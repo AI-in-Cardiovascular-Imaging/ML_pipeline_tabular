@@ -87,3 +87,5 @@ excel/aha_segment/analyze/.ipynb_checkpoints/
 poetry.lock
 
 outputs/
+
+*.pyc
