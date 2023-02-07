@@ -1,0 +1,7 @@
+src_dir: '/home/sebalzer/Documents/Excel_mergen/'
+files: {'cvi_reader_1_1': 'NicoManz Ergebnisse/2 SAX Function CVI42 NM.xlsx',
+  'cvi_reader_1_2': 'NicoManz Ergebnisse/3 SAX Function ICC CVI42 NM.xlsx',
+  'cvi_reader_2': 'Sarah/1. FUNCTION_SAX Function.xlsx',
+  'medis_reader_1_1': 'NicoManz Ergebnisse/4 SAX Function MediSuite NM.xlsx',
+  'medis_reader_1_2': 'NicoManz Ergebnisse/5 SAX Function ICC MediSuite NM.xlsx',
+  'medis_reader_2': 'Sarah/4 SAX Function MediSuite SM.xlsx'}
