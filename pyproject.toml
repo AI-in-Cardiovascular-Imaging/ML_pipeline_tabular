@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "data_parsers"
+name = "cardio_parsers"
 version = "0.1.0"
 description = ""
 authors = ["melandur <account@qunit.ch>"]

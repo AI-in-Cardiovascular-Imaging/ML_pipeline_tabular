@@ -19,7 +19,7 @@ class MergeData:
 
     def __init__(self, config: DictConfig) -> None:
         self.src = config.dataset.out_dir
-        dir_name = checked_dir(config.dataset.dims)
+        dir_name = checked_dir(config.dataset.dims, config.dataset.strict)
         self.checked_src = os.path.join(self.src, '4_checked', dir_name)
         self.experiment = config.analysis.experiment
         self.dims = config.dataset.dims

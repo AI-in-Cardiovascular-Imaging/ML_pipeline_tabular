@@ -55,7 +55,7 @@ class Analysis:
 
         # Data exploration
         if self.exploration:
-            expl_dir = os.path.join(self.src_dir, '6_exploration')
+            expl_dir = os.path.join(self.src_dir, '6_exploration', self.experiment)
             os.makedirs(expl_dir, exist_ok=True)
             self.config.dataset.out_dir = expl_dir
             explorer = ExploreData(data, self.config)
