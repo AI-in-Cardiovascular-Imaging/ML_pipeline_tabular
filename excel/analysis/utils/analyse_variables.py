@@ -6,6 +6,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.inspection import permutation_importance
 
 from excel.analysis.utils.helpers import save_tables, split_data
 
@@ -96,24 +97,44 @@ def feature_reduction(
     to_analyse: pd.DataFrame, out_dir: str, metadata: list, method: str = 'forest', seed: int = 0, label: str = 'mace'
 ):
     if method == 'forest':
-        # Calculate feature importance using random forests
+        # Calculate feature importance using random forests and mean decrease in impurity
         forest = RandomForestClassifier(random_state=seed)
         X = to_analyse.drop(label, axis=1)
         y = to_analyse[label]
         forest.fit(X, y)
         importances = pd.Series(forest.feature_importances_, index=X.columns)
-        std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
+        std = pd.Series(np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0), index=X.columns)
+
+        # Calculate feature importance using random forests and feature permutation
+        result = permutation_importance(
+            forest, X, y, n_repeats=10, random_state=seed, n_jobs=2
+        )
+        perm_importances = pd.Series(result.importances_mean, index=X.columns)
+        perm_std = pd.Series(result.importances_std, index=X.columns)
+        
+        # Remove features with low importance
+        to_keep = 20
+        importances = importances.nlargest(n=to_keep, keep='all')
+        std = std[importances.index]
+        perm_importances = perm_importances.nlargest(n=to_keep, keep='all')
+        perm_std = perm_std[importances.index]
 
         # Plot importances
         fig, ax = plt.subplots()
         importances.plot.bar(yerr=std, ax=ax)
-        ax.set_title("Feature importances using MDI")
+        ax.set_title("Feature importances using mean decrease in impurity")
         ax.set_ylabel("Mean decrease in impurity")
         fig.tight_layout()
-        plt.savefig(os.path.join(out_dir, 'feature_importance.pdf'))
+        plt.savefig(os.path.join(out_dir, 'feature_importance_impurity.pdf'))
+        plt.clf()
 
-        # Remove features with low importance
-        # TODO:
+        fig, ax = plt.subplots()
+        perm_importances.plot.bar(yerr=perm_std, ax=ax)
+        ax.set_title("Feature importances using feature permutation")
+        ax.set_ylabel("Mean accuraccy decrease")
+        fig.tight_layout()
+        plt.savefig(os.path.join(out_dir, 'feature_importance_permutation.pdf'))
+        plt.clf()
 
     return to_analyse, metadata
 

@@ -27,6 +27,7 @@ class Analysis:
         self.overwrite = config.analysis.overwrite
         self.update_metadata = config.analysis.update_metadata
         self.exploration = config.analysis.exploration
+        self.feature_reduction = config.analysis.feature_reduction
 
     def __call__(self) -> None:
         # TODO: train and test paths/sets
@@ -54,8 +55,8 @@ class Analysis:
         data = data.set_index('subject')  # Use subject ID as index column
 
         # Data exploration
-        if self.exploration:
-            expl_dir = os.path.join(self.src_dir, '6_exploration', self.experiment)
+        if self.exploration or self.feature_reduction:
+            expl_dir = os.path.join(self.src_dir, '6_exploration', self.config.analysis.experiment)
             os.makedirs(expl_dir, exist_ok=True)
             self.config.dataset.out_dir = expl_dir
             explorer = ExploreData(data, self.config)
