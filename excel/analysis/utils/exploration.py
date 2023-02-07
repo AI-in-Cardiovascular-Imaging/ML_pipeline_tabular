@@ -5,6 +5,7 @@ import os
 
 from loguru import logger
 import pandas as pd
+from omegaconf import DictConfig
 
 from excel.analysis.utils import statistics
 from excel.analysis.utils import analyse_variables
@@ -12,33 +13,17 @@ from excel.analysis.utils import dim_reduction
 
 
 class ExploreData:
-    def __init__(
-        self,
-        data: pd.DataFrame,
-        experiment: str,
-        exploration: str,
-        out_dir: str,
-        metadata: list,
-        remove_outliers: bool = False,
-        investigate_outliers: bool = False,
-        whis: float = 1.5,
-        seed: int = 0,
-        corr_thresh: float = 0.6,
-        drop_features: bool = True,
-        feature_reduction: str = 'forest',
-    ) -> None:
+    def __init__(self, data: pd.DataFrame, config: DictConfig) -> None:
         self.data = data
-        self.experiment = experiment
-        self.exploration = exploration
-        self.out_dir = out_dir
-        self.metadata = list(set(metadata) & set(data.columns))
-        self.remove_outliers = remove_outliers
-        self.investigate_outliers = investigate_outliers
-        self.whis = whis
-        self.seed = seed
-        self.corr_thresh = corr_thresh
-        self.drop_features = drop_features
-        self.feature_reduction = feature_reduction
+        self.out_dir = config.dataset.out_dir
+        self.exploration = config.analysis.exploration
+        self.remove_outliers = config.analysis.remove_outliers
+        self.investigate_outliers = config.analysis.investigate_outliers
+        self.whis = config.analysis.whis
+        self.metadata = config.analysis.metadata
+        self.seed = config.analysis.seed
+        self.feature_reduction = config.analysis.feature_reduction
+        self.corr_thresh = config.analysis.corr_thresh
 
     def __call__(self) -> None:
         # Detect (and optionally remove or investigate) outliers

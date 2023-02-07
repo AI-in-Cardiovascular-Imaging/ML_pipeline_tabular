@@ -6,6 +6,7 @@ import os
 from loguru import logger
 import pandas as pd
 import numpy as np
+from omegaconf import DictConfig
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, IterativeImputer
 
@@ -16,40 +17,27 @@ from excel.analysis.utils.helpers import save_tables
 class MergeData:
     """Extracts data for given localities, dims, axes, orientations and metrics"""
 
-    def __init__(
-        self,
-        src: str,
-        mdata_src: str,
-        dims: list,
-        strict: bool,
-        segments: list,
-        axes: list,
-        orientations: list,
-        metrics: list,
-        peak_values: bool = True,
-        metadata: list = None,
-        experiment: str = 'unnamed_experiment',
-        impute: bool = True,
-        seed: int = 0,
-    ) -> None:
-        self.src = src
-        dir_name = checked_dir(dims, strict)
-        self.checked_src = os.path.join(src, '4_checked', dir_name)
-        self.mdata_src = mdata_src
-        self.dims = dims
-        self.segments = segments
-        self.axes = axes
-        self.orientations = orientations
-        self.metrics = metrics
-        self.peak_values = peak_values
+    def __init__(self, config: DictConfig) -> None:
+        self.src = config.dataset.out_dir
+        dir_name = checked_dir(config.dataset.dims)
+        self.checked_src = os.path.join(self.src, '4_checked', dir_name)
+        self.experiment = config.analysis.experiment
+        self.dims = config.dataset.dims
+        self.axes = config.analysis.axes
+        self.orientations = config.analysis.orientations
+        self.metrics = config.analysis.metrics
+        self.impute = config.analysis.impute
+        self.peak_values = config.analysis.peak_values
+        self.metadata = config.analysis.metadata
+        self.mdata_src = config.dataset.mdata_src
+        self.seed = config.analysis.seed
+        self.segments = config.analysis.segments
+
         # Always want subject ID
-        if metadata:
-            self.metadata = ['redcap_id', 'pat_id'] + metadata
+        if self.metadata:
+            self.metadata = ['redcap_id', 'pat_id'] + self.metadata
         else:
             self.metadata = None
-        self.experiment = experiment
-        self.impute = impute
-        self.seed = seed
 
         self.relevant = []
         self.table_name = None
@@ -70,7 +58,6 @@ class MergeData:
                 else:
                     logger.error('peak_values=False is not implemented yet.')
                     raise NotImplementedError
-
             tables_list.append(self.subject_data)
 
         # Build DataFrame from list (each row represents a subject)
@@ -84,7 +71,7 @@ class MergeData:
             imputed_tables = self.impute_data(tables)
             tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
         else:  # remove patients with any NaN values
-            table = table.dropna(axis=0, how='any')
+            tables = tables.dropna(axis=0, how='any')
 
         # Read and clean metadata
         if self.metadata:
@@ -244,5 +231,4 @@ class MergeData:
         )
         # logger.debug(f'\n{table}')
         table = num_imputer.fit_transform(table)
-
         return table

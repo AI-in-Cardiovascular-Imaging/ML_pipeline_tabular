@@ -1,21 +1,20 @@
 """Update metadata without re-running the entire merging process (e.g. peak calculations)
 """
 
-import os
-
-from loguru import logger
 import pandas as pd
+from omegaconf import DictConfig
 
 from excel.analysis.utils.helpers import merge_metadata, save_tables
 
 
 class UpdateMetadata:
-    def __init__(self, src: str, data: pd.DataFrame, mdata_src: str, metadata: list, experiment: str) -> None:
-        self.src = src
+    def __init__(self, data: pd.DataFrame, config: DictConfig) -> None:
         self.data = data
-        self.mdata_src = mdata_src
-        self.metadata = metadata
-        self.experiment = experiment
+        self.config = config
+        self.src = config.dataset.out_dir
+        self.experiment = config.experiment.name
+        self.mdata_src = config.dataset.mdata
+        self.metadata = config.experiment.metadata
 
     def __call__(self) -> pd.DataFrame:
         if self.experiment == 'layer_analysis':
@@ -23,8 +22,6 @@ class UpdateMetadata:
             self.data = self.data.iloc[:, :10]
         # Merge the cvi42 data with the new metadata
         self.data = merge_metadata(self.data, self.mdata_src, self.metadata)
-
         # Save the new data table for analysis
         save_tables(self.src, self.experiment, self.data)
-
         return self.data
