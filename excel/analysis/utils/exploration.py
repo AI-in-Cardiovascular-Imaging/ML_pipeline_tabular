@@ -16,7 +16,8 @@ from excel.analysis.utils.helpers import normalise_data
 class ExploreData:
     def __init__(self, data: pd.DataFrame, config: DictConfig) -> None:
         self.data = data
-        self.out_dir = config.dataset.out_dir
+        self.out_dir = os.path.join(config.dataset.out_dir, '6_exploration', config.analysis.experiment)
+        os.makedirs(self.out_dir, exist_ok=True)
         self.label = config.analysis.label
         self.exploration = config.analysis.exploration
         self.remove_outliers = config.analysis.remove_outliers
@@ -40,10 +41,10 @@ class ExploreData:
                 metadata=self.metadata,
             )
 
-        # Analyse individual variables before normalising data
+        # Analyse individual variables (box plot, distribution) before normalising data
         if 'univariate_analysis' in self.exploration:
             analyse_variables.univariate_analysis(
-                self.data, out_dir=self.out_dir, metadata=self.metadata, hue='mace', whis=self.whis
+                self.data, out_dir=self.out_dir, metadata=self.metadata, hue=self.label, whis=self.whis
             )
             self.exploration.remove('univariate_analysis')
 
@@ -63,7 +64,7 @@ class ExploreData:
         if self.feature_reduction is not None:
             logger.info(f'Performing {self.feature_reduction}-based feature reduction.')
             self.data, self.metadata = analyse_variables.feature_reduction(
-                self.data, self.out_dir, self.metadata, method=self.feature_reduction, seed=self.seed, label='mace'
+                self.data, self.out_dir, self.metadata, method=self.feature_reduction, seed=self.seed, label=self.label
             )
             logger.info(f'{self.feature_reduction}-based feature reduction finished.')
 
@@ -71,7 +72,7 @@ class ExploreData:
             logger.info(f'Performing {expl} data exploration for {len(self.data.index)} patients.')
             try:
                 stats_func = getattr(analyse_variables, expl)
-                stats_func(self.data, self.out_dir, self.metadata, 'mace', self.whis)
+                stats_func(self.data, self.out_dir, self.metadata, self.label, self.whis)
                 logger.info(f'{expl} data exploration finished.')
                 continue
             except AttributeError:
@@ -79,7 +80,7 @@ class ExploreData:
 
             try:
                 stats_func = getattr(dim_reduction, expl)
-                stats_func(self.data, self.out_dir, self.metadata, 'mace', self.seed)
+                stats_func(self.data, self.out_dir, self.metadata, self.label, self.seed)
                 logger.info(f'{expl} data exploration finished.')
                 continue
             except AttributeError:

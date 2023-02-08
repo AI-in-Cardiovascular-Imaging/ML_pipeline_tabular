@@ -30,7 +30,6 @@ class Analysis:
         self.feature_reduction = config.analysis.feature_reduction
 
     def __call__(self) -> None:
-        # TODO: train and test paths/sets
         self.config.analysis.experiment = f'{self.experiment}_imputed' if self.impute else self.experiment
         merged_path = os.path.join(self.src_dir, '5_merged', f'{self.config.analysis.experiment}.xlsx')
 
@@ -38,27 +37,20 @@ class Analysis:
         if os.path.isfile(merged_path) and not self.overwrite:
             logger.info('Merged data available, skipping merge step...')
         else:
-            logger.info('Merging data according to config parameters...')
             merger = MergeData(self.config)
             merger()
-            logger.info('Data merging finished.')
 
         data = pd.read_excel(merged_path)  # Read in merged data
 
         # Update metadata if desired (only makes sense if overwrite=False)
         if not self.overwrite and self.update_metadata:
-            logger.info('Updating metadata as requested...')
             updater = UpdateMetadata(data, self.config)
             data = updater()
-            logger.info('Metadata update finished.')
 
         data = data.set_index('subject')  # Use subject ID as index column
 
         # Data exploration
         if self.exploration or self.feature_reduction:
-            expl_dir = os.path.join(self.src_dir, '6_exploration', self.config.analysis.experiment)
-            os.makedirs(expl_dir, exist_ok=True)
-            self.config.dataset.out_dir = expl_dir
             explorer = ExploreData(data, self.config)
             explorer()
 

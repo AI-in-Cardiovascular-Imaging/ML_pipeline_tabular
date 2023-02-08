@@ -3,6 +3,7 @@
 
 import pandas as pd
 from omegaconf import DictConfig
+from loguru import logger
 
 from excel.analysis.utils.helpers import merge_metadata, save_tables
 
@@ -17,6 +18,7 @@ class UpdateMetadata:
         self.metadata = config.experiment.metadata
 
     def __call__(self) -> pd.DataFrame:
+        logger.info('Updating metadata as requested...')
         if self.experiment == 'layer_analysis':
             # Keep the first 10 cols, the rest are old metadata
             self.data = self.data.iloc[:, :10]
@@ -25,3 +27,6 @@ class UpdateMetadata:
         # Save the new data table for analysis
         save_tables(self.src, self.experiment, self.data)
         return self.data
+
+    def __del__(self) -> None:
+        logger.info('Metadata update finished.')

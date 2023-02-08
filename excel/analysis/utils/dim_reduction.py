@@ -40,7 +40,7 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
             # logger.info(f'\n{abs(pca.components_)}')
 
             # Plot the transformed dataset
-            sns.lmplot(data=analysis, x='pc_1', y='pc_2', hue='mace', fit_reg=False, legend=True, scatter_kws={'s': 20})
+            sns.lmplot(data=analysis, x='pc_1', y='pc_2', hue=hue, fit_reg=False, legend=True, scatter_kws={'s': 20})
             # plt.tight_layout()
             plt.xlabel(f'First PC (explains {int(round(explained_var[0], 2) * 100)}% of variance)')
             plt.ylabel(f'Second PC (explains {int(round(explained_var[1], 2) * 100)}% of variance)')
@@ -79,7 +79,7 @@ def tsne(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
 
                 # Plot the transformed dataset
                 sns.lmplot(
-                    data=analysis, x='tsne_1', y='tsne_2', hue='mace', fit_reg=False, legend=True, scatter_kws={'s': 20}
+                    data=analysis, x='tsne_1', y='tsne_2', hue=hue, fit_reg=False, legend=True, scatter_kws={'s': 20}
                 )
                 plt.title(f't-SNE for perplexity {perp}')
                 plt.savefig(os.path.join(out_dir, f'TSNE_{suffix}_perp_{perp}.pdf'), bbox_inches='tight')
