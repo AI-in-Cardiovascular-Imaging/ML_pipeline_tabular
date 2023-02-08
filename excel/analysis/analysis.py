@@ -11,6 +11,7 @@ import pandas as pd
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.utils.update_metadata import UpdateMetadata
 from excel.analysis.utils.exploration import ExploreData
+from excel.analysis.utils.helpers import normalise_data
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -53,6 +54,8 @@ class Analysis:
         if self.exploration or self.feature_reduction:
             explorer = ExploreData(data, self.config)
             explorer()
+        else: # data is normalised during exploration, ensure same behaviour for exploration=[]
+            data = normalise_data(data, label=self.config.analysis.label)
 
 
 if __name__ == '__main__':
