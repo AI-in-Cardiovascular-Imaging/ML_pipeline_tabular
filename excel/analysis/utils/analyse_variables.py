@@ -17,7 +17,7 @@ def univariate_analysis(data: pd.DataFrame, out_dir: str, metadata: list, hue: s
     """
     # Split data and metadata but keep hue column
     metadata.remove(hue)
-    to_analyse, _, _ = split_data(data, metadata, hue, remove_mdata=True, normalise=False)
+    to_analyse, _, _ = split_data(data, metadata, hue, remove_mdata=True)
 
     # Box plot for each feature w.r.t. MACE
     data_long = to_analyse.melt(id_vars=[hue])
@@ -83,13 +83,6 @@ def correlation(
     plt.savefig(os.path.join(out_dir, 'corr_plot.pdf'))
     plt.clf()
 
-    # Plot patient/feature value heatmap
-    # plt.figure(figsize=(50, 50))
-    # sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True)
-    # plt.xticks(rotation=90)
-    # plt.savefig(os.path.join(out_dir, 'heatmap.pdf'))
-    # plt.clf()
-
     return to_analyse, metadata
 
 
@@ -118,6 +111,8 @@ def feature_reduction(
         std = std[importances.index]
         perm_importances = perm_importances.nlargest(n=to_keep, keep='all')
         perm_std = perm_std[importances.index]
+        to_analyse = to_analyse[importances.index.union([label])]
+        metadata = [col for col in metadata if col in importances.index.union([label])]
 
         # Plot importances
         fig, ax = plt.subplots()
@@ -134,6 +129,14 @@ def feature_reduction(
         ax.set_ylabel("Mean accuraccy decrease")
         fig.tight_layout()
         plt.savefig(os.path.join(out_dir, 'feature_importance_permutation.pdf'))
+        plt.clf()
+
+        # Plot patient/feature value heatmap
+        # plt.figure(figsize=(50, 50))
+        sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True)
+        plt.xticks(rotation=90)
+        fig.tight_layout()
+        plt.savefig(os.path.join(out_dir, 'heatmap.pdf'))
         plt.clf()
 
     return to_analyse, metadata

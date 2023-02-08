@@ -32,13 +32,15 @@ analysis:
   impute: True
   # experiment name (i.e. file name in which to store merged data)
   experiment: 'phenomapping'
+  # which column to use as label for exploration, feature reduction and analysis
+  label: 'mace'
   # whether to overwrite merged data
   overwrite: False
   # whether to overwrite metadata 
   # (without performing entire merging process again - unless overwrite=True)
   update_metadata: False
   # which types of data exploration to perform (if any)
-  exploration: ['correlation']
+  exploration: ['correlation', 'pca', 'tsne']
   # exploration: []
   # whether to remove outliers
   remove_outliers: False 
@@ -49,10 +51,10 @@ analysis:
   # random seed
   seed: 545
   # threshold above which correlated features are removed
-  corr_thresh: 0.4
+  corr_thresh: 0.6
   # whether to drop highly correlated features for further analysis
-  drop_features: False
-  # method to use for feature reduction (higher precedence than correlation-based feature reduction)
+  drop_features: True
+  # method to use for feature reduction
   feature_reduction: 'forest'
   # which metadata features to include
   metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',   # demographic

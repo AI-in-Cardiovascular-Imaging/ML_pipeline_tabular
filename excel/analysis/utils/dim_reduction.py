@@ -28,9 +28,7 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
             # OPT: could be removed (at least for impute=True)
             to_analyse = to_analyse.dropna(how='any')  # drop rows containing any NaN values
             # Split data and metadata
-            to_analyse, hue_df, suffix = split_data(
-                to_analyse, metadata, hue, remove_mdata=remove_mdata, normalise=True
-            )
+            to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=remove_mdata)
 
             # Perform PCA
             pca = PCA(n_components=4)
@@ -67,9 +65,7 @@ def tsne(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
             to_analyse = data.copy(deep=True)
             to_analyse = to_analyse.dropna(how='any')  # drop rows containing any NaN values
 
-            to_analyse, hue_df, suffix = split_data(
-                to_analyse, metadata, hue, remove_mdata=remove_mdata, normalise=True
-            )
+            to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=remove_mdata)
 
             # Perform t-SNE for different perplexities
             perplexities = [5, 15, 30, 50]

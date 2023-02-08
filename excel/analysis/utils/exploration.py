@@ -10,12 +10,14 @@ from omegaconf import DictConfig
 from excel.analysis.utils import statistics
 from excel.analysis.utils import analyse_variables
 from excel.analysis.utils import dim_reduction
+from excel.analysis.utils.helpers import normalise_data
 
 
 class ExploreData:
     def __init__(self, data: pd.DataFrame, config: DictConfig) -> None:
         self.data = data
         self.out_dir = config.dataset.out_dir
+        self.label = config.analysis.label
         self.exploration = config.analysis.exploration
         self.remove_outliers = config.analysis.remove_outliers
         self.investigate_outliers = config.analysis.investigate_outliers
@@ -38,6 +40,13 @@ class ExploreData:
                 metadata=self.metadata,
             )
 
+        # Analyse individual variables before normalising data
+        if 'univariate_analysis' in self.exploration:
+            analyse_variables.univariate_analysis(
+                self.data, out_dir=self.out_dir, metadata=self.metadata, hue='mace', whis=self.whis
+            )
+            self.exploration.remove('univariate_analysis')
+
         if 'correlation' in self.exploration:
             self.data, self.metadata = analyse_variables.correlation(
                 self.data,
@@ -47,7 +56,10 @@ class ExploreData:
                 drop_features=self.drop_features,
             )
             self.exploration.remove('correlation')
-            
+
+        # Normalise data
+        self.data = normalise_data(self.data, self.label)
+
         if self.feature_reduction is not None:
             logger.info(f'Performing {self.feature_reduction}-based feature reduction.')
             self.data, self.metadata = analyse_variables.feature_reduction(

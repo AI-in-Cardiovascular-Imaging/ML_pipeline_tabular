@@ -26,18 +26,20 @@ def save_tables(src, experiment, tables) -> None:
     tables.to_excel(file_path, index=False)
 
 
-def split_data(data: pd.DataFrame, metadata: list, hue: str, remove_mdata: bool = True, normalise: bool = True):
+def split_data(data: pd.DataFrame, metadata: list, hue: str, remove_mdata: bool = True):
     to_analyse = data.copy(deep=True)
-    hue_df = to_analyse[[hue]]
-
-    if normalise:
-        mdata = to_analyse[metadata]
-        to_normalise = to_analyse.drop(metadata, axis=1)
-        to_analyse = (to_normalise - to_normalise.mean()) / to_normalise.std()
-
-        if not remove_mdata:
-            to_analyse = pd.concat((to_analyse, mdata), axis=1)
+    hue_df = to_analyse[hue]
+    
+    if remove_mdata:
+        to_analyse = to_analyse.drop(metadata, axis=1)
 
     suffix = 'no_mdata' if remove_mdata else 'with_mdata'
 
     return to_analyse, hue_df, suffix
+
+def normalise_data(data: pd.DataFrame, label: str) -> pd.DataFrame:
+    tmp = data[label] # keep label col as is
+    data = (data - data.mean()) / data.std()
+    data[label] = tmp
+
+    return data
