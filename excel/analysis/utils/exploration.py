@@ -24,6 +24,7 @@ class ExploreData:
         self.seed = config.analysis.seed
         self.feature_reduction = config.analysis.feature_reduction
         self.corr_thresh = config.analysis.corr_thresh
+        self.drop_features = config.analysis.drop_features
 
     def __call__(self) -> None:
         # Detect (and optionally remove or investigate) outliers
@@ -37,9 +38,18 @@ class ExploreData:
                 metadata=self.metadata,
             )
 
+        if 'correlation' in self.exploration:
+            self.data, self.metadata = analyse_variables.correlation(
+                self.data,
+                self.out_dir,
+                self.metadata,
+                corr_thresh=self.corr_thresh,
+                drop_features=self.drop_features,
+            )
+            self.exploration.remove('correlation')
+            
         if self.feature_reduction is not None:
             logger.info(f'Performing {self.feature_reduction}-based feature reduction.')
-            self.drop_features = False  # higher precedence than correlation-based feature reduction
             self.data, self.metadata = analyse_variables.feature_reduction(
                 self.data, self.out_dir, self.metadata, method=self.feature_reduction, seed=self.seed, label='mace'
             )
@@ -47,18 +57,6 @@ class ExploreData:
 
         for expl in self.exploration:
             logger.info(f'Performing {expl} data exploration for {len(self.data.index)} patients.')
-
-            if expl == 'correlation':
-                self.data, self.metadata = analyse_variables.correlation(
-                    self.data,
-                    self.out_dir,
-                    self.metadata,
-                    corr_thresh=self.corr_thresh,
-                    drop_features=self.drop_features,
-                )
-                logger.info(f'{expl} data exploration finished.')
-                continue
-
             try:
                 stats_func = getattr(analyse_variables, expl)
                 stats_func(self.data, self.out_dir, self.metadata, 'mace', self.whis)
