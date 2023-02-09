@@ -16,78 +16,85 @@ from excel.pre_processing.utils.checks import SplitByCompleteness
 from excel.pre_processing.utils.helpers import SaveTables
 
 
-@hydra.main(version_base=None, config_path='../../config', config_name='config')
-def pre_processing(config: DictConfig) -> None:
-    """Pre-processing pipeline
+class Preprocessing:
+    def __init__(self, config: DictConfig) -> None:
+        self.src_dir = config.dataset.raw_dir
+        self.dst_dir = config.dataset.out_dir
+        self.save_intermediate = config.dataset.save_intermediate
+        self.save_final = config.dataset.save_final
+        self.dims = config.dataset.dims
+        self.strict = config.dataset.strict
 
-    Args:
-        config (DictConfig): config element containing all config parameters
-            check the config files for info on the individual parameters
+        self.dir_name = checked_dir(self.dims, self.strict)
 
-    Returns:
-        None
-    """
-    # Parse some config parameters
-    src_dir = config.dataset.raw_dir
-    dst_dir = config.dataset.out_dir
-    save_intermediate = config.dataset.save_intermediate
-    save_final = config.dataset.save_final
-    dims = config.dataset.dims
-    strict = config.dataset.strict
+    def __call__(self) -> None:
+        if self.save_intermediate:
+            logger.info('Intermediate results will be saved between each pre-processing step.')
+            dst = os.path.join(self.dst_dir, '1_extracted')
+        else:
+            dst = os.path.join(self.dst_dir, '4_checked', self.dir_name)
 
-    dir_name = checked_dir(dims, strict)
+        # Extract one sheet per patient from the available raw workbooks
+        # additionally removes any colour formatting
+        sheets = {}
+        for src_file in os.listdir(src_dir):
+            # for src_file in [os.path.join(src_dir, 'D. Strain_v3b_FlamBer_61-120.xlsx')]:
+            if src_file.endswith('.xlsx') and not src_file.startswith('.'):
+                logger.info(f'File -> {src_file}')
+                workbook_2_sheets = ExtractWorkbook2Sheets(
+                    src=os.path.join(src_dir, src_file), dst=dst, save_intermediate=self.save_intermediate
+                )
+                sheets = sheets | workbook_2_sheets()
 
-    if save_intermediate:
-        logger.info('Intermediate results will be saved between each pre-processing step.')
-        dst = os.path.join(dst_dir, '1_extracted')
-    else:
-        dst = os.path.join(dst_dir, '4_checked', dir_name)
+                if self.save_intermediate:  # update paths
+                    src_dir = dst
+                    dst = os.path.join(self.dst_dir, '2_case_wise')
 
-    # Extract one sheet per patient from the available raw workbooks
-    # additionally removes any colour formatting
-    sheets = {}
-    for src_file in os.listdir(src_dir):
-        # for src_file in [os.path.join(src_dir, 'D. Strain_v3b_FlamBer_61-120.xlsx')]:
-        if src_file.endswith('.xlsx') and not src_file.startswith('.'):
-            logger.info(f'File -> {src_file}')
-            workbook_2_sheets = ExtractWorkbook2Sheets(
-                src=os.path.join(src_dir, src_file), dst=dst, save_intermediate=save_intermediate
-            )
-            sheets = sheets | workbook_2_sheets()
+                sheets_2_tables = ExtractSheets2Tables(
+                    src=src_dir, dst=dst, save_intermediate=self.save_intermediate, sheets=sheets
+                )
+                tables = sheets_2_tables()
 
-            if save_intermediate:  # update paths
-                src_dir = dst
-                dst = os.path.join(dst_dir, '2_case_wise')
+                if self.save_intermediate:  # update paths
+                    src_dir = dst
+                    dst = os.path.join(self.dst_dir, '3_cleaned')
 
-            sheets_2_tables = ExtractSheets2Tables(
-                src=src_dir, dst=dst, save_intermediate=save_intermediate, sheets=sheets
-            )
-            tables = sheets_2_tables()
+                cleaner = TableCleaner(
+                    src=src_dir,
+                    dst=dst,
+                    save_intermediate=self.save_intermediate,
+                    dims=self.dims,
+                    tables=tables,
+                    strict=self.strict,
+                )
+                clean_tables = cleaner()
 
-            if save_intermediate:  # update paths
-                src_dir = dst
-                dst = os.path.join(dst_dir, '3_cleaned')
+                if self.save_intermediate:  # update paths
+                    src_dir = dst
+                    dst = os.path.join(self.dst_dir, '4_checked', self.dir_name)
 
-            cleaner = TableCleaner(
-                src=src_dir, dst=dst, save_intermediate=save_intermediate, dims=dims, tables=tables, strict=strict
-            )
-            clean_tables = cleaner()
+                checker = SplitByCompleteness(
+                    src=src_dir,
+                    dst=dst,
+                    save_intermediate=self.save_intermediate,
+                    dims=self.dims,
+                    tables=clean_tables,
+                    strict=self.strict,
+                )
+                complete_tables = checker()
 
-            if save_intermediate:  # update paths
-                src_dir = dst
-                dst = os.path.join(dst_dir, '4_checked', dir_name)
+                # Save final pre-processed tables (only relevant if save_intermediate=False)
+                if not self.save_intermediate and self.save_final:
+                    saver = SaveTables(dst=dst, tables=complete_tables)
 
-            checker = SplitByCompleteness(
-                src=src_dir, dst=dst, save_intermediate=save_intermediate, dims=dims, tables=clean_tables, strict=strict
-            )
-            complete_tables = checker()
-
-            # Save final pre-processed tables (only relevant if save_intermediate=False)
-            if not save_intermediate and save_final:
-                saver = SaveTables(dst=dst, tables=complete_tables)
-
-                saver()
+                    saver()
 
 
 if __name__ == '__main__':
-    pre_processing()
+
+    @hydra.main(version_base=None, config_path='../../config', config_name='config')
+    def main(config: DictConfig) -> None:
+        pre_processing = Preprocessing(config)
+        pre_processing()
+
+    main()
