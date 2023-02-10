@@ -31,7 +31,7 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
             to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=remove_mdata)
 
             # Perform PCA
-            pca = PCA(n_components=4)
+            pca = PCA(n_components=4, random_state=seed)
             analysis = pca.fit_transform(to_analyse)
             analysis = pd.DataFrame(analysis, index=to_analyse.index, columns=['pc_1', 'pc_2', 'pc_3', 'pc_4'])
             analysis = pd.concat((analysis, hue_df), axis=1)
