@@ -40,14 +40,12 @@ class ExploreData:
                 whis=self.whis,
                 metadata=self.metadata,
             )
-
         # Analyse individual variables (box plot, distribution) before normalising data
         if 'univariate_analysis' in self.exploration:
             analyse_variables.univariate_analysis(
                 self.data, out_dir=self.out_dir, metadata=self.metadata, hue=self.label, whis=self.whis
             )
             self.exploration.remove('univariate_analysis')
-
         if 'correlation' in self.exploration:
             self.data, self.metadata = analyse_variables.correlation(
                 self.data,
@@ -57,7 +55,6 @@ class ExploreData:
                 drop_features=self.drop_features,
             )
             self.exploration.remove('correlation')
-
         # Normalise data
         self.data = normalise_data(self.data, self.label)
 

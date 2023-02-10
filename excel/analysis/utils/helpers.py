@@ -39,7 +39,8 @@ def split_data(data: pd.DataFrame, metadata: list, hue: str, remove_mdata: bool 
 
 def normalise_data(data: pd.DataFrame, label: str) -> pd.DataFrame:
     tmp = data[label] # keep label col as is
-    data = (data - data.mean()) / data.std()
+    # data = (data - data.mean()) / data.std()
+    data = data / data.sum()
     data[label] = tmp
 
     return data

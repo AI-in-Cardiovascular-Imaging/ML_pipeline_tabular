@@ -33,7 +33,7 @@ def cleanup(config: DictConfig) -> None:
         data = pd.read_excel(os.path.join(src_dir, file))
         # Clean data
         data = data.drop(index=0, axis=0)  # drop first row
-        data.iloc[:, 11:] = data.iloc[:, 11:].replace(r'[a-zA-Z%/²]', '', regex=True)  # remove units
+        data.iloc[:, 11:] = data.iloc[:, 11:].replace(r'[a-zA-Z%/²-]', '', regex=True)  # remove units
         data.iloc[:, 11:] = data.iloc[:, 11:].apply(lambda x: x.str.strip() if x.dtype == "object" else x)
         data.iloc[:, 11:] = data.iloc[:, 11:].replace([0, ''], np.nan, regex=True)  # set 0 values to NaN
         data.iloc[:, 11:] = data.iloc[:, 11:].astype(float)

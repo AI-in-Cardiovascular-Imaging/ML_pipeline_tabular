@@ -37,17 +37,17 @@ analysis:
   # whether to impute missing data
   impute: True
   # experiment name (i.e. file name in which to store merged data)
-  experiment: 'phenomapping'
+  experiment: 'phenomapping_l1norm'
   # which column to use as label for exploration, feature reduction and analysis
   label: 'mace'
   # whether to overwrite merged data
-  overwrite: False
+  overwrite: True
   # whether to overwrite metadata 
   # (without performing entire merging process again - unless overwrite=True)
   update_metadata: False
   # which types of data exploration to perform (if any)
-  exploration: ['correlation', 'pca', 'tsne']
-  # exploration: []
+  # exploration: ['correlation', 'pca', 'tsne']
+  exploration: ['pca']
   # whether to remove outliers
   remove_outliers: False 
   # whether to investigate outliers
@@ -61,7 +61,7 @@ analysis:
   # whether to drop highly correlated features for further analysis
   drop_features: True
   # method to use for feature reduction
-  feature_reduction: 'forest'
+  feature_reduction: null
   # which metadata features to include
   metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',   # demographic
              'hxhtn', 'hxdm', 'dm_ja_nein', 'hxchol',   # medical history

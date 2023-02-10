@@ -18,10 +18,12 @@ class MergeData:
     """Extracts data for given localities, dims, axes, orientations and metrics"""
 
     def __init__(self, config: DictConfig) -> None:
+        self.config = config
         self.src = config.dataset.out_dir
         dir_name = checked_dir(config.dataset.dims, config.dataset.strict)
         self.checked_src = os.path.join(config.dataset.out_dir, '4_checked', dir_name)
         self.experiment = config.analysis.experiment
+        self.label = config.analysis.label
         self.dims = config.dataset.dims
         self.axes = config.analysis.axes
         self.orientations = config.analysis.orientations
@@ -33,11 +35,12 @@ class MergeData:
         self.seed = config.analysis.seed
         self.segments = config.analysis.segments
 
-        # Always want subject ID
+        # Always want subject IDs and label
         if self.metadata:
-            self.metadata = ['redcap_id', 'pat_id'] + self.metadata
+            to_add = ['redcap_id', 'pat_id', self.label]
+            self.metadata.extend([col for col in to_add if col not in self.metadata])
         else:
-            self.metadata = None
+            self.metadata = [self.label]
 
         self.relevant = []
         self.table_name = None
@@ -214,7 +217,8 @@ class MergeData:
             tables = tables.dropna(axis=1, thresh=threshold * len(tables.index))
 
             # Remove these columns from the metadata list
-            metadata = [col for col in self.metadata if col in tables.columns]
+            self.metadata = [col for col in self.metadata if col in tables.columns]
+            self.config.analysis.metadata = self.metadata
 
             # Impute missing metadata if desired
             if self.impute:

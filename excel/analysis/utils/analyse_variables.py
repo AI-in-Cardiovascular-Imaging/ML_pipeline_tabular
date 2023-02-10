@@ -78,7 +78,7 @@ def correlation(
 
     # Plot correlation heatmap
     plt.figure(figsize=(50, 50))
-    sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True)
+    sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
     plt.xticks(rotation=90)
     plt.savefig(os.path.join(out_dir, 'corr_plot.pdf'))
     plt.clf()
@@ -106,7 +106,7 @@ def feature_reduction(
         perm_std = pd.Series(result.importances_std, index=X.columns)
         
         # Remove features with low importance
-        to_keep = 10
+        to_keep = 20
         importances = importances.nlargest(n=to_keep, keep='all')
         std = std[importances.index]
         perm_importances = perm_importances.nlargest(n=to_keep, keep='all')
@@ -135,7 +135,7 @@ def feature_reduction(
         figsize = to_keep * 1.5
         matrix = to_analyse.corr(method='pearson').round(2)
         plt.figure(figsize=(figsize, figsize))
-        sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True)
+        sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
         plt.xticks(rotation=90)
         fig.tight_layout()
         plt.savefig(os.path.join(out_dir, 'corr_plot_after_reduction.pdf'))
@@ -143,7 +143,7 @@ def feature_reduction(
 
         # Plot patient/feature value heatmap
         plt.figure(figsize=(figsize, figsize))
-        sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True)
+        sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
         plt.xticks(rotation=90)
         fig.tight_layout()
         plt.savefig(os.path.join(out_dir, 'heatmap_after_reduction.pdf'))
