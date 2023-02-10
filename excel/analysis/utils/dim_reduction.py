@@ -30,6 +30,7 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
             to_analyse = to_analyse.dropna(how='any')  # drop rows containing any NaN values
             # Split data and metadata
             to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=remove_mdata)
+            to_analyse = to_analyse.drop(hue, axis=1)
 
             # Perform PCA
             pca = PCA(n_components=4, random_state=seed)
@@ -49,6 +50,8 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
                 fit_reg=False,
                 legend=True,
                 scatter_kws={'s': 5, 'marker': '*', 'alpha': 0.5},
+                x_jitter=0.2,
+                y_jitter=0.2,
             )
             # plt.tight_layout()
             plt.xlabel(f'First PC (explains {int(round(explained_var[0], 2) * 100)}% of variance)')
@@ -57,6 +60,8 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
             plt.savefig(os.path.join(out_dir, f'PCA_{suffix}.pdf'), bbox_inches='tight')
             plt.clf()
         except ValueError:
+            pass
+        except KeyError:
             pass
 
 
@@ -75,6 +80,7 @@ def tsne(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
             to_analyse = to_analyse.dropna(how='any')  # drop rows containing any NaN values
 
             to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=remove_mdata)
+            to_analyse = to_analyse.drop(hue, axis=1)
 
             # Perform t-SNE for different perplexities
             perplexities = [5, 15, 30, 50]
@@ -97,34 +103,47 @@ def tsne(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
             logger.info(f'{len(analysis.index)} subjects ({suffix}).')
         except ValueError:
             pass
+        except KeyError:
+            pass
 
 
 def umap(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
     """Perform UMAP dimensionality reduction and visualisation
 
-       Args:
-           data (pd.DataFrame): DataFrame containing all relevant features and metadata (opt.)
-           out_dir (str): directory to store plots
-           metadata (list): list of metadata column names
-           seed (int): random seed
-       """
+    Args:
+        data (pd.DataFrame): DataFrame containing all relevant features and metadata (opt.)
+        out_dir (str): directory to store plots
+        metadata (list): list of metadata column names
+        seed (int): random seed
+    """
     for remove_mdata in [True, False]:
         try:
             to_analyse = data.copy(deep=True)
             to_analyse = to_analyse.dropna(how='any')  # drop rows containing any NaN values
 
             to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=remove_mdata)
+            to_analyse = to_analyse.drop(hue, axis=1)
 
             reducer = UMAP(n_components=2, random_state=seed)
             analysis = reducer.fit_transform(to_analyse)
             analysis = pd.DataFrame(analysis, index=to_analyse.index, columns=['umap_1', 'umap_2'])
             analysis = pd.concat((analysis, hue_df), axis=1)
             sns.lmplot(
-                data=analysis, x='umap_1', y='umap_2', hue=hue, fit_reg=False, legend=True, scatter_kws={'s': 20}
+                data=analysis,
+                x='umap_1',
+                y='umap_2',
+                hue=hue,
+                fit_reg=False,
+                legend=True,
+                scatter_kws={'s': 20},
+                x_jitter=0.2,
+                y_jitter=0.2,
             )
             plt.title(f'Umap analysis')
             plt.savefig(os.path.join(out_dir, f'Umap_{suffix}.pdf'), bbox_inches='tight')
             plt.clf()
             logger.info(f'{len(analysis.index)} subjects ({suffix}).')
         except ValueError:
+            pass
+        except KeyError:
             pass
