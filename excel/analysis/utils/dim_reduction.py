@@ -9,6 +9,7 @@ import seaborn as sns
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from umap import UMAP
 
 from excel.analysis.utils.helpers import split_data
 
@@ -85,6 +86,37 @@ def tsne(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
                 plt.savefig(os.path.join(out_dir, f'TSNE_{suffix}_perp_{perp}.pdf'), bbox_inches='tight')
                 plt.clf()
 
+            logger.info(f'{len(analysis.index)} subjects ({suffix}).')
+        except ValueError:
+            pass
+
+
+def umap(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
+    """Perform UMAP dimensionality reduction and visualisation
+
+       Args:
+           data (pd.DataFrame): DataFrame containing all relevant features and metadata (opt.)
+           out_dir (str): directory to store plots
+           metadata (list): list of metadata column names
+           seed (int): random seed
+       """
+    for remove_mdata in [True, False]:
+        try:
+            to_analyse = data.copy(deep=True)
+            to_analyse = to_analyse.dropna(how='any')  # drop rows containing any NaN values
+
+            to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=remove_mdata)
+
+            reducer = UMAP(n_components=2, random_state=seed)
+            analysis = reducer.fit_transform(to_analyse)
+            analysis = pd.DataFrame(analysis, index=to_analyse.index, columns=['umap_1', 'umap_2'])
+            analysis = pd.concat((analysis, hue_df), axis=1)
+            sns.lmplot(
+                data=analysis, x='umap_1', y='umap_2', hue=hue, fit_reg=False, legend=True, scatter_kws={'s': 20}
+            )
+            plt.title(f'Umap analysis')
+            plt.savefig(os.path.join(out_dir, f'Umap_{suffix}.pdf'), bbox_inches='tight')
+            plt.clf()
             logger.info(f'{len(analysis.index)} subjects ({suffix}).')
         except ValueError:
             pass
