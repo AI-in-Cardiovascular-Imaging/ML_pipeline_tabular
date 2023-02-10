@@ -1,7 +1,13 @@
 defaults:
   - dataset: train
+  - override hydra/hydra_logging: disabled  
+  - override hydra/job_logging: disabled
   - _self_ # keep this to the end of defaults to have config.yaml override values set in other yamls
 
+hydra:
+  output_subdir: null  
+  run:  
+    dir: .
 ### add global default parameter values below
 dataset:
   # metadata source directory

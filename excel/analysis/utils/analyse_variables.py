@@ -106,13 +106,13 @@ def feature_reduction(
         perm_std = pd.Series(result.importances_std, index=X.columns)
         
         # Remove features with low importance
-        to_keep = 20
+        to_keep = 10
         importances = importances.nlargest(n=to_keep, keep='all')
         std = std[importances.index]
         perm_importances = perm_importances.nlargest(n=to_keep, keep='all')
         perm_std = perm_std[importances.index]
-        to_analyse = to_analyse[importances.index.union([label])]
-        metadata = [col for col in metadata if col in importances.index.union([label])]
+        to_analyse = to_analyse[importances.index.union([label], sort=False)]
+        metadata = [col for col in metadata if col in importances.index.union([label], sort=False)]
 
         # Plot importances
         fig, ax = plt.subplots()
@@ -131,12 +131,22 @@ def feature_reduction(
         plt.savefig(os.path.join(out_dir, 'feature_importance_permutation.pdf'))
         plt.clf()
 
+        # Plot correlation heatmap
+        figsize = to_keep * 1.5
+        matrix = to_analyse.corr(method='pearson').round(2)
+        plt.figure(figsize=(figsize, figsize))
+        sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True)
+        plt.xticks(rotation=90)
+        fig.tight_layout()
+        plt.savefig(os.path.join(out_dir, 'corr_plot_after_reduction.pdf'))
+        plt.clf()
+
         # Plot patient/feature value heatmap
-        # plt.figure(figsize=(50, 50))
+        plt.figure(figsize=(figsize, figsize))
         sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True)
         plt.xticks(rotation=90)
         fig.tight_layout()
-        plt.savefig(os.path.join(out_dir, 'heatmap.pdf'))
+        plt.savefig(os.path.join(out_dir, 'heatmap_after_reduction.pdf'))
         plt.clf()
 
     return to_analyse, metadata
