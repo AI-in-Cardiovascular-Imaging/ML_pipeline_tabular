@@ -11,12 +11,12 @@ import pandas as pd
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.utils.update_metadata import UpdateMetadata
 from excel.analysis.utils.exploration import ExploreData
-from excel.analysis.utils.helpers import normalise_data
+from excel.analysis.utils.helpers import normalise_data, variance_threshold
 
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
-pd.set_option('display.max_colwidth', None)
+# pd.set_option('display.max_rows', None)
+# pd.set_option('display.max_columns', None)
+# pd.set_option('display.width', None)
+# pd.set_option('display.max_colwidth', None)
 
 
 class Analysis:
@@ -50,6 +50,9 @@ class Analysis:
             data = updater()
 
         data = data.set_index('subject')  # Use subject ID as index column
+
+        # Apply variance threshold feature selection
+        data = variance_threshold(data, self.config.analysis.label, self.config.analysis.variance_thresh)
 
         # Data exploration
         if self.exploration or self.feature_reduction:
