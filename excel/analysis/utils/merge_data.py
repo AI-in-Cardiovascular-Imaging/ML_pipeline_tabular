@@ -213,8 +213,8 @@ class MergeData:
             tables = tables.rename(columns={'redcap_id': 'subject'})
 
             # Remove any metadata columns containing less than thresh data
-            threshold = 0.9
-            tables = tables.dropna(axis=1, thresh=threshold * len(tables.index))
+            # threshold = 0.9
+            # tables = tables.dropna(axis=1, thresh=threshold * len(tables.index))
 
             # Remove these columns from the metadata list
             self.metadata = [col for col in self.metadata if col in tables.columns]
@@ -239,8 +239,8 @@ class MergeData:
                 logger.debug(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
 
             # Remove features containing the same value for all patients
-            nunique = tables.nunique()
-            cols_to_drop = nunique[nunique == 1].index
-            tables = tables.drop(cols_to_drop, axis=1)
+            # nunique = tables.nunique()
+            # cols_to_drop = nunique[nunique == 1].index
+            # tables = tables.drop(cols_to_drop, axis=1)
 
         return tables

@@ -8,6 +8,7 @@ hydra:
   output_subdir: null  
   run:  
     dir: .
+
 ### add global default parameter values below
 dataset:
   # metadata source directory
@@ -18,19 +19,24 @@ dataset:
   # whether to save the final pre-processed tables (only relevant if save_intermediate is False)
   save_final: True
   # which data to include in the pre-processing/analysis
+  # dims: ['2d', '3d']
   dims: ['2d']
   # strict behaviour for cleaner and checker 
   # strict=False leads to fewer patients dropped and possible data imputation later
   strict: False
 
 analysis:
-  # which segments to use data from (global, aha or roi)
+  # which segments to use data from
+  # segments: ['global', 'aha', 'roi']
   segments: ['roi']
   # which axes to consider
+  # axes: ['long_axis', 'short_axis']
   axes: ['long_axis', 'short_axis']
   # which orientations to consider
+  # orientations: ['radial', 'circumf', 'longit']
   orientations: ['radial', 'circumf', 'longit']
   # which metrics to consider
+  # metrics: ['strain', 'strain_rate', 'displacement', 'velocity']
   metrics: ['strain']
   # whether to reduce data to peak values (i.e. lose time component)
   peak_values: True
@@ -41,13 +47,13 @@ analysis:
   # which column to use as label for exploration, feature reduction and analysis
   label: 'mace'
   # whether to overwrite merged data
-  overwrite: True
+  overwrite: False
   # whether to overwrite metadata 
   # (without performing entire merging process again - unless overwrite=True)
   update_metadata: False
   # which types of data exploration to perform (if any)
-  # exploration: ['correlation', 'pca', 'tsne']
-  exploration: ['pca']
+  # exploration: ['correlation', 'pca', 'tsne', 'umap']
+  exploration: ['correlation', 'pca', 'tsne', 'umap']
   # whether to remove outliers
   remove_outliers: False 
   # whether to investigate outliers
@@ -61,7 +67,8 @@ analysis:
   # whether to drop highly correlated features for further analysis
   drop_features: True
   # method to use for feature reduction
-  feature_reduction: null
+  # feature_reduction: 'forest'
+  feature_reduction: 'forest'
   # which metadata features to include
   metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',   # demographic
              'hxhtn', 'hxdm', 'dm_ja_nein', 'hxchol',   # medical history
