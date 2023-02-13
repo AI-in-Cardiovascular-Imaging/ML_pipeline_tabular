@@ -20,7 +20,7 @@ dataset:
 merge:
   impute: True  # impute missing data
   peak_values: True  # reduce data to peak values (i.e. lose time component)
-  overwrite: True  # overwrite merged data
+  overwrite: False  # overwrite merged data
   update_metadata: False  # overwrite metadata (without performing entire merging process again - unless overwrite=True)
 
 analysis:
@@ -33,10 +33,9 @@ analysis:
     target_label: 'mace'  # which column to use as label for exploration, feature reduction and analysis
 
   run:
-    seed: 545  # random seed
+    seed: 42  # random seed
     corr_thresh: 0.6  # threshold above which correlated features are removed
-    remove_outliers: False  # whether to remove outliers
-    investigate_outliers: False  # whether to investigate outliers
-    drop_features: True  # whether to drop highly correlated features for further analysis
-    feature_reduction: 'forest'  # 'forest'
-    exploration: [ 'correlation', 'pca', 'tsne', 'umap']  # ['correlation', 'pca', 'tsne', 'umap']
+    jobs: [
+      ['univariate_analysis'],
+      ['normalize', 'univariate_analysis'],
+    ]

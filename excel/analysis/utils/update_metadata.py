@@ -13,9 +13,9 @@ class UpdateMetadata:
         self.data = data
         self.config = config
         self.src = config.dataset.out_dir
-        self.experiment = config.experiment.name
-        self.mdata_src = config.dataset.mdata
-        self.metadata = config.experiment.metadata
+        self.experiment = config.analysis.experiment.name
+        self.mdata_src = config.dataset.mdata_src
+        self.metadata = config.analysis.experiment.metadata
 
     def __call__(self) -> pd.DataFrame:
         logger.info('Updating metadata as requested...')

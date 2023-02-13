@@ -11,7 +11,6 @@ import pandas as pd
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.utils.update_metadata import UpdateMetadata
 from excel.analysis.utils.exploration import ExploreData
-from excel.analysis.utils.helpers import normalise_data
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -27,8 +26,6 @@ class Analysis:
         self.impute = config.merge.impute
         self.overwrite = config.merge.overwrite
         self.update_metadata = config.merge.update_metadata
-        self.exploration = config.analysis.run.exploration
-        self.feature_reduction = config.analysis.run.feature_reduction
 
     def __call__(self) -> None:
         new_name = f'{self.experiment_name}_imputed' if self.impute else self.experiment_name
@@ -50,13 +47,8 @@ class Analysis:
             data = updater()
 
         data = data.set_index('subject')  # Use subject ID as index column
-
-        # Data exploration
-        if self.exploration or self.feature_reduction:
-            explorer = ExploreData(data, self.config)
-            explorer()
-        else:  # data is normalised during exploration, ensure same behaviour for exploration=[]
-            data = normalise_data(data, target_label=self.config.analysis.experiment.target_label)
+        explorer = ExploreData(data, self.config)
+        explorer()
 
 
 if __name__ == '__main__':

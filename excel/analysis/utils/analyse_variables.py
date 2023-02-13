@@ -16,7 +16,8 @@ def univariate_analysis(data: pd.DataFrame, out_dir: str, metadata: list, hue: s
     Perform univariate analysis (box plots and distributions)
     """
     # split data and metadata but keep hue column
-    metadata.remove(hue)
+    if hue in metadata:
+        metadata.remove(hue)
     to_analyse, _, _ = split_data(data, metadata, hue, remove_mdata=True)
 
     # box plot for each feature w.r.t. target_label
@@ -89,9 +90,9 @@ def feature_reduction(
     to_analyse: pd.DataFrame,
     out_dir: str,
     metadata: list,
-    method: str = 'forest',
+    method: str = '',
     seed: int = 0,
-    label: str = 'mace',
+    label: str = '',
 ):
     """
     Calculate feature importance and remove features with low importance
@@ -156,25 +157,30 @@ def feature_reduction(
 
 
 def detect_outliers(
-    data: pd.DataFrame, out_dir: str, whis: float, remove: bool, investigate: bool, metadata: list = []
+    data: pd.DataFrame,
+    out_dir: str,
+    remove: bool,
+    investigate: bool,
+    metadata: list = [],
+    whiskers: float = 1.5,
 ):
     """Detect outliers in the data, optionally removing or further investigating them
 
     Args:
         data (pd.DataFrame): data
-        whis (float, optional): determines reach of the whiskers. Defaults to 1.5 (matplotlib default)
+        whiskers (float, optional): determines reach of the whiskers. Defaults to 1.5 (matplotlib default)
         remove (bool, optional): whether to remove outliers. Defaults to True.
         investigate (bool, optional): whether to investigate outliers. Defaults to False.
     """
     # Split data and metadata
     mdata = data[metadata]
-    to_analyse = data.drop(metadata, axis=1)
+    to_analyse = data.drop(metadata, axis=1, errors='ignore')
 
     # Calculate quartiles, interquartile range and limits
     q1, q3 = np.percentile(to_analyse, [25, 75], axis=0)
     iqr = q3 - q1
-    lower_limit = q1 - whis * iqr
-    upper_limit = q3 + whis * iqr
+    lower_limit = q1 - whiskers * iqr
+    upper_limit = q3 + whiskers * iqr
     # logger.debug(f'\nlower limit: {lower_limit}\nupper limit: {upper_limit}')
 
     if investigate:

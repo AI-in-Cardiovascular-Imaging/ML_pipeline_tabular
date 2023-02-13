@@ -1,5 +1,5 @@
 import os
-
+from copy import deepcopy
 import pandas as pd
 
 
@@ -25,15 +25,15 @@ def save_tables(src, experiment_name, tables) -> None:
 
 def split_data(data: pd.DataFrame, metadata: list, hue: str, remove_mdata: bool = True):
     """Split data into data to analyse and hue data"""
-    to_analyse = data.copy(deep=True)
+    to_analyse = deepcopy(data)
     hue_df = to_analyse[hue]
     if remove_mdata:
-        to_analyse = to_analyse.drop(metadata, axis=1)
+        to_analyse = to_analyse.drop(metadata, axis=1, errors='ignore')
     suffix = 'no_mdata' if remove_mdata else 'with_mdata'
     return to_analyse, hue_df, suffix
 
 
-def normalise_data(data: pd.DataFrame, target_label: str) -> pd.DataFrame:
+def normalize_data(data: pd.DataFrame, target_label: str) -> pd.DataFrame:
     """Normalise data"""
     tmp = data[target_label]  # keep label col as is
     # data = (data - data.mean()) / data.std()
