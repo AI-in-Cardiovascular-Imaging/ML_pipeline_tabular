@@ -1,6 +1,8 @@
 import os
 from copy import deepcopy
 import pandas as pd
+from sklearn.feature_selection import VarianceThreshold
+from loguru import logger
 
 
 def merge_metadata(data, mdata_src, metadata) -> pd.DataFrame:
@@ -40,3 +42,20 @@ def normalize_data(data: pd.DataFrame, target_label: str) -> pd.DataFrame:
     data = data / data.sum()
     data[target_label] = tmp
     return data
+
+
+def variance_threshold(data: pd.DataFrame, label: str, thresh: float) -> pd.DataFrame:
+    tmp = data[label] # save label col
+    logger.debug(len(data.columns))
+    selector = VarianceThreshold(threshold=thresh*(1-thresh))
+    selector.fit(data)
+    data = data.loc[:, selector.get_support()]
+
+    logger.debug(len(data.columns))
+
+    if label not in data.columns: # ensure label col is kept
+        logger.warning(f'Target label {label} has variance below threshold {thresh}.')
+        data = pd.concat((data, tmp), axis=1)
+
+    return data
+
