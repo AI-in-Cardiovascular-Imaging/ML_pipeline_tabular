@@ -196,15 +196,8 @@ class MergeData:
             tables = tables[tables['redcap_id'].notna()]  # remove rows without redcap_id
             tables = tables.rename(columns={'redcap_id': 'subject'})
 
-            # remove any metadata columns containing less than thresh data
-            threshold = 0.9
-            tables = tables.dropna(axis=1, thresh=threshold * len(tables.index))
-
-            # remove these columns from the metadata list
-            self.metadata = [col for col in self.metadata if col in tables.columns]
-            self.config.analysis.experiment.metadata = self.metadata
-
-            if self.impute:  # impute missing metadata if desired
+            # Impute missing metadata if desired
+            if self.impute:
                 categorical = [col for col in self.metadata if col not in ['bmi']]
                 imputed_tables = self.impute_data(tables, categorical)
                 tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
@@ -221,8 +214,4 @@ class MergeData:
                 tables = tables.dropna(axis=0, how='any')
                 logger.debug(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
 
-            # Remove features containing the same value for all patients
-            nunique = tables.nunique()
-            cols_to_drop = nunique[nunique == 1].index
-            tables = tables.drop(cols_to_drop, axis=1)
         return tables
