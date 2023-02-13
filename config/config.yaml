@@ -1,3 +1,5 @@
+logging_level: 'INFO'  # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+
 defaults:
   - dataset: train
   - analysis/experiment: metadata
@@ -35,7 +37,9 @@ analysis:
   run:
     seed: 42  # random seed
     corr_thresh: 0.6  # threshold above which correlated features are removed
+    variance_thresh: 0.9  # threshold below which features are removed
     jobs: [
       ['univariate_analysis'],
       ['normalize', 'univariate_analysis'],
+      ['variance_threshold']
     ]

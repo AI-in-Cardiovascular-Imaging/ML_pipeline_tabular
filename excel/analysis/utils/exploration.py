@@ -10,7 +10,7 @@ from omegaconf import DictConfig
 
 from excel.analysis.utils import analyse_variables
 from excel.analysis.utils import dim_reduction
-from excel.analysis.utils.helpers import normalize_data
+from excel.analysis.utils.helpers import normalize_data, variance_threshold
 
 from types import FunctionType
 
@@ -22,6 +22,7 @@ class ExploreData:
         self.jobs = config.analysis.run.jobs
         self.seed = config.analysis.run.seed
         self.corr_thresh = config.analysis.run.corr_thresh
+        self.variance_thresh = config.analysis.run.variance_thresh
         self.metadata = config.analysis.experiment.metadata
         self.target_label = config.analysis.experiment.target_label
 
@@ -54,12 +55,12 @@ class ExploreData:
                     f'\nThe previous step does not seem to produce any output.'
                 )
                 return None, True
-            try:
-                data = getattr(self, step)(data)
-            except:
-                logger.warning(f'Error in step: {step} in {self.job_name}.')
+            # try:
+            data = getattr(self, step)(data)
+            # except:
+            #     logger.warning(f'Error in step: {step} in {self.job_name}.')
             return data, False
-        raise logger.error(f'Invalid step name: "{step}",\nvalid step names: {self.get_member_methods()}')
+        # raise logger.error(f'Invalid step name: "{step}",\nvalid step names: {self.get_member_methods()}')
 
     def remove_outliers(self, data):
         """Remove outliers from the data"""
@@ -106,6 +107,15 @@ class ExploreData:
     def normalize(self, data):
         """Normalise the data"""
         data = normalize_data(data, self.target_label)
+        return data
+
+    def variance_threshold(self, data):
+        """Perform variance threshold based feature selection on the data"""
+        data = variance_threshold(
+            data=data,
+            label=self.target_label,
+            thresh=self.variance_thresh,
+        )
         return data
 
     def pca(self, data):

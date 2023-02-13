@@ -3,6 +3,7 @@
 """
 
 import os
+import sys
 
 import hydra
 from loguru import logger
@@ -92,6 +93,8 @@ if __name__ == '__main__':
 
     @hydra.main(version_base=None, config_path='../../config', config_name='config')
     def main(config: DictConfig) -> None:
+        logger.remove()
+        logger.add(sys.stderr, level=config.logging_level)
         pre_processing = Preprocessing(config)
         pre_processing()
 

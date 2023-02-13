@@ -2,6 +2,7 @@
 """
 
 import os
+import sys
 
 import hydra
 from loguru import logger
@@ -11,7 +12,7 @@ import pandas as pd
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.utils.update_metadata import UpdateMetadata
 from excel.analysis.utils.exploration import ExploreData
-from excel.analysis.utils.helpers import normalise_data, variance_threshold
+from excel.analysis.utils.helpers import normalize_data, variance_threshold
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
@@ -48,7 +49,6 @@ class Analysis:
             data = updater()
 
         data = data.set_index('subject')  # Use subject ID as index column
-        # data = variance_threshold(data, self.config.analysis.label, self.config.analysis.variance_thresh)
         explorer = ExploreData(data, self.config)
         explorer()
 
@@ -57,6 +57,8 @@ if __name__ == '__main__':
 
     @hydra.main(version_base=None, config_path='../../config', config_name='config')
     def main(config: DictConfig) -> None:
+        logger.remove()
+        logger.add(sys.stderr, level=config.logging_level)
         analysis = Analysis(config)
         analysis()
 
