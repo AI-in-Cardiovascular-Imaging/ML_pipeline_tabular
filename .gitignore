@@ -89,5 +89,3 @@ poetry.lock
 outputs/
 
 *.pyc
-
-config/dataset/

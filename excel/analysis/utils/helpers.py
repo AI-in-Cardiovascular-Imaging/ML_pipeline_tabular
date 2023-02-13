@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 from sklearn.feature_selection import VarianceThreshold
+from loguru import logger
 
 
 def merge_metadata(data, mdata_src, metadata) -> pd.DataFrame:
