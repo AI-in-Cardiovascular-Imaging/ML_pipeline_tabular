@@ -1,0 +1,41 @@
+metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',   # demographic
+           'hxhtn', 'hxdm', 'dm_ja_nein', 'hxchol',   # medical history
+           'fhxcad___1', 'fhxcad___2', 'fhxcad___3', 'fhxcad___0',
+           'htxtobacco', 'packyears', 'smoking',
+           'baseline_no_prior_device', 'baseline_ppm', 'baseline_icd', 'baseline_s_icd',
+           'baseline_crt_d', 'baseline_pfo_asd_occlusion', 'baseline_laa_occlusion',
+           'baseline_valve_prostheses', 'baseline_no_comorbidity', 'baseline_af',
+           'baseline_other_arrhythmia', 'baseline_pah', 'baseline_hypertensive_cm',
+           'basline_osas', 'baseline_asthma', 'baseline_copd', 'baseline_active_cancer',
+           'baseline_stroke_tia', 'baseline_vascular_disease', 'baseline_depression',
+           'baseline_autoimmune_disease', 'baselie_prior_myocarditis', 'baseline_dcm',
+           'baseline_other', 'mace_before_cmr', 'baseline_chf_hosp_before_cmr',
+           'baseline_vt_before_cmr', 'baseline_copd_stage',
+           'baseline_meds_none', 'baseline_meds_ass', 'baseline_meds_ticagrelor',   # drugs
+           'baseline_meds_prasugrel', 'baseline_meds_clopidogrel', 'baseline_meds_oac',
+           'baseline_meds_aldosteron_ag', 'baseline_meds_diuretic', 'baseline_meds_betablocker',
+           'baseline_meds_calcium_ag', 'baseline_meds_ace', 'baseline_meds_at1_ag',
+           'baseline_meds_entresto', 'baseline_meds_statin', 'baseline_meds_ezetemibe',
+           'baseline_meds_pcsk9', 'baseline_meds_other_lipid_med', 'baseline_meds_metformin',
+           'baseline_meds_sglt2', 'baseline_meds_glp_1_ag', 'baseline_meds_insulin',
+           'baseline_meds_other_ad', 'baseline_meds_steroid', 'baseline_meds_immunosuppresant',
+           'baseline_meds_nitrates', 'baseline_meds_digitalis', 'baseline_meds_amiodaron',
+           'baseline_meds_checkpoint_inhib', 'immunosup',
+           'Diagn_type_base_or_fu', 'Diagn_sympt_none', 'Diagn_sympt_dyspnoea',   # symptoms
+           'Diagn_sympt_noc_dyspnoea', 'Diagn_sympt_orthopnoea', 'Diagn_sympt_exercise_intol',
+           'Diagn_sympt_edema', 'Diagn_sympt_palpitation', 'Diagn_sympt_syncope',
+           'Diagn_sympt_typ_ap', 'Diagn_sympt_atyp_chestpain', 'Diagn_sympt_any_chestpain',
+           'Diagn_sympt_card_arrest', 'Diagn_sympt_arrhythmia', 'Diagn_sympt_fatigue',
+           'Diagn_sympt_jointpain', 'Diagn_sympt_card_shock', 'Diagn_sympt_fever', 'Diagn_nyha',
+           'Diagn_nyha3or4', 'Diagn_nyha2or3or4', 'Diagn_sympt_onset_date',
+           'Diagn_sympt_duration_d', 'Diagn_setting_acute_subacute', 'Diagn_prior_infect',
+           'Diagn_prior_infect_type', 'Diagn_prior_infect_temp',
+           'Diagn_modality_none', 'Diagn_modality_echo', 'Diagn_modality_catheter',
+           'Diagn_modality_cct', 'Diagn_modality_emb', 'Diagn_modality_pet',
+           'Diagn_modality_stress_ecg', 'Diagn_modality_holter', 'Diagn_modality_other',
+           ]
+
+# metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',
+#            'MACE_any_chf_hosp', 'Time2chf', 'MACE_any_vt', 'TimetoVT', 'MACE_any_death',
+#            'Timeto_death', 'MACE_any_myo', 'Time2myo'
+#           ]

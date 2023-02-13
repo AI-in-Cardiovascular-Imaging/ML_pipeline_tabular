@@ -2,6 +2,7 @@
 """
 
 import os
+from copy import deepcopy
 
 from loguru import logger
 import matplotlib.pyplot as plt
@@ -13,6 +14,7 @@ from umap import UMAP
 
 from excel.analysis.utils.helpers import split_data
 
+
 def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
     """Perform Principal Component Analysis (PCA)
 
@@ -22,15 +24,12 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
         metadata (list): list of metadata column names
         seed (int): random seed
     """
-    to_analyse = data.copy(deep=True)
+    to_analyse = deepcopy(data)
     # OPT: could be removed (at least for impute=True)
     to_analyse = to_analyse.dropna(how='any')  # drop rows containing any NaN values
-    # Split data and metadata
-    to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=False)
+    to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=False)  # split data and metadata
     to_analyse = to_analyse.drop(hue, axis=1)
-
-    # Perform PCA
-    pca = PCA(n_components=4, random_state=seed)
+    pca = PCA(n_components=4, random_state=seed)  # perform PCA
     analysis = pca.fit_transform(to_analyse)
     analysis = pd.DataFrame(analysis, index=to_analyse.index, columns=['pc_1', 'pc_2', 'pc_3', 'pc_4'])
     analysis = pd.concat((analysis, hue_df), axis=1)
@@ -38,7 +37,6 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
     logger.info(f'Variance explained: {explained_var} for {len(analysis.index)} subjects ({suffix}).')
     # logger.info(f'\n{abs(pca.components_)}')
 
-    # Plot the transformed dataset
     sns.lmplot(
         data=analysis,
         x='pc_1',
@@ -58,7 +56,6 @@ def pca(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
     plt.clf()
 
 
-
 def tsne(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
     """Perform t-SNE dimensionality reduction and visualisation
 
@@ -70,24 +67,17 @@ def tsne(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, seed: int):
     """
     to_analyse = data.copy(deep=True)
     to_analyse = to_analyse.dropna(how='any')  # drop rows containing any NaN values
-
     to_analyse, hue_df, suffix = split_data(to_analyse, metadata, hue, remove_mdata=False)
     to_analyse = to_analyse.drop(hue, axis=1)
+    perplexities = [5, 15, 30, 50]  # perplexities to test
 
-    # Perform t-SNE for different perplexities
-    perplexities = [5, 15, 30, 50]
-
-    for perp in perplexities:
-        # Calculate t-SNE for given perplexity
+    for perp in perplexities:  # perform t-SNE for different perplexities
         tsne = TSNE(n_components=2, perplexity=perp, random_state=seed)
         analysis = tsne.fit_transform(to_analyse)
         analysis = pd.DataFrame(analysis, index=to_analyse.index, columns=['tsne_1', 'tsne_2'])
         analysis = pd.concat((analysis, hue_df), axis=1)
 
-        # Plot the transformed dataset
-        sns.lmplot(
-            data=analysis, x='tsne_1', y='tsne_2', hue=hue, fit_reg=False, legend=True, scatter_kws={'s': 20}
-        )
+        sns.lmplot(data=analysis, x='tsne_1', y='tsne_2', hue=hue, fit_reg=False, legend=True, scatter_kws={'s': 20})
         plt.title(f't-SNE for perplexity {perp}')
         plt.savefig(os.path.join(out_dir, f'TSNE_{suffix}_perp_{perp}.pdf'), bbox_inches='tight')
         plt.clf()

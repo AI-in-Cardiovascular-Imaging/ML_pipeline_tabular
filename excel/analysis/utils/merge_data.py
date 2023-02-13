@@ -5,9 +5,8 @@ import os
 
 from loguru import logger
 import pandas as pd
-import numpy as np
 from omegaconf import DictConfig
-from sklearn.experimental import enable_iterative_imputer
+from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
 from sklearn.impute import SimpleImputer, IterativeImputer
 
 from excel.global_helpers import checked_dir
@@ -22,25 +21,24 @@ class MergeData:
         self.src = config.dataset.out_dir
         dir_name = checked_dir(config.dataset.dims, config.dataset.strict)
         self.checked_src = os.path.join(config.dataset.out_dir, '4_checked', dir_name)
-        self.experiment = config.analysis.experiment
-        self.label = config.analysis.label
         self.dims = config.dataset.dims
-        self.axes = config.analysis.axes
-        self.orientations = config.analysis.orientations
-        self.metrics = config.analysis.metrics
-        self.impute = config.analysis.impute
-        self.peak_values = config.analysis.peak_values
-        self.metadata = config.analysis.metadata
+        self.impute = config.merge.impute
+        self.peak_values = config.merge.peak_values
         self.mdata_src = config.dataset.mdata_src
-        self.seed = config.analysis.seed
-        self.segments = config.analysis.segments
+        self.target_label = config.analysis.experiment.target_label
+        self.experiment_name = config.analysis.experiment.name
+        self.axes = config.analysis.experiment.axes
+        self.orientations = config.analysis.experiment.orientations
+        self.metrics = config.analysis.experiment.metrics
+        self.metadata = config.analysis.experiment.metadata
+        self.seed = config.analysis.run.seed
+        self.segments = config.analysis.experiment.segments
 
-        # Always want subject IDs and label
-        if self.metadata:
-            to_add = ['redcap_id', 'pat_id', self.label]
+        if self.metadata:  # always want subject IDs and label
+            to_add = ['redcap_id', 'pat_id', self.target_label]
             self.metadata.extend([col for col in to_add if col not in self.metadata])
         else:
-            self.metadata = [self.label]
+            self.metadata = [self.target_label]
 
         self.relevant = []
         self.table_name = None
@@ -48,11 +46,9 @@ class MergeData:
     def __call__(self) -> None:
         logger.info('Merging data according to config parameters...')
         tables_list = []
-        # Identify relevant tables w.r.t. input parameters
-        self.identify_tables()
-        # Parse source directory to read in relevant tables
+        self.identify_tables()  # identify relevant tables w.r.t. input parameters
         subjects = os.listdir(self.checked_src)
-        for subject in subjects:
+        for subject in subjects:  # loop over subjects
             self.col_names = []  # OPT: not necessary for each patient
             self.subject_data = pd.Series(dtype='float64')
             for table in self.loop_files(subject):
@@ -66,23 +62,20 @@ class MergeData:
 
         # Build DataFrame from list (each row represents a subject)
         tables = pd.DataFrame(tables_list, index=subjects, columns=self.col_names)
-        # Add a subject column and reset index
-        tables = tables.rename_axis('subject').reset_index()
+        tables = tables.rename_axis('subject').reset_index()  # add a subject column and reset index
         tables['subject'] = tables['subject'].astype(int)
 
-        # Data imputation (merged data)
-        if self.impute:
+        if self.impute:  # data imputation (merged data)
             imputed_tables = self.impute_data(tables)
             tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
         else:  # remove patients with any NaN values
             tables = tables.dropna(axis=0, how='any')
 
-        if self.metadata: # read and clean metadata
+        if self.metadata:  # read and clean metadata
             tables = self.add_metadata(tables)
 
-        # Save the tables for analysis
-        tables = tables.sort_values(by='subject')
-        save_tables(src=self.src, experiment=self.experiment, tables=tables)
+        tables = tables.sort_values(by='subject')  # save the tables for analysis
+        save_tables(src=self.src, experiment_name=self.experiment_name, tables=tables)
 
     def __del__(self) -> None:
         logger.info('Data merging finished.')
@@ -92,7 +85,6 @@ class MergeData:
             for dim in self.dims:
                 for axis in self.axes:
                     for orientation in self.orientations:
-                        # Skip impossible or imprecise combinations
                         if (
                             axis == 'short_axis'
                             and orientation == 'longit'
@@ -101,7 +93,7 @@ class MergeData:
                             or axis == 'long_axis'
                             and orientation == 'radial'
                         ):
-                            continue
+                            continue  # skip impossible or imprecise combinations
 
                         for metric in self.metrics:
                             self.relevant.append(f'{segment}_{dim}_{axis}_{orientation}_{metric}')
@@ -110,7 +102,7 @@ class MergeData:
         for root, _, files in os.walk(os.path.join(self.checked_src, subject)):
             files.sort()  # sort files for consistent order of cols among subjects
             for file in files:
-                # Consider only relevant tables
+                # consider only relevant tables
                 for table_name in self.relevant:
                     if file.endswith('.xlsx') and f'{table_name}_(' in file:
                         # logger.info(f'Relevant table {table_name} found for subject {subject}.')
@@ -120,48 +112,38 @@ class MergeData:
                         yield table
 
     def remove_time(self, table) -> pd.DataFrame:
+        """Remove time columns from ROI analysis tables"""
         return table[table.columns.drop(list(table.filter(regex='time')))]
 
     def extract_peak_values(self, table) -> None:
-        # AHA data contain one info col, ROI data contains two info cols
-        info_cols = 1 if 'aha' in self.table_name else 2
+        """Extract peak values from ROI analysis tables"""
+        info_cols = 1 if 'aha' in self.table_name else 2  # AHA data got one info col, ROI data got two info cols
 
-        # Ensure consistent naming between short and long axis
-        if 'long_axis' in self.table_name:
+        if 'long_axis' in self.table_name:  # ensure consistent naming between short and long axis
             table = table.rename(columns={'series, slice': 'slice'})
 
-        # ROI analysis
-        if 'roi' in self.table_name:
-            # Remove slice-wise global rows
+        if 'roi' in self.table_name:  # ROI analysis, remove slice-wise global rows and  keep only global, endo, epi ROI
             table = table.drop(table[(table.roi == 'global') & (table.slice != 'all slices')].index)
-            # Keep only global, endo, epi ROI
             to_keep = ['global', 'endo', 'epi']
             table = table[table.roi.str.contains('|'.join(to_keep)) == True]
 
-        # Data imputation (table-wise)
-        if self.impute:
+        if self.impute:  # data imputation (table-wise)
             table.iloc[:, info_cols:] = self.impute_data(table.iloc[:, info_cols:], categorical=[])
         # else: # remove patients with any NaN values
         #     table = table.dropna(axis=0, how='any')
 
         # Circumferential and longitudinal strain and strain rate peak at minimum value
         if 'strain' in self.table_name and ('circumf' in self.table_name or 'longit' in self.table_name):
-            # Compute peak values over sample cols
-            peak = table.iloc[:, info_cols:].min(axis=1, skipna=True)
-
+            peak = table.iloc[:, info_cols:].min(axis=1, skipna=True)  # compute peak values over sample cols
         else:
             peak = table.iloc[:, info_cols:].max(axis=1, skipna=True)
 
-        # Concat peak values to info cols
-        table = pd.concat([table.iloc[:, :info_cols], peak], axis=1)
+        table = pd.concat([table.iloc[:, :info_cols], peak], axis=1)  # concat peak values to info cols
 
-        # ROI analysis -> group by global/endo/epi
-        if 'roi' in self.table_name:
-            # Remove slice-wise global rows
-            table = table.groupby(by='roi', sort=False).agg('mean', numeric_only=True)
+        if 'roi' in self.table_name:  # ROI analysis -> group by global/endo/epi
+            table = table.groupby(by='roi', sort=False).agg('mean', numeric_only=True)  # remove slice-wise global rows
 
-        # Store column names for later
-        col_names = []
+        col_names = []  # store column names for later
         for segment in to_keep:
             orientation = [o for o in self.orientations if o in self.table_name][0]
             metric = [m for m in self.metrics if m in self.table_name][0]
@@ -171,6 +153,7 @@ class MergeData:
         self.subject_data = pd.concat((self.subject_data, pd.Series(list(table.iloc[:, 0]), index=col_names)), axis=0)
 
     def impute_data(self, table: pd.DataFrame, categorical: list = []):
+        """Impute missing values in table"""
         cat_imputer = SimpleImputer(strategy='most_frequent')
         for col in categorical:
             try:
@@ -186,6 +169,7 @@ class MergeData:
         return table
 
     def add_metadata(self, tables):
+        """Add metadata to tables"""
         try:
             mdata = pd.read_excel(self.mdata_src)
         except FileNotFoundError:
@@ -194,39 +178,38 @@ class MergeData:
 
         if mdata is not None:
             mdata = mdata[self.metadata]
-            # Clean some errors in metadata
+            # clean some errors in metadata
             if 'mace' in self.metadata:
                 mdata[mdata['mace'] == 999] = 0
             if 'fhxcad___1' in self.metadata:
                 mdata.loc[~mdata['fhxcad___1'].isin([0, 1]), 'fhxcad___1'] = 0
 
-            # Clean subject IDs
+            # clean subject IDs
             mdata['pat_id'].fillna(mdata['redcap_id'], inplace=True)  # patients without pat_id get redcap_id
             mdata = mdata[mdata['pat_id'].notna()]  # remove rows without pat_id and redcap_id
             mdata = mdata.rename(columns={'pat_id': 'subject'})
             mdata['subject'] = mdata['subject'].astype(int)
 
-            # Merge the cvi42 data with available metadata
+            # merge the cvi42 data with available metadata
             tables = tables.merge(mdata, how='left', on='subject')
             tables = tables.drop('subject', axis=1)  # use redcap_id as subject id
             tables = tables[tables['redcap_id'].notna()]  # remove rows without redcap_id
             tables = tables.rename(columns={'redcap_id': 'subject'})
 
-            # Remove any metadata columns containing less than thresh data
-            # threshold = 0.9
-            # tables = tables.dropna(axis=1, thresh=threshold * len(tables.index))
+            # remove any metadata columns containing less than thresh data
+            threshold = 0.9
+            tables = tables.dropna(axis=1, thresh=threshold * len(tables.index))
 
-            # Remove these columns from the metadata list
+            # remove these columns from the metadata list
             self.metadata = [col for col in self.metadata if col in tables.columns]
-            self.config.analysis.metadata = self.metadata
+            self.config.analysis.experiment.metadata = self.metadata
 
-            # Impute missing metadata if desired
-            if self.impute:
+            if self.impute:  # impute missing metadata if desired
                 categorical = [col for col in self.metadata if col not in ['bmi']]
                 imputed_tables = self.impute_data(tables, categorical)
                 tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
 
-                # Convert integer cols explicitly to int
+                # convert integer cols explicitly to int
                 int_cols = ['age']
                 for col in int_cols:
                     try:
@@ -239,8 +222,7 @@ class MergeData:
                 logger.debug(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
 
             # Remove features containing the same value for all patients
-            # nunique = tables.nunique()
-            # cols_to_drop = nunique[nunique == 1].index
-            # tables = tables.drop(cols_to_drop, axis=1)
-
+            nunique = tables.nunique()
+            cols_to_drop = nunique[nunique == 1].index
+            tables = tables.drop(cols_to_drop, axis=1)
         return tables

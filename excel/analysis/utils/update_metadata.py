@@ -20,11 +20,8 @@ class UpdateMetadata:
     def __call__(self) -> pd.DataFrame:
         logger.info('Updating metadata as requested...')
         if self.experiment == 'layer_analysis':
-            # Keep the first 10 cols, the rest are old metadata
-            self.data = self.data.iloc[:, :10]
-        # Merge the cvi42 data with the new metadata
-        self.data = merge_metadata(self.data, self.mdata_src, self.metadata)
-        # Save the new data table for analysis
+            self.data = self.data.iloc[:, :10]  # Keep the first 10 cols, the rest are old metadata
+        self.data = merge_metadata(self.data, self.mdata_src, self.metadata)  # Merge cvi42 data with new metadata
         save_tables(self.src, self.experiment, self.data)
         return self.data
 

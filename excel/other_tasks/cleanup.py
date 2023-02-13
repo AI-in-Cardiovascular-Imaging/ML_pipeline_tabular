@@ -2,7 +2,6 @@ import os
 
 import hydra
 from omegaconf import DictConfig
-from loguru import logger
 import pandas as pd
 import numpy as np
 from functools import reduce
@@ -42,7 +41,6 @@ def cleanup(config: DictConfig) -> None:
 
         data.columns = ['{}{}'.format(c, '' if c in merge_on else f'_{key}') for c in data.columns]
         dataframes.append(data)
-
         # Write data to new excel file
         data.to_excel(writer, sheet_name=key, index=False)
 
@@ -55,10 +53,10 @@ def cleanup(config: DictConfig) -> None:
 
 
 def highlight_cols(col: pd.Series, suffixes: list, colors: list) -> str:
+    """Highlight columns based on suffixes"""
     for i, suffix in enumerate(suffixes):
         if suffix in col.name:
             return [f'background-color: {colors[i]}'] * (len(col) - 1)
-
     return [''] * (len(col) - 1)
 
 

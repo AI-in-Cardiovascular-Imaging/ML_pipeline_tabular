@@ -11,17 +11,17 @@ from sklearn.inspection import permutation_importance
 from excel.analysis.utils.helpers import save_tables, split_data
 
 
-def univariate_analysis(data: pd.DataFrame, out_dir: str, metadata: list, hue: str, whis: float):
+def univariate_analysis(data: pd.DataFrame, out_dir: str, metadata: list, hue: str):
     """
     Perform univariate analysis (box plots and distributions)
     """
-    # Split data and metadata but keep hue column
+    # split data and metadata but keep hue column
     metadata.remove(hue)
     to_analyse, _, _ = split_data(data, metadata, hue, remove_mdata=True)
 
-    # Box plot for each feature w.r.t. MACE
+    # box plot for each feature w.r.t. target_label
     data_long = to_analyse.melt(id_vars=[hue])
-    sns.boxplot(data=data_long, x='value', y='variable', hue=hue, orient='h', meanline=True, showmeans=True, whis=whis)
+    sns.boxplot(data=data_long, x='value', y='variable', hue=hue, orient='h', meanline=True, showmeans=True)
     plt.axvline(x=0, alpha=0.7, color='grey', linestyle='--')
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, f'box_plot_{hue}.pdf'))
@@ -29,14 +29,14 @@ def univariate_analysis(data: pd.DataFrame, out_dir: str, metadata: list, hue: s
 
     to_analyse = to_analyse.drop(hue, axis=1)  # now remove hue column
 
-    # Box plot for each feature
-    sns.boxplot(data=to_analyse, orient='h', meanline=True, showmeans=True, whis=whis)
+    # box plot for each feature
+    sns.boxplot(data=to_analyse, orient='h', meanline=True, showmeans=True, whis=1.5)
     plt.axvline(x=0, alpha=0.7, color='grey', linestyle='--')
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, 'box_plot.pdf'))
     plt.clf()
 
-    # Plot distribution for each feature
+    # plot distribution for each feature
     sns.displot(data=to_analyse, kind='kde')
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, 'dis_plot.pdf'))
@@ -63,8 +63,7 @@ def correlation(
     """
     matrix = to_analyse.corr(method=method).round(2)
 
-    # Feature selection
-    if drop_features:
+    if drop_features:  # remove highly correlated features
         abs_corr = matrix.abs()
         upper_tri = abs_corr.where(np.triu(np.ones(abs_corr.shape), k=1).astype(bool))
         cols_to_drop = [col for col in upper_tri.columns if any(upper_tri[col] > corr_thresh)]
@@ -76,7 +75,7 @@ def correlation(
         )
         matrix = to_analyse.corr(method=method).round(2)
 
-    # Plot correlation heatmap
+    # plot correlation heatmap
     plt.figure(figsize=(50, 50))
     sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
     plt.xticks(rotation=90)
@@ -87,10 +86,17 @@ def correlation(
 
 
 def feature_reduction(
-    to_analyse: pd.DataFrame, out_dir: str, metadata: list, method: str = 'forest', seed: int = 0, label: str = 'mace'
+    to_analyse: pd.DataFrame,
+    out_dir: str,
+    metadata: list,
+    method: str = 'forest',
+    seed: int = 0,
+    label: str = 'mace',
 ):
+    """
+    Calculate feature importance and remove features with low importance
+    """
     if method == 'forest':
-        # Calculate feature importance using random forests and mean decrease in impurity
         forest = RandomForestClassifier(random_state=seed)
         X = to_analyse.drop(label, axis=1)
         y = to_analyse[label]
@@ -99,12 +105,10 @@ def feature_reduction(
         std = pd.Series(np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0), index=X.columns)
 
         # Calculate feature importance using random forests and feature permutation
-        result = permutation_importance(
-            forest, X, y, n_repeats=10, random_state=seed, n_jobs=2
-        )
+        result = permutation_importance(forest, X, y, n_repeats=10, random_state=seed, n_jobs=2)
         perm_importances = pd.Series(result.importances_mean, index=X.columns)
         perm_std = pd.Series(result.importances_std, index=X.columns)
-        
+
         # Remove features with low importance
         to_keep = 20
         importances = importances.nlargest(n=to_keep, keep='all')
@@ -148,7 +152,6 @@ def feature_reduction(
         fig.tight_layout()
         plt.savefig(os.path.join(out_dir, 'heatmap_after_reduction.pdf'))
         plt.clf()
-
     return to_analyse, metadata
 
 
@@ -174,7 +177,6 @@ def detect_outliers(
     upper_limit = q3 + whis * iqr
     # logger.debug(f'\nlower limit: {lower_limit}\nupper limit: {upper_limit}')
 
-    # Investigation
     if investigate:
         high_data = to_analyse.copy(deep=True)
         # Remove rows without outliers
@@ -188,7 +190,6 @@ def detect_outliers(
             lambda _: highlight(df=high_data, lower_limit=lower_limit, upper_limit=upper_limit), axis=None
         ).to_excel(os.path.join(out_dir, 'investigate_outliers.xlsx'), index=True)
 
-    # Removal
     if remove:
         to_analyse = to_analyse.mask(to_analyse.le(lower_limit) | to_analyse.ge(upper_limit))
         to_analyse.to_excel(os.path.join(out_dir, 'outliers_removed.xlsx'), index=True)
@@ -202,14 +203,12 @@ def detect_outliers(
 
 
 def highlight(df: pd.DataFrame, lower_limit: np.array, upper_limit: np.array):
+    """Highlight outliers in a dataframe"""
     style_df = pd.DataFrame('', index=df.index, columns=df.columns)
     mask = pd.concat(
         [~df.iloc[:, i].between(lower_limit[i], upper_limit[i], inclusive='neither') for i in range(lower_limit.size)],
         axis=1,
     )
     style_df = style_df.mask(mask, 'background-color: red')
-
-    # Uncolor metadata
-    style_df.iloc[:, lower_limit.size :] = ''
-
+    style_df.iloc[:, lower_limit.size :] = ''  # uncolor metadata
     return style_df

@@ -23,16 +23,17 @@ class Analysis:
     def __init__(self, config: DictConfig) -> None:
         self.config = config
         self.src_dir = config.dataset.out_dir
-        self.experiment = config.analysis.experiment
-        self.impute = config.analysis.impute
-        self.overwrite = config.analysis.overwrite
-        self.update_metadata = config.analysis.update_metadata
-        self.exploration = config.analysis.exploration
-        self.feature_reduction = config.analysis.feature_reduction
+        self.experiment_name = config.analysis.experiment.name
+        self.impute = config.merge.impute
+        self.overwrite = config.merge.overwrite
+        self.update_metadata = config.merge.update_metadata
+        self.exploration = config.analysis.run.exploration
+        self.feature_reduction = config.analysis.run.feature_reduction
 
     def __call__(self) -> None:
-        self.config.analysis.experiment = f'{self.experiment}_imputed' if self.impute else self.experiment
-        merged_path = os.path.join(self.src_dir, '5_merged', f'{self.config.analysis.experiment}.xlsx')
+        new_name = f'{self.experiment_name}_imputed' if self.impute else self.experiment_name
+        merged_path = os.path.join(self.src_dir, '5_merged', f'{new_name}.xlsx')
+        self.config.analysis.experiment.name = new_name
 
         # Data merging
         if os.path.isfile(merged_path) and not self.overwrite:
@@ -54,8 +55,8 @@ class Analysis:
         if self.exploration or self.feature_reduction:
             explorer = ExploreData(data, self.config)
             explorer()
-        else: # data is normalised during exploration, ensure same behaviour for exploration=[]
-            data = normalise_data(data, label=self.config.analysis.label)
+        else:  # data is normalised during exploration, ensure same behaviour for exploration=[]
+            data = normalise_data(data, target_label=self.config.analysis.experiment.target_label)
 
 
 if __name__ == '__main__':

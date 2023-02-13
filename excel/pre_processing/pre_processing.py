@@ -38,7 +38,6 @@ class Preprocessing:
         # additionally removes any colour formatting
         sheets = {}
         for src_file in os.listdir(self.src_dir):
-            # for src_file in [os.path.join(src_dir, 'D. Strain_v3b_FlamBer_61-120.xlsx')]:
             if src_file.endswith('.xlsx') and not src_file.startswith('.'):
                 logger.info(f'File -> {src_file}')
                 workbook_2_sheets = ExtractWorkbook2Sheets(
@@ -86,7 +85,6 @@ class Preprocessing:
                 # Save final pre-processed tables (only relevant if save_intermediate=False)
                 if not self.save_intermediate and self.save_final:
                     saver = SaveTables(dst=dst, tables=complete_tables)
-
                     saver()
 
 
