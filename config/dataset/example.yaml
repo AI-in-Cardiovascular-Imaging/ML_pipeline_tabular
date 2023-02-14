@@ -1,0 +1,3 @@
+raw_dir: '/path/to/raw/dir'
+out_dir: '/path/to/out/dir'
+mdata_src: '/path/to/metadata/source/Final_Regional_Database_reduced.xlsx'  # metadata source directory
