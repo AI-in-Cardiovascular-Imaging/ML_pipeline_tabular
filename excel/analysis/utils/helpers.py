@@ -35,7 +35,7 @@ def split_data(data: pd.DataFrame, metadata: list, hue: str, remove_mdata: bool 
     return to_analyse, hue_df, suffix
 
 
-def normalize_data(data: pd.DataFrame, target_label: str) -> pd.DataFrame:
+def normalise_data(data: pd.DataFrame, target_label: str) -> pd.DataFrame:
     """Normalise data"""
     tmp = data[target_label]  # keep label col as is
     # data = (data - data.mean()) / data.std()
@@ -47,12 +47,9 @@ def normalize_data(data: pd.DataFrame, target_label: str) -> pd.DataFrame:
 def variance_threshold(data: pd.DataFrame, label: str, thresh: float) -> pd.DataFrame:
     """Remove features with variance below threshold"""
     tmp = data[label]  # save label col
-    logger.debug(len(data.columns))
     selector = VarianceThreshold(threshold=thresh * (1 - thresh))
     selector.fit(data)
     data = data.loc[:, selector.get_support()]
-
-    logger.debug(len(data.columns))
 
     if label not in data.columns:  # ensure label col is kept
         logger.warning(f'Target label {label} has variance below threshold {thresh}.')

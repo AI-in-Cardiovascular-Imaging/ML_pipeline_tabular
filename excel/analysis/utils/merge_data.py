@@ -154,7 +154,7 @@ class MergeData:
 
     def impute_data(self, table: pd.DataFrame, categorical: list = []):
         """Impute missing values in table"""
-        cat_imputer = SimpleImputer(strategy='most_frequent')
+        cat_imputer = SimpleImputer(strategy='most_frequent', keep_empty_features=True)
         for col in categorical:
             try:
                 table[col] = cat_imputer.fit_transform(table[[col]])
@@ -213,5 +213,11 @@ class MergeData:
                 logger.debug(f'Number of patients before dropping NaN metadata: {len(tables.index)}')
                 tables = tables.dropna(axis=0, how='any')
                 logger.debug(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
+
+            # Remove features containing the same value for all patients
+            nunique = tables.nunique()
+            cols_to_drop = nunique[nunique == 1].index
+            tables = tables.drop(cols_to_drop, axis=1)
+
 
         return tables

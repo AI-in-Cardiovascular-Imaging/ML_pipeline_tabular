@@ -12,7 +12,7 @@ import pandas as pd
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.utils.update_metadata import UpdateMetadata
 from excel.analysis.utils.exploration import ExploreData
-from excel.analysis.utils.helpers import normalize_data, variance_threshold
+from excel.analysis.utils.helpers import normalise_data, variance_threshold
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)

@@ -10,7 +10,7 @@ from omegaconf import DictConfig
 
 from excel.analysis.utils import analyse_variables
 from excel.analysis.utils import dim_reduction
-from excel.analysis.utils.helpers import normalize_data, variance_threshold
+from excel.analysis.utils.helpers import normalise_data, variance_threshold
 
 from types import FunctionType
 
@@ -104,9 +104,9 @@ class ExploreData:
         )
         return data
 
-    def normalize(self, data):
+    def normalise(self, data):
         """Normalise the data"""
-        data = normalize_data(data, self.target_label)
+        data = normalise_data(data, self.target_label)
         return data
 
     def variance_threshold(self, data):
