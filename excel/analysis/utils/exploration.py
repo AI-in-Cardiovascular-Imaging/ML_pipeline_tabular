@@ -153,8 +153,6 @@ class ExploreData:
 
     def forest(self, data):
         """Perform forest based feature selection on the data"""
-        x = 1 / 0
-        print(x)
         data, _ = analyse_variables.feature_reduction(
             to_analyse=data,
             out_dir=self.job_dir,

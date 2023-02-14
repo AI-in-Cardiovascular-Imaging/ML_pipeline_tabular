@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import permutation_importance
+from sklearn.feature_selection import RFECV
 
 from excel.analysis.utils.helpers import save_tables, split_data
 
@@ -98,61 +99,74 @@ def feature_reduction(
     Calculate feature importance and remove features with low importance
     """
     if method == 'forest':
-        forest = RandomForestClassifier(random_state=seed)
-        X = to_analyse.drop(label, axis=1)
-        y = to_analyse[label]
-        forest.fit(X, y)
-        importances = pd.Series(forest.feature_importances_, index=X.columns)
-        std = pd.Series(np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0), index=X.columns)
+        estimator = RandomForestClassifier(random_state=seed)
+    else:
+        logger.error(
+            f'Your requested feature reduction method {method} has not yet been implemented.\n'
+            'Available methods: forest'
+        )
 
-        # Calculate feature importance using random forests and feature permutation
-        result = permutation_importance(forest, X, y, n_repeats=10, random_state=seed, n_jobs=2)
-        perm_importances = pd.Series(result.importances_mean, index=X.columns)
-        perm_std = pd.Series(result.importances_std, index=X.columns)
+    X = to_analyse.drop(label, axis=1)  # split data
+    y = to_analyse[label]
 
-        # Remove features with low importance
-        to_keep = 20
-        importances = importances.nlargest(n=to_keep, keep='all')
-        std = std[importances.index]
-        perm_importances = perm_importances.nlargest(n=to_keep, keep='all')
-        perm_std = perm_std[importances.index]
-        to_analyse = to_analyse[importances.index.union([label], sort=False)]
-        metadata = [col for col in metadata if col in importances.index.union([label], sort=False)]
+    min_features = 1
+    selector = RFECV(
+        estimator=estimator, step=1, min_features_to_select=min_features, scoring='average_precision', n_jobs=4
+    )
+    selector.fit(X, y)
 
-        # Plot importances
-        fig, ax = plt.subplots()
-        importances.plot.bar(yerr=std, ax=ax)
-        ax.set_title("Feature importances using mean decrease in impurity")
-        ax.set_ylabel("Mean decrease in impurity")
-        fig.tight_layout()
-        plt.savefig(os.path.join(out_dir, 'feature_importance_impurity.pdf'))
-        plt.clf()
+    logger.info(f'Optimal number of features: {selector.n_features_}')
 
-        fig, ax = plt.subplots()
-        perm_importances.plot.bar(yerr=perm_std, ax=ax)
-        ax.set_title("Feature importances using feature permutation")
-        ax.set_ylabel("Mean accuraccy decrease")
-        fig.tight_layout()
-        plt.savefig(os.path.join(out_dir, 'feature_importance_permutation.pdf'))
-        plt.clf()
+    n_scores = len(selector.cv_results_["mean_test_score"])
+    plt.figure()
+    plt.xlabel("Number of features selected")
+    plt.ylabel("Mean average precision")
+    plt.xticks(range(min_features, n_scores+1))
+    plt.grid()
+    plt.errorbar(
+        range(min_features, n_scores + min_features),
+        selector.cv_results_["mean_test_score"],
+        yerr=selector.cv_results_["std_test_score"],
+    )
+    plt.title("Recursive Feature Elimination")
+    plt.savefig(os.path.join(out_dir, 'RFECV.pdf'))
+    plt.clf()
 
-        # Plot correlation heatmap
-        figsize = to_keep * 1.5
-        matrix = to_analyse.corr(method='pearson').round(2)
-        plt.figure(figsize=(figsize, figsize))
-        sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
-        plt.xticks(rotation=90)
-        fig.tight_layout()
-        plt.savefig(os.path.join(out_dir, 'corr_plot_after_reduction.pdf'))
-        plt.clf()
+    # Plot importances
+    # fig, ax = plt.subplots()
+    # importances.plot.bar(yerr=std, ax=ax)
+    # ax.set_title("Feature importances using mean decrease in impurity")
+    # ax.set_ylabel("Mean decrease in impurity")
+    # fig.tight_layout()
+    # plt.savefig(os.path.join(out_dir, 'feature_importance_impurity.pdf'))
+    # plt.clf()
 
-        # Plot patient/feature value heatmap
-        plt.figure(figsize=(figsize, figsize))
-        sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
-        plt.xticks(rotation=90)
-        fig.tight_layout()
-        plt.savefig(os.path.join(out_dir, 'heatmap_after_reduction.pdf'))
-        plt.clf()
+    # fig, ax = plt.subplots()
+    # perm_importances.plot.bar(yerr=perm_std, ax=ax)
+    # ax.set_title("Feature importances using feature permutation")
+    # ax.set_ylabel("Mean accuraccy decrease")
+    # fig.tight_layout()
+    # plt.savefig(os.path.join(out_dir, 'feature_importance_permutation.pdf'))
+    # plt.clf()
+
+    # Plot correlation heatmap
+    # figsize = to_keep * 1.5
+    # matrix = to_analyse.corr(method='pearson').round(2)
+    # plt.figure(figsize=(figsize, figsize))
+    # sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
+    # plt.xticks(rotation=90)
+    # fig.tight_layout()
+    # plt.savefig(os.path.join(out_dir, 'corr_plot_after_reduction.pdf'))
+    # plt.clf()
+
+    # Plot patient/feature value heatmap
+    # plt.figure(figsize=(figsize, figsize))
+    # sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
+    # plt.xticks(rotation=90)
+    # fig.tight_layout()
+    # plt.savefig(os.path.join(out_dir, 'heatmap_after_reduction.pdf'))
+    # plt.clf()
+
     return to_analyse, metadata
 
 
