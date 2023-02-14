@@ -92,7 +92,7 @@ class ExploreData:
             metadata=self.metadata,
             hue=self.target_label,
         )
-        return None
+        return data
 
     def correlation(self, data):
         """Analyse correlation between variables"""
@@ -127,7 +127,7 @@ class ExploreData:
             hue=self.target_label,
             seed=self.seed,
         )
-        return None
+        return data
 
     def tsne(self, data):
         """Perform TSNE based feature reduction on the data"""
@@ -138,7 +138,7 @@ class ExploreData:
             hue=self.target_label,
             seed=self.seed,
         )
-        return None
+        return data
 
     def umap(self, data):
         """Perform UMAP based feature reduction on the data"""
@@ -149,7 +149,7 @@ class ExploreData:
             hue=self.target_label,
             seed=self.seed,
         )
-        return None
+        return data
 
     def forest(self, data):
         """Perform forest based feature selection on the data"""
