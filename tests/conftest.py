@@ -7,4 +7,3 @@ from excel.analysis.utils.normalisers import Normaliser
 def normaliser():
     """Returns an unique normaliser for each function"""
     return Normaliser()
-
