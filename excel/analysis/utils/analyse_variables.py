@@ -108,98 +108,61 @@ class AnalyseVariables:
         """
         Calculate feature importance and remove features with low importance
         """
-        X = data.drop(self.target_label, axis=1)  # split data
-        y = data[self.target_label]
         estimator = RandomForestClassifier(random_state=self.seed)
+        method = 'forest'
+
+        X = to_analyse.drop(self.target_label, axis=1)
+        y = to_analyse[self.target_label]
+
         min_features = 1
+        cross_validator = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
         selector = RFECV(
-            estimator=estimator, step=1, min_features_to_select=min_features, scoring='average_precision', n_jobs=4
+            estimator=estimator,
+            step=1,
+            min_features_to_select=min_features,
+            cv=cross_validator,
+            scoring='average_precision',
+            n_jobs=4,
         )
         selector.fit(X, y)
-        logger.info(f'Optimal number of features: {selector.n_features_}')
 
-        n_scores = len(selector.cv_results_["mean_test_score"])
+        # Plot performance for increasing number of features
+        n_scores = len(selector.cv_results_['mean_test_score'])
         plt.figure()
-        plt.xlabel("Number of features selected")
-        plt.ylabel("Mean average precision")
-        plt.xticks(range(min_features, n_scores + 1))
-        plt.grid()
+        plt.xlabel('Number of features selected')
+        plt.ylabel('Mean average precision')
+        plt.xticks(range(min_features, n_scores + 1, 5))
+        plt.grid(alpha=0.5)
         plt.errorbar(
             range(min_features, n_scores + min_features),
-            selector.cv_results_["mean_test_score"],
-            yerr=selector.cv_results_["std_test_score"],
+            selector.cv_results_['mean_test_score'],
+            yerr=selector.cv_results_['std_test_score'],
         )
-        plt.title("Recursive Feature Elimination")
-        plt.savefig(os.path.join(self.job_dir, 'RFECV.pdf'))
+        plt.title(f'Recursive Feature Elimination for {method} estimator')
+        plt.savefig(os.path.join(self.job_dir, f'RFECV_{method}.pdf'))
         plt.clf()
 
+        to_analyse = pd.concat((X.loc[:, selector.support_], to_analyse[self.target_label]), axis=1)
+        metadata = [col for col in metadata if col in to_analyse.columns]
+        importances = pd.Series(selector.estimator_.feature_importances_, index=X.columns[selector.support_])
+        importances = importances.sort_values(ascending=False)
+
         # Plot importances
-        # fig, ax = plt.subplots()
-        # importances.plot.bar(yerr=std, ax=ax)
-        # ax.set_title("Feature importances using mean decrease in impurity")
-        # ax.set_ylabel("Mean decrease in impurity")
-        # fig.tight_layout()
-        # plt.savefig(os.path.join(job_dir, 'feature_importance_impurity.pdf'))
-        # plt.clf()
+        fig, ax = plt.subplots()
+        importances.plot.bar(ax=ax)
+        ax.set_title(f'Feature importances using {method} estimator')
+        fig.tight_layout()
+        plt.savefig(os.path.join(self.job_dir, f'feature_importance_{method}.pdf'))
+        plt.clf()
 
-    min_features = 1
-    cross_validator = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
-    selector = RFECV(
-        estimator=estimator,
-        step=1,
-        min_features_to_select=min_features,
-        cv=cross_validator,
-        scoring='average_precision',
-        n_jobs=4,
-    )
-    selector.fit(X, y)
-
-        # Plot correlation heatmap
-        # figsize = to_keep * 1.5
-        # matrix = to_analyse.corr(method='pearson').round(2)
+        # Plot patient/feature value heatmap
         # plt.figure(figsize=(figsize, figsize))
-        # sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
+        # sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
         # plt.xticks(rotation=90)
         # fig.tight_layout()
-        # plt.savefig(os.path.join(out_dir, 'corr_plot_after_reduction.pdf'))
+        # plt.savefig(os.path.join(self.job_dir, 'heatmap_after_reduction.pdf'))
         # plt.clf()
 
-    # Plot performance for increasing number of features
-    n_scores = len(selector.cv_results_['mean_test_score'])
-    plt.figure()
-    plt.xlabel('Number of features selected')
-    plt.ylabel('Mean average precision')
-    plt.xticks(range(min_features, n_scores + 1, 5))
-    plt.grid(alpha=0.5)
-    plt.errorbar(
-        range(min_features, n_scores + min_features),
-        selector.cv_results_['mean_test_score'],
-        yerr=selector.cv_results_['std_test_score'],
-    )
-    plt.title(f'Recursive Feature Elimination for {method} estimator')
-    plt.savefig(os.path.join(out_dir, f'RFECV_{method}.pdf'))
-    plt.clf()
-
-    to_analyse = pd.concat((X.loc[:, selector.support_], to_analyse[label]), axis=1)
-    metadata = [col for col in metadata if col in to_analyse.columns]
-    importances = pd.Series(selector.estimator_.feature_importances_, index=X.columns[selector.support_])
-    importances = importances.sort_values(ascending=False)
-
-    # Plot importances
-    fig, ax = plt.subplots()
-    importances.plot.bar(ax=ax)
-    ax.set_title(f'Feature importances using {method} estimator')
-    fig.tight_layout()
-    plt.savefig(os.path.join(out_dir, f'feature_importance_{method}.pdf'))
-    plt.clf()
-
-    # Plot patient/feature value heatmap
-    # plt.figure(figsize=(figsize, figsize))
-    # sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
-    # plt.xticks(rotation=90)
-    # fig.tight_layout()
-    # plt.savefig(os.path.join(out_dir, 'heatmap_after_reduction.pdf'))
-    # plt.clf()
     def drop_outliers(self, data: pd.DataFrame):
         """Detect outliers in the data, optionally removing or further investigating them
 
