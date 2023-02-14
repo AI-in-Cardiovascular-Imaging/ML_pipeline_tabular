@@ -13,7 +13,6 @@ hydra:
     dir: .
 
 dataset:
-  mdata_src: '/home/melandur/Data/Myocarditis/Final_Regional_Database_reduced.xlsx'  # metadata source directory
   save_intermediate: False  # save intermediate steps
   save_final: True  # save the final pre-processed tables (only relevant if save_intermediate is False)
   dims: ['2d']  # ['2d', '3d'], which data to include in the pre-processing/analysis
@@ -39,7 +38,5 @@ analysis:
     corr_thresh: 0.6  # threshold above which correlated features are removed
     variance_thresh: 0.9  # threshold below which features are removed
     jobs: [
-      ['univariate_analysis'],
-      ['normalize', 'univariate_analysis'],
-      ['variance_threshold']
+      ['univariate_analysis', 'correlation', 'normalise', 'forest']
     ]
