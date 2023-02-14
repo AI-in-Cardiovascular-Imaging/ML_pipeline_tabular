@@ -35,15 +35,6 @@ def split_data(data: pd.DataFrame, metadata: list, hue: str, remove_mdata: bool 
     return to_analyse, hue_df, suffix
 
 
-def normalise_data(data: pd.DataFrame, target_label: str) -> pd.DataFrame:
-    """Normalise data"""
-    tmp = data[target_label]  # keep label col as is
-    # data = (data - data.mean()) / data.std()
-    data = data / data.sum()
-    data[target_label] = tmp
-    return data
-
-
 def variance_threshold(data: pd.DataFrame, label: str, thresh: float) -> pd.DataFrame:
     """Remove features with variance below threshold"""
     tmp = data[label]  # save label col

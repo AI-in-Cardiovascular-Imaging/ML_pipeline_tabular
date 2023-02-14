@@ -38,5 +38,5 @@ analysis:
     corr_thresh: 0.6  # threshold above which correlated features are removed
     variance_thresh: 0.9  # threshold below which features are removed
     jobs: [
-      ['univariate_analysis', 'correlation', 'normalise', 'forest']
+      ['drop_by_pearson_correlation', 'pca']
     ]

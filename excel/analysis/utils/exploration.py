@@ -10,13 +10,18 @@ from omegaconf import DictConfig
 
 from excel.analysis.utils import analyse_variables
 from excel.analysis.utils import dim_reduction
-from excel.analysis.utils.helpers import normalise_data, variance_threshold
+from excel.analysis.utils.helpers import variance_threshold
+from excel.analysis.utils.normalisers import Normaliser
+from excel.analysis.utils.dim_reduction import DimensionReductions
+from excel.analysis.utils.analyse_variables import AnalyseVariables
+
 
 from types import FunctionType
 
 
-class ExploreData:
+class ExploreData(Normaliser, DimensionReductions, AnalyseVariables):
     def __init__(self, data: pd.DataFrame, config: DictConfig) -> None:
+        super().__init__()
         self.original_data = data
         self.out_dir = os.path.join(config.dataset.out_dir, '6_exploration', config.analysis.experiment.name)
         self.jobs = config.analysis.run.jobs
@@ -62,52 +67,7 @@ class ExploreData:
             return data, False
         # raise logger.error(f'Invalid step name: "{step}",\nvalid step names: {self.get_member_methods()}')
 
-    def remove_outliers(self, data):
-        """Remove outliers from the data"""
-        data = analyse_variables.detect_outliers(
-            data,
-            out_dir=self.job_dir,
-            remove=True,
-            investigate=False,
-            metadata=self.metadata,
-        )
-        return data
 
-    def investigate_outliers(self, data):
-        """Investigate outliers in the data"""
-        data = analyse_variables.detect_outliers(
-            data,
-            out_dir=self.job_dir,
-            remove=False,
-            investigate=True,
-            metadata=self.metadata,
-        )
-        return data
-
-    def univariate_analysis(self, data):
-        """Perform univariate analysis on the data"""
-        analyse_variables.univariate_analysis(
-            data,
-            out_dir=self.job_dir,
-            metadata=self.metadata,
-            hue=self.target_label,
-        )
-        return data
-
-    def correlation(self, data):
-        """Analyse correlation between variables"""
-        data, _ = analyse_variables.correlation(
-            data,
-            self.job_dir,
-            self.metadata,
-            corr_thresh=self.corr_thresh,
-        )
-        return data
-
-    def normalise(self, data):
-        """Normalise the data"""
-        data = normalise_data(data, self.target_label)
-        return data
 
     def variance_threshold(self, data):
         """Perform variance threshold based feature selection on the data"""
@@ -118,47 +78,3 @@ class ExploreData:
         )
         return data
 
-    def pca(self, data):
-        """Perform PCA based feature reduction on the data"""
-        dim_reduction.pca(
-            data=data,
-            out_dir=self.job_dir,
-            metadata=self.metadata,
-            hue=self.target_label,
-            seed=self.seed,
-        )
-        return data
-
-    def tsne(self, data):
-        """Perform TSNE based feature reduction on the data"""
-        dim_reduction.tsne(
-            data=data,
-            out_dir=self.job_dir,
-            metadata=self.metadata,
-            hue=self.target_label,
-            seed=self.seed,
-        )
-        return data
-
-    def umap(self, data):
-        """Perform UMAP based feature reduction on the data"""
-        dim_reduction.umap(
-            data=data,
-            out_dir=self.job_dir,
-            metadata=self.metadata,
-            hue=self.target_label,
-            seed=self.seed,
-        )
-        return data
-
-    def forest(self, data):
-        """Perform forest based feature selection on the data"""
-        data, _ = analyse_variables.feature_reduction(
-            to_analyse=data,
-            out_dir=self.job_dir,
-            metadata=self.metadata,
-            method='forest',
-            seed=self.seed,
-            label=self.target_label,
-        )
-        return data
