@@ -30,6 +30,7 @@ omegaconf = "^2.2"
 scikit-learn = "^1.2.0"
 xlsxwriter = "^3.0.7"
 umap-learn = "^0.5"
+pytest = "^7.2.1"
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"
