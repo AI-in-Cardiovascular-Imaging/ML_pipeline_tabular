@@ -75,18 +75,19 @@ class AnalyseVariables:
         """
         Compute correlation between features and optionally drop highly correlated ones
         """
-        matrix = data.corr(method=self.corr_method).round(2)
+        to_analyse = data.drop(self.target_label, axis=1)
+        matrix = to_analyse.corr(method=self.corr_method).round(2)
 
         if self.corr_drop_features:
             abs_corr = matrix.abs()
             upper_tri = abs_corr.where(np.triu(np.ones(abs_corr.shape), k=1).astype(bool))
             cols_to_drop = [col for col in upper_tri.columns if any(upper_tri[col] > self.corr_thresh)]
-            to_analyse = data.drop(cols_to_drop, axis=1)
+            to_analyse = to_analyse.drop(cols_to_drop, axis=1)
             logger.info(
                 f'Removed {len(cols_to_drop)} redundant features with correlation above {self.corr_thresh}, '
                 f'number of remaining features: {len(to_analyse.columns)}'
             )
-            matrix = to_analyse.corr(method='pearson').round(2)
+            matrix = to_analyse.corr(method=self.corr_method).round(2)
 
         # plot correlation heatmap
         plt.figure(figsize=(20, 20))
@@ -94,8 +95,10 @@ class AnalyseVariables:
         plt.xticks(rotation=90)
         plt.savefig(os.path.join(self.job_dir, 'corr_plot.pdf'))
         plt.clf()
-        return data
 
+        data = pd.concat((to_analyse, data[self.target_label]), axis=1)
+
+        return data
 
     def feature_reduction(self, data: pd.DataFrame):
         """
@@ -109,7 +112,6 @@ class AnalyseVariables:
 
         X = data.drop(self.target_label, axis=1)
         y = data[self.target_label]
-        # logger.debug(y)
 
         min_features = 1
         cross_validator = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
@@ -128,7 +130,7 @@ class AnalyseVariables:
         plt.figure()
         plt.xlabel('Number of features selected')
         plt.ylabel('Mean average precision')
-        plt.xticks(range(min_features, n_scores + 1, 5))
+        plt.xticks(range(0, n_scores + 1, 5))
         plt.grid(alpha=0.5)
         plt.errorbar(
             range(min_features, n_scores + min_features),
@@ -142,6 +144,10 @@ class AnalyseVariables:
         data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)
         importances = pd.Series(selector.estimator_.feature_importances_, index=X.columns[selector.support_])
         importances = importances.sort_values(ascending=False)
+        logger.info(
+                f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {self.rfe_estimator} estimator, '
+                f'number of remaining features: {len(data.columns) - 1}'
+            )
 
         # Plot importances
         fig, ax = plt.subplots()
