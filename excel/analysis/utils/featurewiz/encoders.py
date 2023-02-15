@@ -24,15 +24,16 @@
 #####  This amazing Library was created by Alex Lekov: Many Thanks to Alex! ###
 #####                https://github.com/Alex-Lekov/AutoML_Alex              ###
 ###############################################################################
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 ################################################################
-            #               Simple Encoders
-            #      (do not use information about target)
+#               Simple Encoders
+#      (do not use information about target)
 ################################################################
 
-class FrequencyEncoder():
+
+class FrequencyEncoder:
     """
     FrequencyEncoder
     Conversion of category into frequencies.
@@ -41,6 +42,7 @@ class FrequencyEncoder():
     cols : list of categorical features.
     drop_invariant : not used
     """
+
     def __init__(self, cols=None, drop_invariant=None):
         """
         Description of __init__
@@ -89,22 +91,15 @@ class FrequencyEncoder():
         counts_dict_test = {}
         res = []
         for col in self.cols:
-            values = X[col].value_counts(1,dropna=False).index.tolist()
-            counts = X[col].value_counts(1,dropna=False).values.tolist()
+            values = X[col].value_counts(1, dropna=False).index.tolist()
+            counts = X[col].value_counts(1, dropna=False).values.tolist()
             counts_dict_test[col] = dict(zip(values, counts))
 
             # if value is in "train" keys - replace "test" counts with "train" counts
-            for k in [
-                key
-                for key in counts_dict_test[col].keys()
-                if key in self.counts_dict[col].keys()
-            ]:
+            for k in [key for key in counts_dict_test[col].keys() if key in self.counts_dict[col].keys()]:
                 counts_dict_test[col][k] = self.counts_dict[col][k]
             res.append(X[col].map(counts_dict_test[col]).values.reshape(-1, 1))
-        try:
-            res = np.hstack(res)
-        except:
-            pdb.set_trace()
+        res = np.hstack(res)
         X[self.cols] = res
         return X
 

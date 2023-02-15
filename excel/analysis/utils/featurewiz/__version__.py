@@ -7,4 +7,3 @@ __description__ = "Advanced Feature Engineering and Feature Selection for any da
 __url__ = "https://github.com/Auto_ViML/featurewiz.git"
 __version__ = "0.2.04"
 __license__ = "Apache License 2.0"
-__copyright__ = "2020-23 Google"
