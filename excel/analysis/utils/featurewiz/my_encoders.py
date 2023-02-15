@@ -28,6 +28,11 @@ from sklearn.base import (  # gives fit_transform method for free
     BaseEstimator,
     TransformerMixin,
 )
+import collections
+import copy
+import random
+import re
+
 from sklearn.compose import make_column_transformer
 
 # from sklearn.preprocessing import OneHotEncoder
@@ -37,8 +42,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer, LabelBinarizer, LabelEncoder
 
-
-#################################################################################
 def left_subtract(l1, l2):
     lst = []
     for i in l1:
@@ -47,7 +50,6 @@ def left_subtract(l1, l2):
     return lst
 
 
-#################################################################################
 class My_LabelEncoder(BaseEstimator, TransformerMixin):
     """
     ################################################################################################
@@ -2060,97 +2062,7 @@ class TS_Fourier_Transformer(BaseEstimator, TransformerMixin):
         return self.X_transformed
 
 
-import copy
-import pdb
-
-#########################################################################################################
 from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
-
-
-class Column_Names_Transformer(BaseEstimator, TransformerMixin):
-    """
-    This Transformer class will make your column names unique.
-    Just fit on train data and transform on test data to make them same.
-
-    Input:
-    train or X_train: a dataframe. Must have column names - should not be an array.
-    """
-
-    def __init__(self, verbose=0):
-        self.verbose = verbose
-        self.old_column_names = []
-        self.new_column_names = []
-        self.rename_dict = {}
-        self.train = False
-        self.fitted = False
-        self.transformed_flag = False
-
-    def fit(self, X):
-        X = copy.deepcopy(X)
-        ### Now you can check if the parts of tuple are dataframe series, etc.
-        if isinstance(X, tuple):
-            y = X[1]
-            X = X[0]
-        ### Now you can check if the parts of tuple are dataframe series, etc.
-        if isinstance(X, pd.Series):
-            if self.verbose:
-                print('X must be dataframe. Converting it to a pd.DataFrame.')
-            X = pd.DataFrame(X.values, columns=[X.name])
-        elif isinstance(X, np.ndarray):
-            if self.verbose:
-                print('X must be dataframe and cannot be numpy array. Returning...')
-            return self
-        else:
-            #### There is no way to transform dataframes in an sklearn pipeline
-            ####    since you will get a nested renamer error if you try ###
-            #### But if it is a one-dimensional dataframe, you can convert into Series
-            if self.verbose:
-                print('X is a DataFrame...')
-            pass
-        ########## you must save the product uniques so that train and test have consistent columns ##
-        self.old_column_names = X.columns.tolist()
-        if self.verbose:
-            print('Before making column names unique, shape of data = %s' % (X.shape,))
-        self.new_column_names, self.transformed_flag = EDA_make_column_names_unique(X)
-        self.rename_dict = dict(zip(self.old_column_names, self.new_column_names))
-        self.fitted = True
-        return self
-
-    def transform(self, X, y=None):
-
-        if self.fitted and self.train:
-            self.train = False
-            return self.X_transformed
-        ##### Then you should transform here ############
-        if self.verbose:
-            print('    will make features unique...')
-        try:
-            self.X_transformed = copy.deepcopy(X)
-            self.X_transformed.rename(columns=self.rename_dict, inplace=True)
-        except:
-            print('    Error occured in making unique features. Check your inputs. Returning...')
-            self.train = False
-            self.X_transformed = X
-            return self.X_transformed
-        ##### This is where you set the end of training and return values ###
-        self.fitted = True
-        self.train = True
-        return self.X_transformed
-
-    def fit_transform(self, X, y=None):
-        X = copy.deepcopy(X)
-        self.fit(X)
-        self.transform(X)
-        self.train = False
-        return self.X_transformed
-
-
-import collections
-import copy
-
-################################################################################
-import random
-import re
 
 
 def EDA_make_column_names_unique(data_input):
@@ -2174,8 +2086,6 @@ def EDA_make_column_names_unique(data_input):
 
 
 import copy
-
-##########################################################################################
 from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 
 

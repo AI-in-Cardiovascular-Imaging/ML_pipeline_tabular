@@ -17,7 +17,6 @@ from .featurewiz import (
     FE_add_groupby_features_aggregated_to_dataframe,
     FE_capping_outliers_beyond_IQR_Range,
     FE_concatenate_multiple_columns,
-    FE_convert_mixed_datatypes_to_string,
     FE_count_rows_for_all_columns_by_group,
     FE_create_categorical_feature_crosses,
     FE_create_interaction_vars,

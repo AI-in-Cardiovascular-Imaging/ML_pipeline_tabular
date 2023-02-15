@@ -536,32 +536,6 @@ class DataBunch(object):
                         if not isinstance(test_encodet, str):
                             test_data = pd.concat([test_data, test_encodet], axis=1)
 
-                if verbose > 0:
-                    if not isinstance(data_encodet, str):
-                        addl_features = data_encodet.shape[1] - original_number_features
-                        count_number_features += addl_features
-                        print(' + added ', len(encodet_features_names), ' additional Features using ', encoder_name)
-
-        # Clean NaNs in Numeric variables only
-        if clean_nan:
-            if verbose > 0:
-                print('> Cleaned NaNs in numeric features')
-            data = self.clean_nans(data, cols=num_features)
-            if test_data is not None:
-                test_data = self.clean_nans(test_data, cols=num_features)
-            ### Sometimes, train has nulls while test doesn't and vice versa
-            if test_data is not None:
-                rem_cols = left_subtract(list(data), list(test_data))
-                if len(rem_cols) > 0:
-                    for rem_col in rem_cols:
-                        test_data[rem_col] = 0
-                elif len(left_subtract(list(test_data), list(data))) > 0:
-                    rem_cols = left_subtract(list(test_data), list(data))
-                    for rem_col in rem_cols:
-                        data[rem_col] = 0
-                else:
-                    print(' + test and train have similar NaN columns')
-
         # Generate interaction features for Numeric variables
         if num_generator_features:
             if len(num_features) > 1:

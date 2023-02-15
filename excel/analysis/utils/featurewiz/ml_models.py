@@ -1910,21 +1910,12 @@ def plot_importances_XGB(train_set, labels, ls, y_preds, modeltype, top_num='all
         pd.Series(y_preds).hist(ax=ax2, color='b', label='Model predictions histogram on test data')
 
 
-##################################################################################
-def analyze_problem_type(y_train, target, verbose=0):
+def analyze_problem_type(y_train):
     y_train = copy.deepcopy(y_train)
     cat_limit = 30  ### this determines the number of categories to name integers as classification ##
     float_limit = 15  ### this limits the number of float variable categories for it to become cat var
-    if isinstance(target, str):
-        multi_label = False
-        string_target = True
-    else:
-        if len(target) == 1:
-            multi_label = False
-            string_target = False
-        else:
-            multi_label = True
-            string_target = False
+    # if isinstance(target, str):
+    string_target = True
 
     ####  This is where you detect what kind of problem it is #################
     if string_target or type(y_train) == pd.Series:
@@ -1970,12 +1961,7 @@ def analyze_problem_type(y_train, target, verbose=0):
                     model_class = 'Binary_Classification'
                 else:
                     model_class = 'Multi_Classification'
-    ########### print this for the start of next step ###########
-    if multi_label:
-        print('''#### %s %s problem ####''' % ('Multi_Label', model_class))
-    else:
-        print('''#### %s %s problem ####''' % ('Single_Label', model_class))
-    return model_class, multi_label
+    return model_class
 
 
 ###############################################################################

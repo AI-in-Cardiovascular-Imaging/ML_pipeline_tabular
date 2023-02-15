@@ -13,8 +13,6 @@ from excel.analysis.utils.featurewiz.classify_method import (
     classify_columns,
 )
 from excel.analysis.utils.featurewiz.my_encoders import (
-    Column_Names_Transformer,
-    FE_create_time_series_features,
     Groupby_Aggregator,
     My_LabelEncoder,
 )
@@ -22,7 +20,6 @@ from excel.analysis.utils.featurewiz.my_encoders import (
 from . import settings
 from .ml_models import (
     analyze_problem_type,
-    check_if_GPU_exists,
     get_sample_weight_array,
 )
 from .sulov_method import FE_remove_variables_using_SULOV_method
@@ -47,7 +44,7 @@ def load_file_dataframe(dataname, sep=",", header=0, nrows=None, parse_dates=Fal
                     print('featurewiz does not work on clustering or unsupervised problems. Returning...')
                     return dataname
                 else:
-                    modelt, _ = analyze_problem_type(dataname[target], target)
+                    modelt = analyze_problem_type(dataname[target])
             else:
                 ### For test data, just check the target value which will be given as odeltype ##
                 modelt = copy.deepcopy(target)
@@ -58,7 +55,7 @@ def load_file_dataframe(dataname, sep=",", header=0, nrows=None, parse_dates=Fal
                     print('featurewiz does not work on clustering or unsupervised problems. Returning...')
                     return dataname
                 else:
-                    modelt, _ = analyze_problem_type(dataname[target], target)
+                    modelt = analyze_problem_type(dataname[target])
             else:
                 ## For test data, the modeltype is given in the target variable
                 modelt = copy.deepcopy(target)
@@ -249,7 +246,6 @@ def featurewiz(
     max_cats = 15
     maxrows = 10000
     RANDOM_SEED = 42
-    mem_limit = 500  # amount of memory consumed by pandas df before reducing_mem function called
 
     cat_vars = []
     if kwargs:
@@ -297,34 +293,9 @@ def featurewiz(
 
     train = load_file_dataframe(dataname, sep=sep, header=header, nrows=nrows, target=target)
     dataname = copy.deepcopy(train)
-    print('    Loaded train data. Shape = %s' % (dataname.shape,))
-    dataname = FE_convert_mixed_datatypes_to_string(dataname)  # Convert mixed data types to string data type
-
-    # XGBoost cannot handle special chars in column names
-    uniq = Column_Names_Transformer()
-    dataname = uniq.fit_transform(dataname)
-    new_col_names = uniq.new_column_names
-    old_col_names = uniq.old_column_names
-    special_char_flag = uniq.transformed_flag
-
-    # Now save the old and new columns in a dictionary to use them later
-    col_name_mapper = dict(zip(new_col_names, old_col_names))
-    col_name_replacer = {y: x for (x, y) in col_name_mapper.items()}
-    item_replacer = col_name_replacer.get  # For faster gets.
-
-    # You need to change the target name if you have changed the column names
-    if special_char_flag:
-        if isinstance(target, str):
-            targets = [target]
-            targets = [item_replacer(n, n) for n in targets]
-            target = targets[0]
-        else:
-            targets = copy.deepcopy(target)
-            target = [item_replacer(n, n) for n in targets]
 
     train_index = dataname.index
-    settings.modeltype, _ = analyze_problem_type(dataname[target], target)
-    cols_list = left_subtract(list(dataname), target)
+    settings.modeltype = analyze_problem_type(dataname[target])
 
     ######################################################################################
     ##################    L O A D      T E S T     D A T A   #############################
@@ -332,23 +303,9 @@ def featurewiz(
     ##########   test will be the name of the dask dataframe version of test data   #####
     ######################################################################################
 
-    test_data = load_file_dataframe(
-        test_data,
-        sep=sep,
-        header=header,
-        nrows=None,
-        target=settings.modeltype,
-        is_test_flag=True,
-    )
-    test = copy.deepcopy(test_data)
-
     #############    C L A S S I F Y    F E A T U R E S      ####################
-    nrows_limit = maxrows
     #### you can use targets as a list wherever you choose #####
-    if isinstance(target, str):
-        targets = [target]
-    else:
-        targets = copy.deepcopy(target)
+    targets = [target]
     features_dict = classify_features(dataname, target)
     #### Now we have to drop certain cols that must be deleted #####################
     remove_cols = features_dict['discrete_string_vars'] + features_dict['cols_delete']
@@ -363,7 +320,6 @@ def featurewiz(
         dataname.drop(remove_cols, axis=1, inplace=True)
     ################    Load data frame with date var features correctly this time ################
     if len(features_dict['date_vars']) > 0:
-        print('Caution: Since there are date-time variables in dataset, it is best to load them using pandas')
         date_time_vars = features_dict['date_vars']
         dataname = load_file_dataframe(
             dataname,
@@ -374,35 +330,20 @@ def featurewiz(
             target=target,
         )
         test_data = None
-        test = None
     else:
         train_index = dataname.index
         if test_data is not None:
             test_index = test_data.index
 
     ################   X G B O O S T      D E F A U L T S      ######################################
-    #### If there are more than 30 categorical variables in a data set, it is worth reducing features.
-    ####  Otherwise. XGBoost is pretty good at finding the best features whether cat or numeric !
-    #################################################################################################
+    # If there are more than 30 categorical variables in a data set, it is worth reducing features.
+    # Otherwise. XGBoost is pretty good at finding the best features whether cat or numeric !
+
     start_time = time.time()
-    n_splits = 5
     max_depth = 8
-    ######################   I M P O R T A N T    D E F A U L T S ##############
-    subsample = 0.7
-    col_sub_sample = 0.7
-    test_size = 0.2
-    # print('test_size = %s' %test_size)
-    seed = 1
-    early_stopping = 5
-    ####### All the default parameters are set up now #########
-    kf = KFold(n_splits=n_splits)
-    #########     G P U     P R O C E S S I N G      B E G I N S    ############
-    ###### This is where we set the CPU and GPU parameters for XGBoost
-    GPU_exists = check_if_GPU_exists(verbose)
-    n_workers = get_cpu_worker_count()
-    #####   Set the Scoring Parameters here based on each model and preferences of user ###
+
+    n_workers = multiprocessing.cpu_count()
     cpu_params = {}
-    param = {}
     cpu_tree_method = 'hist'
     tree_method = 'hist'
     cpu_params['nthread'] = -1
@@ -417,63 +358,18 @@ def featurewiz(
     cpu_params['updater'] = 'grow_colmaker'
     cpu_params['predictor'] = 'cpu_predictor'
     cpu_params['num_parallel_tree'] = 1
-    param = copy.deepcopy(cpu_params)
     gpuid = None
 
     #################################################################################
     #############   D E T E C T  SINGLE OR MULTI-LABEL PROBLEM      #################
     #################################################################################
-
-    if isinstance(target, str):
-        target = [target]
-        settings.multi_label = False
-    else:
-        if len(target) <= 1:
-            settings.multi_label = False
-        else:
-            settings.multi_label = True
-    #### You need to make sure only Single Label problems are handled in target encoding!
-    if settings.multi_label:
-        if verbose:
-            print('Turning off Target encoding for multi-label problems like this data set...')
-            print(
-                '    since Feature Engineering module cannot handle Multi Label Targets, turnoff target_enc_cat_features to False'
-            )
-        target_enc_cat_features = False
-    else:
-        ## If target is specified in feature_gen then use it to Generate target encoded features
-        target_enc_cat_features = 'target' in feature_gen
+    target = [target]
+    target_enc_cat_features = 'target' in feature_gen
     ######################################################################################
     ########     C L A S S I F Y    V A R I A B L E S           ##########################
     ###### Now we detect the various types of variables to see how to convert them to numeric
     ######################################################################################
-    date_cols = features_dict['date_vars']
-    if len(features_dict['date_vars']) > 0:
-        date_time_vars = copy.deepcopy(date_cols)
-        #### Do this only if date time columns exist in your data set!
-        date_col_mappers = {}
-        for date_col in date_cols:
-            print('Processing %s column for date time features....' % date_col)
-            dataname, ts_adds = FE_create_time_series_features(dataname, date_col)
-            date_col_mapper = dict([(x, date_col) for x in ts_adds])
-            date_col_mappers.update(date_col_mapper)
-            # print('    Adding %d column(s) from date-time column %s in train' %(len(date_col_adds_train),date_col))
-            # train = train.join(date_df_train, rsuffix='2')
-            if isinstance(test_data, str) or test_data is None:
-                ### do nothing ####
-                pass
-            else:
-                print('        Adding same time series features to test data...')
-                test_data, _ = FE_create_time_series_features(test_data, date_col, ts_adds)
-                # date_col_adds_test_data = left_subtract(date_df_test.columns.tolist(),date_col)
-                ### Now time to remove the date time column from all further processing ##
-                # test = test.join(date_df_test, rsuffix='2')
-    ### Now time to continue with our further processing ##
     idcols = features_dict['IDcols']
-    if isinstance(test_data, str) or test_data is None:
-        pass
-    else:
-        test_ids = test_data[idcols]
     train_ids = dataname[idcols]  ### this saves the ID columns of dataname
     if cat_vars:
         cols_in_both = [x for x in cat_vars if x in features_dict['cols_delete']]
@@ -486,8 +382,7 @@ def featurewiz(
     preds = [x for x in list(dataname) if x not in target + cols_to_remove]
     ###   This is where we sort the columns to make sure that the order of columns doesn't matter in selection ###########
     preds = np.sort(preds)
-    if verbose:
-        print('    After removing redundant variables from further processing, features left = %d' % len(preds))
+
     numvars = dataname[preds].select_dtypes(include='number').columns.tolist()
     ######   F I N D I N G    C A T  V A R S   H E R E  ##################################
     if len(numvars) > max_nums:
@@ -503,27 +398,7 @@ def featurewiz(
         if feature_type:
             print('\nWarning: Too many extra features will be generated by category encoding. This may take time...')
     ######   C R E A T I N G    I N T X N  V A R S   F R O M   C A T  V A R S #####################
-    if np.where('interactions' in feature_gen, True, False).tolist():
-        if len(catvars) > 1:
 
-            num_combos = len(list(combinations(catvars, 2)))
-            print('Adding %s interactions between categorical_vars %s...' % (num_combos, catvars))
-            dataname = FE_create_interaction_vars(dataname, catvars)
-            train = FE_create_interaction_vars(train, catvars)
-            catvars = left_subtract(dataname.columns.tolist(), numvars)
-            catvars = left_subtract(catvars, target)
-            preds = left_subtract(dataname.columns.tolist(), target)
-            if not test_data is None:
-                test_data = FE_create_interaction_vars(test_data, catvars)
-                test = FE_create_interaction_vars(test, catvars)
-        else:
-            if verbose:
-                print('No interactions created for categorical vars since number less than 2')
-    else:
-        if verbose:
-            print('No interactions created for categorical vars since feature engg does not specify it')
-    ##### Now we need to re-set the catvars again since we have created new features #####
-    rem_vars = copy.deepcopy(catvars)
     ########## Now we need to select the right model to run repeatedly ####
 
     if settings.modeltype != 'Regression':
@@ -547,26 +422,6 @@ def featurewiz(
             if target_conversion_flag:
                 mlb = My_LabelEncoder()
                 dataname[each_target] = mlb.fit_transform(dataname[each_target])
-                try:
-                    ## After converting train, just load it into dask again ##
-                    train[each_target] = dd.from_pandas(dataname[each_target], npartitions=n_workers)
-                except:
-                    print('Could not convert dask dataframe target into numeric. Check your input. Continuing...')
-                if test_data is not None:
-                    if each_target in test_data.columns:
-                        test_data[each_target] = mlb.transform(test_data[each_target])
-                        try:
-                            ## After converting test, just load it into dask again ##
-                            test[each_target] = dd.from_pandas(test_data[each_target], npartitions=n_workers)
-                        except:
-                            print(
-                                'Could not convert dask dataframe target into numeric. Check your input. Continuing...'
-                            )
-                print('Completed label encoding of target variable = %s' % each_target)
-                print(
-                    'How model predictions need to be transformed for %s:\n\t%s'
-                    % (each_target, mlb.inverse_transformer)
-                )
 
     ######################################################################################
     ######    B E F O R E    U S I N G    D A T A B U N C H  C H E C K ###################
@@ -977,110 +832,29 @@ def featurewiz(
         print('Selected %d important features:\n%s' % (len(important_features), important_features))
     else:
         print('Selected %d important features. Too many to print...' % len(important_features))
-    numvars = [x for x in numvars if x in important_features]
-    important_cats = [x for x in important_cats if x in important_features]
+
     print('Total Time taken for featurewiz selection = %0.0f seconds' % (time.time() - start_time))
-    #### Now change the feature names back to original feature names ################
-    item_replacer = col_name_mapper.get  # For faster gets.
-    ##########################################################################
-    ### You select the features with the same old names as before here #######
-    ##########################################################################
-    ## In one case, column names get changed in train but not in test since it test is not available.
+
     if isinstance(test_data, str) or test_data is None:
         print('Output contains a list of %s important features and a train dataframe' % len(important_features))
     else:
         print('Output contains two dataframes: train and test with %d important features.' % len(important_features))
-    if feature_gen or feature_type:
-        if isinstance(test_data, str) or test_data is None:
-            ### if feature engg is performed, id columns are dropped. Hence they must rejoin here.
-            dataname = pd.concat([train_ids, dataname], axis=1)
-            if isinstance(target, str):
-                return important_features, dataname[important_features + [target]]
-            else:
-                return important_features, dataname[important_features + target]
-        else:
-            ### if feature engg is performed, id columns are dropped. Hence they must rejoin here.
-            dataname = pd.concat([train_ids, dataname], axis=1)
-            test_data = pd.concat([test_ids, test_data], axis=1)
-            if isinstance(target, str):
-                return dataname[important_features + [target]], test_data[important_features]
-            else:
-                return dataname[important_features + target], test_data[important_features]
-    else:
-        ### You select the features with the same old names as before #######
-        old_important_features = copy.deepcopy(important_features)
-        if len(date_cols) > 0:
-            date_replacer = date_col_mappers.get  # For faster gets.
-            important_features1 = [date_replacer(n, n) for n in important_features]
-        else:
-            important_features1 = [item_replacer(n, n) for n in important_features]
-        important_features = find_remove_duplicates(important_features1)
-        if old_important_features == important_features:
-            ## Don't drop the old target since there is only one target here ###
-            pass
-        else:
-            if len(old_important_features) == len(important_features):
-                ### You just move the values from the new names to the old feature names ##
-                dataname[important_features] = dataname[old_important_features]
-                if isinstance(test_data, str) or test_data is None:
-                    pass
-                else:
-                    #### if there is test data transfer values to it ###
-                    test_data[important_features] = test_data[old_important_features]
-            else:
-                ### first try to return with the new important features, if that fails return with old features
-                try:
-                    print('There are special chars in column names. Please remove them and try again.')
-                    if isinstance(test_data, str) or test_data is None:
-                        return important_features, dataname[important_features]
-                    else:
-                        return dataname[important_features], test_data[important_features]
-                except:
-                    print('There are special chars in column names. Returning with important features and train.')
-                    if isinstance(test_data, str) or test_data is None:
-                        return old_important_features, dataname[old_important_features]
-                    else:
-                        return dataname[old_important_features], test_data[old_important_features]
 
-        old_target = copy.deepcopy(target)
+    if isinstance(test_data, str) or test_data is None:
+        ### if feature engg is performed, id columns are dropped. Hence they must rejoin here.
+        dataname = pd.concat([train_ids, dataname], axis=1)
         if isinstance(target, str):
-            target = item_replacer(target, target)
-            targets = [target]
+            return important_features, dataname[important_features + [target]]
         else:
-            target = [item_replacer(n, n) for n in target]
-            targets = copy.deepcopy(target)
-
-        if old_target == target:
-            ## Don't drop the old target since there is only one target here ###
-            pass
+            return important_features, dataname[important_features + target]
+    else:
+        ### if feature engg is performed, id columns are dropped. Hence they must rejoin here.
+        dataname = pd.concat([train_ids, dataname], axis=1)
+        test_data = pd.concat([test_ids, test_data], axis=1)
+        if isinstance(target, str):
+            return dataname[important_features + [target]], test_data[important_features]
         else:
-            ### you don't need drop the cols that have changed since only a few are selected #######
-            if isinstance(target, str):
-                dataname[target] = dataname[old_target]
-            else:
-                copy_targets = copy.deepcopy(targets)
-                copy_old = copy.deepcopy(old_target)
-                for each_target, each_old_target in zip(copy_targets, copy_old):
-                    dataname[each_target] = dataname[each_old_target]
-
-        #### This is where we check whether to return test data or not ######
-        try:
-            if isinstance(test_data, str) or test_data is None:
-                if feature_gen or feature_type:
-                    ### if feature engg is performed, id columns are dropped. Hence they must rejoin here.
-                    dataname = pd.concat([train_ids, dataname], axis=1)
-                return important_features, dataname[important_features + target]
-            else:
-                ## This is for test data existing ####
-                if feature_gen or feature_type:
-                    ### if feature engg is performed, id columns are dropped. Hence they must rejoin here.
-                    dataname = pd.concat([train_ids, dataname], axis=1)
-                    test_data = pd.concat([test_ids, test_data], axis=1)
-                ### You select the features with the same old names as before #######
-                return dataname[important_features + targets], test_data[important_features]
-        except:
-            print('Warning: Returning with important features and train. Please re-check your outputs.')
-            return important_features, dataname[important_features + targets]
+            return dataname[important_features + target], test_data[important_features]
 
 
 def classify_features(dfte, depVar, verbose=0):
@@ -1149,10 +923,6 @@ def remove_highly_correlated_vars_fast(df, corr_limit=0.70):
     print()
     print('Highly correlated columns to remove: %s' % to_drop)
     return to_drop
-
-
-def get_cpu_worker_count():
-    return multiprocessing.cpu_count()
 
 
 #############################################################################################
@@ -2489,22 +2259,6 @@ def load_embeddings(tokenized, glove_filename_with_path, vocab_size, glove_dimen
             embedding_matrix[i] = embedding_vector
     print('    Completed.')
     return embedding_matrix, glove_dimension
-
-
-def FE_convert_mixed_datatypes_to_string(df):
-    df = copy.deepcopy(df)
-    for col in df.columns:
-        if len(df[col].apply(type).value_counts()) > 1:
-            print('Mixed data type detected in %s column. Converting all rows to string type now...' % col)
-            df[col] = df[col].map(lambda x: x if isinstance(x, str) else str(x)).values
-            if len(df[col].apply(type).value_counts()) == 1:
-                print('    completed.')
-            else:
-                print('    could not change column type. Fix it manually and then re-run EDA.')
-    return df
-
-
-#
 
 
 def FE_split_list_into_columns(df, col, cols_in=[]):
