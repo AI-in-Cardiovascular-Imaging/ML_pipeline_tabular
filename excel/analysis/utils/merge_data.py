@@ -196,6 +196,19 @@ class MergeData:
             tables = tables[tables['redcap_id'].notna()]  # remove rows without redcap_id
             tables = tables.rename(columns={'redcap_id': 'subject'})
 
+            # remove any metadata columns containing less than threshold data
+            threshold = 0.9
+            num_features = len(tables.columns)
+            tables = tables.dropna(axis=1, thresh=threshold * len(tables.index))
+            logger.info(
+                f'Removed {num_features - len(tables.columns) - 1} features with less than {int(threshold*100)}% data, '
+                f'number of remaining features: {len(tables.columns) - 1}'
+            )
+
+            # remove these columns from the metadata list
+            self.metadata = [col for col in self.metadata if col in tables.columns]
+            self.config.analysis.experiment.metadata = self.metadata
+
             # Impute missing metadata if desired
             if self.impute:
                 categorical = [col for col in self.metadata if col not in ['bmi']]
