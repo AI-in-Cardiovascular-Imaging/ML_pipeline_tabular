@@ -29,104 +29,6 @@ np.random.seed(99)
 random.seed(42)
 
 
-def lenopenreadlines(filename):
-    with open(filename) as f:
-        return len(f.readlines())
-
-
-def load_file_dataframe(dataname, sep=",", header=0, nrows=None, parse_dates=False, target='', is_test_flag=False):
-    ### This is where you have to make sure target is not empty #####
-    if not isinstance(dataname, str):
-        dfte = copy.deepcopy(dataname)
-        if isinstance(target, str):
-            if not is_test_flag:
-                if len(target) == 0:
-                    print('featurewiz does not work on clustering or unsupervised problems. Returning...')
-                    return dataname
-                else:
-                    modelt = analyze_problem_type(dataname[target])
-            else:
-                ### For test data, just check the target value which will be given as odeltype ##
-                modelt = copy.deepcopy(target)
-        else:
-            ### Target is a list or None ############
-            if not is_test_flag:
-                if target is None or len(target) == 0:
-                    print('featurewiz does not work on clustering or unsupervised problems. Returning...')
-                    return dataname
-                else:
-                    modelt = analyze_problem_type(dataname[target])
-            else:
-                ## For test data, the modeltype is given in the target variable
-                modelt = copy.deepcopy(target)
-    ###########################  This is where we load file or data frame ###############
-    elif isinstance(dataname, str):
-        if dataname == '':
-            print('    No file given. Continuing...')
-            return None
-        #### this means they have given file name as a string to load the file #####
-        codex = ['ascii', 'utf-8', 'iso-8859-1', 'cp1252', 'latin1']
-        ## this is the total number of rows in df  ###
-        ###############################################################################
-        if dataname != '' and dataname.endswith(('csv')):
-            try:
-                ### You can read the entire data into pandas first and then stratify split it ##
-                ###   If you don't stratify it, then you will have less classes than 2 error ###
-                dfte = pd.read_csv(dataname, sep=sep, header=header, encoding=None, parse_dates=parse_dates)
-                print('    pandas default encoder does not work for this file. Trying other encoders...')
-            except:
-                for code in codex:
-                    try:
-                        dfte = pd.read_csv(dataname, sep=sep, header=header, encoding=code, parse_dates=parse_dates)
-                        break
-                    except:
-                        continue
-            ######### If the file is not loadable, then give an error message #########
-            try:
-                print('    Shape of your Data Set loaded: %s' % (dfte.shape,))
-            except:
-                print('    File not loadable. Please check your file path or encoding format and try again.')
-                return dataname
-        elif dataname.endswith(('xlsx', 'xls', 'txt')):
-            #### It's very important to get header rows in Excel since people put headers anywhere in Excel#
-            dfte = pd.read_excel(dataname, header=header, parse_dates=parse_dates)
-        elif dataname.endswith(('gzip', 'bz2', 'zip', 'xz')):
-            print('    Reading compressed file...')
-            try:
-                #### Dont use skip_function in zip files #####
-                compression = 'infer'
-                dfte = pd.read_csv(
-                    dataname, sep=sep, header=header, encoding=None, compression=compression, parse_dates=parse_dates
-                )
-            except:
-                print('    Could not read compressed file. Please unzip and try again...')
-                return dataname
-    elif isinstance(dataname, pd.DataFrame):
-        dfte = copy.deepcopy(dataname)
-    else:
-        print('Dataname input must be a filename with path to that file or a Dataframe')
-        return None
-    ######################### This is where you sample rows ############################
-    #### this means they now have a dataframe and you must sample it correctly #####
-    #### Now that you have read the file, you must sample it ############
-    ####################################################################################
-    if not nrows is None:
-        if nrows < dfte.shape[0]:
-            if modelt == 'Regression':
-                dfte = dfte[:nrows]
-                print('        sequentially select %s max_rows from dataset %d...' % (nrows, dfte.shape[0]))
-            else:
-                test_size = 1 - (nrows / dfte.shape[0])
-                print('        stratified split %d rows from given %s' % (nrows, dfte.shape[0]))
-                dfte, _ = train_test_split(
-                    dfte, test_size=test_size, stratify=dfte[target], shuffle=True, random_state=99
-                )
-    if len(np.array(list(dfte))[dfte.columns.duplicated()]) > 0:
-        print('You have duplicate column names in your data set. Removing duplicate columns now...')
-        dfte = dfte[list(dfte.columns[~dfte.columns.duplicated(keep='first')])]
-    return dfte
-
-
 def find_remove_duplicates(values):
     output = []
     seen = set()
@@ -170,20 +72,7 @@ def return_factorized_dict(ls):
     return dict(zip(categs, factos))
 
 
-def featurewiz(
-    dataname,
-    target,
-    corr_limit=0.8,
-    verbose=0,
-    sep=",",
-    header=0,
-    test_data='',
-    feature_engg='',
-    category_encoders='',
-    nrows=None,
-    skip_sulov=False,
-    **kwargs
-):
+def featurewiz(dataname, target, corr_limit=0.8, feature_engg='', category_encoders=''):
     """
     #################################################################################
     ###############           F E A T U R E   W I Z A R D          ##################
@@ -205,10 +94,6 @@ def featurewiz(
         corr_limit: if you want to set your own threshold for removing variables as
             highly correlated, then give it here. The default is 0.7 which means variables less
             than -0.7 and greater than 0.7 in pearson's correlation will be candidates for removal.
-        verbose: This has 3 possible states:
-            0 limited output. Great for running this silently and getting fast results.
-            1 more verbiage. Great for knowing how results were and making changes to flags in input.
-            2 SULOV charts and output. Great for finding out what happens under the hood for SULOV method.
         test_data: If you want to transform test data in the same way you are transforming dataname, you can.
             test_data could be the name of a datapath+filename or a dataframe. featurewiz will detect whether
                 your input is a filename or a dataframe and load it automatically. Default is empty string.
@@ -237,29 +122,11 @@ def featurewiz(
         3. testm: modified test dataframe is the dataframe that is modified with
                     engineered and selected features from test_data
     """
-    if not nrows is None:
-        print('ALERT: nrows=%s. Hence featurewiz will randomly sample that many rows.' % nrows)
-        print('    Change nrows=None if you want all rows...')
-    # set all the defaults here #
     dataname = copy.deepcopy(dataname)
     max_nums = 30
     max_cats = 15
-    maxrows = 10000
     RANDOM_SEED = 42
-
     cat_vars = []
-    if kwargs:
-        for key, value in zip(kwargs.keys(), kwargs.values()):
-            print('You supplied %s = %s' % (key, value))
-            ###### Now test the next set of kwargs ###
-            if key == 'cat_vars':
-                if isinstance(value, list):
-                    cat_vars = value
-                elif isinstance(value, str):
-                    cat_vars = value
-                else:
-                    print('cat vars must be a list or a string')
-                    return
 
     #  MAKING FEATURE_TYPE AND FEATURE_GEN SELECTIONS HERE
     feature_generators = ['interactions', 'groupby', 'target']
@@ -290,10 +157,6 @@ def featurewiz(
     ##########   dataname will be the name of the pandas version of train data      ######
     ##########           train will be the Dask version of train data               ######
     ######################################################################################
-
-    train = load_file_dataframe(dataname, sep=sep, header=header, nrows=nrows, target=target)
-    dataname = copy.deepcopy(train)
-
     train_index = dataname.index
     settings.modeltype = analyze_problem_type(dataname[target])
 
@@ -319,21 +182,7 @@ def featurewiz(
         )
         dataname.drop(remove_cols, axis=1, inplace=True)
     ################    Load data frame with date var features correctly this time ################
-    if len(features_dict['date_vars']) > 0:
-        date_time_vars = features_dict['date_vars']
-        dataname = load_file_dataframe(
-            dataname,
-            sep=sep,
-            header=header,
-            nrows=nrows,
-            parse_dates=date_time_vars,
-            target=target,
-        )
-        test_data = None
-    else:
-        train_index = dataname.index
-        if test_data is not None:
-            test_index = test_data.index
+    test_data = None
 
     ################   X G B O O S T      D E F A U L T S      ######################################
     # If there are more than 30 categorical variables in a data set, it is worth reducing features.
@@ -353,7 +202,6 @@ def featurewiz(
     cpu_params['grow_policy'] = 'depthwise'  #'lossguide'
     cpu_params['max_depth'] = max_depth
     cpu_params['max_leaves'] = 0
-    cpu_params['verbosity'] = 0
     cpu_params['gpu_id'] = 0
     cpu_params['updater'] = 'grow_colmaker'
     cpu_params['predictor'] = 'cpu_predictor'
@@ -545,11 +393,11 @@ def featurewiz(
     ############     S   U  L  O   V       M   E   T   H   O  D      ###############################
     #### If the data dimension is less than 5o Million then do SULOV - otherwise skip it! #########
     ################################################################################################
-    if len(numvars) > 1 and not skip_sulov:
+    if len(numvars) > 1:
         if data_dim < 50:
             try:
                 final_list = FE_remove_variables_using_SULOV_method(
-                    dataname, numvars, settings.modeltype, target, corr_limit, verbose
+                    dataname, numvars, settings.modeltype, target, corr_limit
                 )
             except:
                 print('    SULOV method is erroring. Continuing ...')
@@ -564,7 +412,7 @@ def featurewiz(
             else:
                 data_temp = dataname[:10000]
             final_list = FE_remove_variables_using_SULOV_method(
-                data_temp, numvars, settings.modeltype, target, corr_limit, verbose
+                data_temp, numvars, settings.modeltype, target, corr_limit
             )
             del data_temp
     elif skip_sulov:
@@ -574,18 +422,9 @@ def featurewiz(
         print('    Skipping SULOV method since there are no continuous vars. Continuing ...')
         final_list = copy.deepcopy(numvars)
     #### Now we create interaction variables between categorical features ########
-    if verbose:
-        print(
-            '    Adding %s categorical variables to reduced numeric variables  of %d'
-            % (len(important_cats), len(final_list))
-        )
     if isinstance(final_list, np.ndarray):
         final_list = final_list.tolist()
     preds = final_list + important_cats
-    if verbose and len(preds) <= 30:
-        print('Final list of selected %s vars after SULOV = %s' % (len(preds), preds))
-    else:
-        print('Finally %s vars selected after SULOV' % (len(preds)))
     #######You must convert category variables into integers ###############
     print('Converting all features to numeric before sending to XGBoost...')
     if isinstance(target, str):
@@ -619,14 +458,12 @@ def featurewiz(
 
     #########   This is for DASK Dataframes XGBoost training ####################
     try:
-        xgb.set_config(verbosity=0)
+        xgb.set_config()
     except:
         ## Some cases, this errors, so pass ###
         pass
 
     ### we reload the dataframes into dask since columns may have been dropped ##
-    if verbose:
-        print('    using regular XGBoost')
     train = copy.deepcopy(dataname)
     test = copy.deepcopy(test_data)
     ########  Conversion completed for train and test data ##########
@@ -642,10 +479,6 @@ def featurewiz(
     else:
         iter_limit = int(train_p.shape[1] / 5 + 0.5)
     print('Current number of predictors before recursive XGBoost = %d ' % (train_p.shape[1],))
-    if verbose:
-        print('    Taking top %s features per iteration...' % top_num)
-    if verbose:
-        print('    XGBoost version using %s as tree method: %s' % (xgb.__version__, tree_method))
     ### This is to convert the target labels to proper numeric columns ######
     ### check if they are not starting from zero ##################
     y_train = dataname[target]
@@ -673,8 +506,6 @@ def featurewiz(
                 ### If there is just one variable left, then just skip it #####
                 continue
             else:
-                if verbose:
-                    print('        using %d variables...' % (train_p.shape[1] - i))
                 ### You need to choose fewer and fewer variables ############
                 new_preds_len = train_p.shape[1] - i
                 if new_preds_len <= 50:
@@ -796,17 +627,7 @@ def featurewiz(
                 print('            not selecting any important features since it did not meet criteria: F-score > 1.0')
             #######  order this in the same order in which they were collected ######
             important_features = list(OrderedDict.fromkeys(important_features))
-            if verbose:
-                print(
-                    '            Time taken for regular XGBoost feature selection = %0.0f seconds'
-                    % (time.time() - start_time2)
-                )
         #### plot all the feature importances in a grid ###########
-        if verbose >= 2:
-            if settings.multi_label:
-                draw_feature_importances_multi_label(bst_models)
-            else:
-                draw_feature_importances_single_label(bst_models)
         important_features = list(OrderedDict.fromkeys(important_features))
     except Exception as e:
         print('Regular XGBoost is crashing due to %s. Returning with currently selected features...' % e)
@@ -857,14 +678,14 @@ def featurewiz(
             return dataname[important_features + target], test_data[important_features]
 
 
-def classify_features(dfte, depVar, verbose=0):
+def classify_features(dfte, depVar):
     dfte = copy.deepcopy(dfte)
     if isinstance(depVar, list):
         orig_preds = [x for x in list(dfte) if x not in depVar]
     else:
         orig_preds = [x for x in list(dfte) if x not in [depVar]]
     #################    CLASSIFY  COLUMNS   HERE    ######################
-    var_df = classify_columns(dfte[orig_preds], verbose)
+    var_df = classify_columns(dfte[orig_preds])
     #####       Classify Columns   ################
     IDcols = var_df['id_vars']
     discrete_string_vars = var_df['nlp_vars'] + var_df['discrete_string_vars']
@@ -1415,8 +1236,7 @@ def count_rows_by_group_incl_nulls(dft, id_col):
 
 
 def FE_capping_outliers_beyond_IQR_Range(
-    df, features, cap_at_nth_largest=5, IQR_multiplier=1.5, drop=False, verbose=False
-):
+    df, features, cap_at_nth_largest=5, IQR_multiplier=1.5, drop=False,):
     """
     FE at the beginning of function name stands for Feature Engineering. FE functions add or drop features.
     #########################################################################################
@@ -1450,9 +1270,8 @@ def FE_capping_outliers_beyond_IQR_Range(
     # iterate over features(columns)
     for col in features:
         ### this is how the column looks now before capping outliers
-        if verbose:
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-            df[col].plot(kind='box', title='%s before capping outliers' % col, ax=ax1)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        df[col].plot(kind='box', title='%s before capping outliers' % col, ax=ax1)
         # 1st quartile (25%)
         Q1 = np.percentile(df[col], 25)
         # 3rd quartile (75%)
@@ -1477,10 +1296,6 @@ def FE_capping_outliers_beyond_IQR_Range(
         capped_value = df[col].nlargest(num_largest_after_max).iloc[-1]  ## this is the value we cap it against
         df.loc[df[col] == maxval, col] = capped_value  ## maximum values are now capped
         ### you are now good to go - you can show how they are capped using before and after pics
-        if verbose:
-            df[col].plot(kind='box', title='%s after capping outliers' % col, ax=ax2)
-            plt.show()
-
         # Let's save the list of outliers and see if there are some with outliers in multiple columns
         outlier_indices.extend(outlier_list_col)
 
@@ -1676,7 +1491,7 @@ def outlier_determine_threshold(df, col):
     return thresh
 
 
-def FE_find_and_cap_outliers(df, features, drop=False, verbose=False):
+def FE_find_and_cap_outliers(df, features, drop=False):
     """
     FE at the beginning of function name stands for Feature Engineering. FE functions add or drop features.
     #########################################################################################
@@ -1719,23 +1534,23 @@ def FE_find_and_cap_outliers(df, features, drop=False, verbose=False):
         df.loc[dfout_index, 'anomaly1'] = 1
 
         ### this is how the column looks now before capping outliers
-        if verbose:
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-            colors = {0: 'blue', 1: 'red'}
-            ax1.scatter(df[idcol], df[col], c=df["anomaly1"].apply(lambda x: colors[x]))
-            ax1.set_xlabel('Row ID')
-            ax1.set_ylabel('Target values')
-            ax1.set_title('%s before capping outliers' % col)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        colors = {0: 'blue', 1: 'red'}
+        ax1.scatter(df[idcol], df[col], c=df["anomaly1"].apply(lambda x: colors[x]))
+        ax1.set_xlabel('Row ID')
+        ax1.set_ylabel('Target values')
+        ax1.set_title('%s before capping outliers' % col)
 
         capped_value = df.loc[dfout_index, col].min()  ## this is the value we cap it against
         df.loc[dfout_index, col] = capped_value  ## maximum values are now capped
         ### you are now good to go - you can show how they are capped using before and after pics
-        if verbose:
-            colors = {0: 'blue', 1: 'red'}
-            ax2.scatter(df[idcol], df[col], c=df["anomaly1"].apply(lambda x: colors[x]))
-            ax2.set_xlabel('Row ID')
-            ax2.set_ylabel('Target values')
-            ax2.set_title('%s after capping outliers' % col)
+
+        colors = {0: 'blue', 1: 'red'}
+        ax2.scatter(df[idcol], df[col], c=df["anomaly1"].apply(lambda x: colors[x]))
+        ax2.set_xlabel('Row ID')
+        ax2.set_ylabel('Target values')
+        ax2.set_title('%s after capping outliers' % col)
 
         # Let's save the list of outliers and see if there are some with outliers in multiple columns
         outlier_indices.extend(dfout_index)
@@ -1799,9 +1614,6 @@ def FE_kmeans_resampler(x_train, y_train, target, smote="", verbose=0):
     #### remember you must predict using only predictor variables!
     y_train_c = km_model.fit_predict(x_train)
 
-    if verbose >= 1:
-        print('Number of clusters created = %d' % n_clusters)
-
     #### Generate the over-sampled data
     #### ADASYN / SMOTE oversampling #####
     if isinstance(smote, str):
@@ -1820,7 +1632,7 @@ from collections import Counter
 from sklearn.utils.class_weight import compute_class_weight
 
 
-def get_class_distribution(y_input, verbose=0):
+def get_class_distribution(y_input):
     y_input = copy.deepcopy(y_input)
     classes = np.unique(y_input)
     xp = Counter(y_input)
@@ -1834,8 +1646,6 @@ def get_class_distribution(y_input, verbose=0):
     class_rows = class_weights * [xp[x] for x in classes]
     class_rows = class_rows.astype(int)
     class_weighted_rows = dict(zip(classes, class_rows))
-    if verbose:
-        print('    class_weighted_rows = %s' % class_weighted_rows)
     return class_weighted_rows
 
 
@@ -2012,7 +1822,7 @@ from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import KBinsDiscretizer
 
 
-def FE_discretize_numeric_variables(train, bin_dict, test='', strategy='kmeans', verbose=0):
+def FE_discretize_numeric_variables(train, bin_dict, test='', strategy='kmeans'):
     """
     This handy function discretizes numeric variables into binned variables using kmeans algorithm.
     You need to provide the names of the variables and the numbers of bins for each variable in a dictionary.
@@ -2032,9 +1842,7 @@ def FE_discretize_numeric_variables(train, bin_dict, test='', strategy='kmeans',
     test = copy.deepcopy(test)
     num_cols = len(bin_dict)
     nrows = int((num_cols / 2) + 0.5)
-    # print('nrows',nrows)
-    if verbose:
-        fig = plt.figure(figsize=(10, 3 * num_cols))
+    fig = plt.figure(figsize=(10, 3 * num_cols))
     for i, (col, binvalue) in enumerate(bin_dict.items()):
         new_col = col + '_discrete'
         if strategy == 'gaussian':
@@ -2047,17 +1855,16 @@ def FE_discretize_numeric_variables(train, bin_dict, test='', strategy='kmeans',
             df[new_col] = kbd.fit_transform(df[[col]]).astype(int)
             if not isinstance(test, str):
                 test[new_col] = kbd.transform(test[[col]]).astype(int)
-        if verbose:
-            ax1 = plt.subplot(nrows, 2, i + 1)
-            ax1.scatter(df[col], df[new_col])
-            ax1.set_title(new_col)
+        ax1 = plt.subplot(nrows, 2, i + 1)
+        ax1.scatter(df[col], df[new_col])
+        ax1.set_title(new_col)
     if not isinstance(test, str):
         return df, test
     else:
         return df
 
 
-def FE_transform_numeric_columns_to_bins(df, bin_dict, verbose=0):
+def FE_transform_numeric_columns_to_bins(df, bin_dict):
     """
     This handy function discretizes numeric variables into binned variables using kmeans algorithm.
     You need to provide the names of the variables and the numbers of bins for each variable in a dictionary.
@@ -2076,8 +1883,7 @@ def FE_transform_numeric_columns_to_bins(df, bin_dict, verbose=0):
     df = copy.deepcopy(df)
     num_cols = len(bin_dict)
     nrows = int((num_cols / 2) + 0.5)
-    if verbose:
-        fig = plt.figure(figsize=(10, 3 * num_cols))
+    fig = plt.figure(figsize=(10, 3 * num_cols))
     for i, (col, binvalue) in enumerate(bin_dict.items()):
         new_col = col + '_' + binvalue
         if binvalue == 'log':
@@ -2308,7 +2114,7 @@ def EDA_randomly_select_rows_from_dataframe(train_dataframe, targets, nrows_limi
     if test_size <= 0:
         test_size = 0.9
     ###   Float variables are considered Regression #####################################
-    modeltype, _ = analyze_problem_type(train_dataframe[copy_targets], copy_targets, verbose=0)
+    modeltype, _ = analyze_problem_type(train_dataframe[copy_targets], copy_targets)
     ####### If it is a classification problem, you need to stratify and select sample ###
     if modeltype != 'Regression':
         print('    loading a random sample of %d rows into pandas for EDA' % nrows_limit)
@@ -2337,7 +2143,6 @@ class FeatureWiz(BaseEstimator, TransformerMixin):
     def __init__(
         self,
         corr_limit=0.90,
-        verbose=2,
         sep=',',
         header=0,
         feature_engg='',
@@ -2347,7 +2152,6 @@ class FeatureWiz(BaseEstimator, TransformerMixin):
     ):
         self.features = None
         self.corr_limit = corr_limit
-        self.verbose = verbose
         self.sep = sep
         self.header = header
         self.test_data = ""  ## leave testdata permanently as empty for now ##
@@ -2385,19 +2189,7 @@ class FeatureWiz(BaseEstimator, TransformerMixin):
             return {}, {}
         #### Send target variable as it is so that y_train is analyzed properly ###
         # Select features using featurewiz
-        features, X_sel = featurewiz(
-            df,
-            target,
-            self.corr_limit,
-            self.verbose,
-            self.sep,
-            self.header,
-            self.test_data,
-            self.feature_engg,
-            self.category_encoders,
-            self.nrows,
-            self.skip_sulov,
-        )
+        features, X_sel = featurewiz(df, target, self.corr_limit, self.feature_engg, self.category_encoders)
         # Convert the remaining column names back to integers and drop the
         difftime = max(1, int(time.time() - start_time))
         print('    Time taken to create entire pipeline = %s second(s)' % difftime)

@@ -109,7 +109,7 @@ def data_transform(
                 X_test_encoded[feat] = lbEncoder.transform(X_test[feat])
     elif enc_method == 'glmm':
         # Initialize the encoder model
-        GLMMEncoder = ce.glmm.GLMMEncoder(verbose=0, binomial_target=False)
+        GLMMEncoder = ce.glmm.GLMMEncoder(binomial_target=False)
         # fit the train data
         GLMMEncoder.fit(X_train[feature_to_encode], Y_train_encoded)
         # transform training set  ####
@@ -285,7 +285,6 @@ def lightgbm_model_fit(random_search_flag, x_train, y_train, x_test, y_test, mod
                 cv=3,
                 refit=True,
                 scoring=scoring,
-                verbose=False,
             )
             model.fit(x_train, y_train)
             print(
@@ -355,29 +354,12 @@ def lightgbm_model_fit(random_search_flag, x_train, y_train, x_test, y_test, mod
                 print('Mean cross-validated test %s = %0.04f' % (score_name, cv_results['mean_test_score'].mean()))
         else:
             try:
-                model.fit(x_train, y_train, verbose=-1)
+                model.fit(x_train, y_train)
             except:
                 print('lightgbm model is crashing. Please check your inputs and try again...')
         return model
 
 
-##############################################################################################
-import os
-
-
-def check_if_GPU_exists(verbose=0):
-    try:
-        os.environ['NVIDIA_VISIBLE_DEVICES']
-        if verbose:
-            print('GPU active on this device')
-        return True
-    except:
-        if verbose:
-            print('No GPU active on this device')
-        return False
-
-
-#############################################################################################
 def complex_XGBoost_model(
     X_train, y_train, X_test, log_y=False, GPU_flag=False, scaler='', enc_method='label', n_splits=5, verbose=0
 ):
@@ -401,7 +383,6 @@ def complex_XGBoost_model(
             But you can explicity send in "minmax' to select MinMaxScaler().
             Alternatively, you can send in a scaler object that you define here: MaxAbsScaler(), etc.
     enc_method: default is 'label' encoding. But you can choose 'glmm' as an alternative. But those are the only two.
-    verbose: default = 0. Choosing 1 will give you lot more output.
 
     Outputs:
     ------------
@@ -693,7 +674,6 @@ def xgbm_model_fit(
                 cv=3,
                 refit=True,
                 scoring=scoring,
-                verbose=False,
             )
             model.fit(x_train, y_train)
             print(
@@ -776,7 +756,7 @@ from collections import Counter
 from sklearn.utils.class_weight import compute_class_weight
 
 
-def find_rare_class(classes, verbose=0):
+def find_rare_class(classes):
     ######### Print the % count of each class in a Target variable  #####
     """
     Works on Multi Class too. Prints class percentages count of target variable.
@@ -785,11 +765,6 @@ def find_rare_class(classes, verbose=0):
     """
     counts = OrderedDict(Counter(classes))
     total = sum(counts.values())
-    if verbose >= 1:
-        print('       Class  -> Counts -> Percent')
-        sorted_keys = sorted(counts.keys())
-        for cls in sorted_keys:
-            print("%12s: % 7d  ->  % 5.1f%%" % (cls, counts[cls], counts[cls] / total * 100))
     if type(pd.Series(counts).idxmin()) == str:
         return pd.Series(counts).idxmin()
     else:
@@ -909,8 +884,7 @@ def xgboost_model_fit(
                         y_train,
                         early_stopping_rounds=early_stopping,
                         eval_metric=['rmse'],
-                        eval_set=[(x_test, y_test)],
-                        verbose=0,
+                        eval_set=[(x_test, y_test)]
                     )
             else:
                 if modeltype == 'Binary_Classification':
@@ -956,8 +930,7 @@ def xgboost_model_fit(
                         np.log(y_train),
                         early_stopping_rounds=6,
                         eval_metric=['rmse'],
-                        eval_set=[(x_test, np.log(y_test))],
-                        verbose=0,
+                        eval_set=[(x_test, np.log(y_test))]
                     )
                 else:
                     model.fit(
@@ -965,8 +938,7 @@ def xgboost_model_fit(
                         y_train,
                         early_stopping_rounds=6,
                         eval_metric=['rmse'],
-                        eval_set=[(x_test, y_test)],
-                        verbose=0,
+                        eval_set=[(x_test, y_test)]
                     )
             else:
                 model.fit(
@@ -974,8 +946,7 @@ def xgboost_model_fit(
                     y_train,
                     early_stopping_rounds=6,
                     eval_metric=eval_metric,
-                    eval_set=[(x_test, y_test)],
-                    verbose=0,
+                    eval_set=[(x_test, y_test)]
                 )
     return model
 
@@ -1000,7 +971,6 @@ def simple_XGBoost_model(
     GPU_flag: if your machine has a GPU set this flag and it will use XGBoost GPU to speed up processing.
     scaler : default is StandardScaler(). But you can send in MinMaxScaler() as input to change it or any other scaler.
     enc_method: default is 'label' encoding. But you can choose 'glmm' as an alternative. But those are the only two.
-    verbose: default = 0. Choosing 1 will give you lot more output.
 
     Outputs:
     ------------
@@ -1098,7 +1068,6 @@ def simple_XGBoost_model(
             random_state=99,
             objective='reg:squarederror',
             eval_metric='rmse',
-            verbosity=0,
             n_jobs=-1,
             tree_method=tree_method,
             silent=True,
@@ -1177,7 +1146,6 @@ def simple_XGBoost_model(
         cv=3,
         refit=True,
         scoring=scoring,
-        verbose=False,
     )
 
     X_train, Y_train, X_valid, Y_valid = data_transform(
@@ -1325,8 +1293,7 @@ def simple_XGBoost_model(
 
 ##################################################################################
 def complex_LightGBM_model(
-    X_train, y_train, X_test, log_y=False, GPU_flag=False, scaler='', enc_method='label', n_splits=5, verbose=-1
-):
+    X_train, y_train, X_test, log_y=False, GPU_flag=False, scaler='', enc_method='label', n_splits=5):
     """
     This model is called complex because it handle multi-label, mulit-class datasets which LGBM ordinarily cant.
     Just send in X_train, y_train and what you want to predict, X_test
@@ -1345,7 +1312,6 @@ def complex_LightGBM_model(
     GPU_flag: if your machine has a GPU set this flag and it will use XGBoost GPU to speed up processing.
     scaler : default is StandardScaler(). But you can send in MinMaxScaler() as input to change it or any other scaler.
     enc_method: default is 'label' encoding. But you can choose 'glmm' as an alternative. But those are the only two.
-    verbose: default = 0. Choosing 1 will give you lot more output.
 
     Outputs:
     ------------
@@ -1581,7 +1547,6 @@ def simple_LightGBM_model(
         n_estimators = 500  # make sure it is small
         early_stopping_rounds = 10
     ###### Now you can set these defaults ##
-    verbose = False
     SEED = 42
     X_XGB = copy.deepcopy(X_train)
     Y_XGB = copy.deepcopy(y_train)
@@ -1681,7 +1646,6 @@ def simple_LightGBM_model(
             'bagging_seed': 1337,
             'drop_seed': 1337,
             'data_random_seed': 1337,
-            'verbose': -1,
             'n_estimators': n_estimators,
         }
     else:
@@ -1731,7 +1695,6 @@ def simple_LightGBM_model(
         cv=5,
         refit=True,
         scoring=scoring,
-        verbose=False,
     )
     model.fit(X_train, y_train)
     print(
@@ -1769,7 +1732,6 @@ def simple_LightGBM_model(
         es = lgbm.early_stopping(
             stopping_rounds=early_stopping_rounds,
             first_metric_only=True,
-            verbose=verbose,
         )
 
         # le = lgbm.log_evaluation(

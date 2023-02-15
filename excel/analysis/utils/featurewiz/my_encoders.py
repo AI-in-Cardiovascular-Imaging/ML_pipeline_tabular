@@ -42,6 +42,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer, LabelBinarizer, LabelEncoder
 
+
 def left_subtract(l1, l2):
     lst = []
     for i in l1:
@@ -936,9 +937,8 @@ class DateTime_Transformer(BaseEstimator, TransformerMixin):
           See My_Label_Encoder_Pipe for an example of how to change this to use in sklearn pipelines.
     """
 
-    def __init__(self, ts_column, verbose=0):
+    def __init__(self, ts_column):
         self.ts_column = ts_column
-        self.verbose = verbose
         self.cols_added = []
         self.fitted = False
 
@@ -966,16 +966,12 @@ class DateTime_Transformer(BaseEstimator, TransformerMixin):
         X = copy.deepcopy(X)
         if self.fitted:
             ### This is for test data ##########
-            X_trans, _ = FE_create_time_series_features(
-                X, self.ts_column, ts_adds_in=self.cols_added, verbose=self.verbose
-            )
+            X_trans, _ = FE_create_time_series_features(X, self.ts_column, ts_adds_in=self.cols_added)
             return X_trans
         else:
             ### This is for train data #########
             self.fit(X)
-            X_trans, self.cols_added = FE_create_time_series_features(
-                X, self.ts_column, ts_adds_in=[], verbose=self.verbose
-            )
+            X_trans, self.cols_added = FE_create_time_series_features(X, self.ts_column, ts_adds_in=[])
             self.fitted = True
             return X_trans
 
@@ -1086,8 +1082,6 @@ def _create_ts_features(df, tscol, verbose=0):
             dt_adds.append(tscol + '_month_typeofday_cross')
     except:
         print('    Error in creating date time derived features. Continuing...')
-    if verbose:
-        print('    created %d columns from time series %s column' % (len(dt_adds), tscol))
     return df, dt_adds
 
 
@@ -1188,8 +1182,6 @@ def FE_create_time_series_features(dft, ts_column, ts_adds_in=[], verbose=0):
                     dtf = dtf.drop(col, axis=1)
                     ts_adds.remove(col)
             removed_ts_cols = left_subtract(ts_adds_copy, ts_adds)
-            if verbose:
-                print('        dropped %d time series added columns due to zero variance' % len(removed_ts_cols))
             rem_ts_cols = ts_adds
             dtf = dtf[rem_cols + rem_ts_cols]
         else:
@@ -1208,8 +1200,6 @@ def FE_create_time_series_features(dft, ts_column, ts_adds_in=[], verbose=0):
             dtf = dtf.drop(ts_column, axis=1)
         else:
             pass
-        if verbose:
-            print('    After dropping some zero variance cols, shape of data: %s' % (dtf.shape,))
     except Exception as e:
         print('Error in Processing %s column due to %s for date time features. Continuing...' % (ts_column, e))
     return dtf, rem_ts_cols
@@ -1235,18 +1225,13 @@ class Binning_Transformer(BaseEstimator, TransformerMixin):
     ############################################################################
     """
 
-    def __init__(self, verbose=0):
-        self.verbose = verbose
+    def __init__(self):
         ### This is where we set the max depth for setting defaults for clf ##
         self.new_bincols = {}
         self.entropy_threshold = {}
         self.fitted = False
         self.clfs = {}
         self.max_number_of_classes = 1
-
-    def get_params(self, deep=True):
-        # This is to make it scikit-learn compatible ####
-        return {"verbose": self.verbose}
 
     def set_params(self, **parameters):
         for parameter, value in parameters.items():
@@ -1404,7 +1389,7 @@ class TS_Lagging_Transformer(BaseEstimator, TransformerMixin):
     X_transformed: This is the transformed data frame with lagged targets added.
     """
 
-    def __init__(self, lags, ts_column, hier_vars=[], time_period="", verbose=0):
+    def __init__(self, lags, ts_column, hier_vars=[], time_period=""):
         self.lags = lags
         self.ts_column = ts_column
         if isinstance(ts_column, list):
@@ -1432,7 +1417,6 @@ class TS_Lagging_Transformer(BaseEstimator, TransformerMixin):
         else:
             print("time period input must be either daily or weekly or hourly. Returning...")
             return
-        self.verbose = verbose
         self.targets = []
         self.fitted = False
         self.train = None
@@ -1579,12 +1563,11 @@ class TS_Lagging_Transformer_Pipe(BaseEstimator, TransformerMixin):
     #####################################################################
     """
 
-    def __init__(self, lags, ts_column, hier_vars=[], time_period="", verbose=0):
+    def __init__(self, lags, ts_column, hier_vars=[], time_period=""):
         self.lags = lags
         self.ts_column = ts_column
         self.hier_vars = hier_vars
         self.time_period = time_period
-        self.verbose = verbose
 
     def fit(self, X, y):
         tslag = TS_Lagging_Transformer(
@@ -1592,7 +1575,6 @@ class TS_Lagging_Transformer_Pipe(BaseEstimator, TransformerMixin):
             ts_column=self.ts_column,
             hier_vars=self.hier_vars,
             time_period=self.time_period,
-            verbose=self.verbose,
         )
         self.fitted = True
         return tslag

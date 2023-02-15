@@ -18,7 +18,7 @@ def left_subtract(l1, l2):
 
 
 ####################################################################################
-def classify_columns(df_preds, verbose=0):
+def classify_columns(df_preds):
     """
     This actually does Exploratory data analysis - it means this function performs EDA
     ######################################################################################
@@ -36,8 +36,6 @@ def classify_columns(df_preds, verbose=0):
     print('#######################################################################################')
     print('######################## C L A S S I F Y I N G  V A R I A B L E S  ####################')
     print('#######################################################################################')
-    if verbose:
-        print('Classifying variables in data set...')
     #### Cat_Limit defines the max number of categories a column can have to be called a categorical colum
     cat_limit = 35
     float_limit = 15  #### Make this limit low so that float variables below this limit become cat vars ###
@@ -281,47 +279,18 @@ def classify_columns(df_preds, verbose=0):
     ###############  This is where you print all the types of variables ##############
     ####### Returns 8 vars in the following order: continuous_vars,int_vars,cat_vars,
     ###  string_bool_vars,discrete_string_vars,nlp_vars,date_or_id_vars,cols_delete
-    if verbose == 1:
-        print("    Number of Numeric Columns = ", len(continuous_vars))
-        print("    Number of Integer-Categorical Columns = ", len(int_vars))
-        print("    Number of String-Categorical Columns = ", len(cat_vars))
-        print("    Number of Factor-Categorical Columns = ", len(factor_vars))
-        print("    Number of String-Boolean Columns = ", len(string_bool_vars))
-        print("    Number of Numeric-Boolean Columns = ", len(num_bool_vars))
-        print("    Number of Discrete String Columns = ", len(discrete_string_vars))
-        print("    Number of NLP String Columns = ", len(nlp_vars))
-        print("    Number of Date Time Columns = ", len(date_vars))
-        print("    Number of ID Columns = ", len(id_vars))
-        print("    Number of Columns to Delete = ", len(cols_delete))
-    if verbose == 2:
-        print('  Printing upto %d columns max in each category:' % max_cols_to_print)
-        print("    Numeric Columns : %s" % continuous_vars[:max_cols_to_print])
-        print("    Integer-Categorical Columns: %s" % int_vars[:max_cols_to_print])
-        print("    String-Categorical Columns: %s" % cat_vars[:max_cols_to_print])
-        print("    Factor-Categorical Columns: %s" % factor_vars[:max_cols_to_print])
-        print("    String-Boolean Columns: %s" % string_bool_vars[:max_cols_to_print])
-        print("    Numeric-Boolean Columns: %s" % num_bool_vars[:max_cols_to_print])
-        print("    Discrete String Columns: %s" % discrete_string_vars[:max_cols_to_print])
-        print("    NLP text Columns: %s" % nlp_vars[:max_cols_to_print])
-        print("    Date Time Columns: %s" % date_vars[:max_cols_to_print])
-        print("    ID Columns: %s" % id_vars[:max_cols_to_print])
-        print("    Columns that will not be considered in modeling: %s" % cols_delete[:max_cols_to_print])
     ##### now collect all the column types and column names into a single dictionary to return!
 
     len_sum_all_cols = reduce(add, [len(v) for v in sum_all_cols.values()])
     if len_sum_all_cols == orig_cols_total:
-        if verbose:
-            print('    %d Predictors classified...' % orig_cols_total)
-        # print('        This does not include the Target column(s)')
-    else:
         print(
             'No of columns classified %d does not match %d total cols. Continuing...'
             % (len_sum_all_cols, orig_cols_total)
         )
-        ls = sum_all_cols.values()
-        flat_list = [item for sublist in ls for item in sublist]
-        if len(left_subtract(list(train), flat_list)) > 0:
-            print('    Error: some columns missing from classification are: %s' % left_subtract(list(train), flat_list))
+    ls = sum_all_cols.values()
+    flat_list = [item for sublist in ls for item in sublist]
+    if len(left_subtract(list(train), flat_list)) > 0:
+        print('    Error: some columns missing from classification are: %s' % left_subtract(list(train), flat_list))
     return sum_all_cols
 
 

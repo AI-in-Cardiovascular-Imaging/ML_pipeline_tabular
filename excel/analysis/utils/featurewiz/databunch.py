@@ -76,7 +76,6 @@ class DataBunch(object):
         target_enc_cat_features=True,
         normalization=True,
         random_state=42,
-        verbose=1,
     ):
         """
         Description of __init__
@@ -94,7 +93,6 @@ class DataBunch(object):
             group_generator_features=True (undefined):
             target_enc_cat_features=True (undefined)
             random_state=42 (undefined):
-            verbose = 1 (undefined)
         """
         self.random_state = random_state
 
@@ -158,12 +156,6 @@ class DataBunch(object):
         if y_test is not None:
             self.y_test = y_test
 
-        if verbose > 0:
-            print('Source X_train shape: ', self.X_train_source.shape)
-            if not X_test is None:
-                print('| Source X_test shape: ', self.X_test_source.shape)
-            print('#' * 50)
-
         # add categorical features in DataBunch
         if cat_features is None:
             self.cat_features = self.auto_detect_cat_features(self.X_train_source)
@@ -175,8 +167,6 @@ class DataBunch(object):
 
         # preproc_data in DataBunch
         if clean_and_encod_data:
-            if verbose > 0:
-                print('> Start preprocessing with %d variables' % self.X_train_source.shape[1])
             self.X_train, self.X_test = self.preproc_data(
                 self.X_train_source,
                 self.X_test_source,
@@ -188,7 +178,6 @@ class DataBunch(object):
                 group_generator_features=group_generator_features,
                 target_enc_cat_features=target_enc_cat_features,
                 normalization=normalization,
-                verbose=verbose,
             )
         else:
             self.X_train, self.X_test = X_train, X_test
@@ -403,7 +392,6 @@ class DataBunch(object):
         group_generator_features=True,
         target_enc_cat_features=True,
         normalization=True,
-        verbose=1,
     ):
         """
         Description of preproc_data:
@@ -482,9 +470,6 @@ class DataBunch(object):
                             test_data[feature] = test_data[feature].astype('category').cat.codes
                 else:
                     #### If an encoder is specified, then use that encoder to transform categorical variables
-                    if verbose > 0:
-                        print('> Generate Categorical Encoded features')
-
                     copy_cat_encoder_names = copy.deepcopy(cat_encoder_names)
                     for encoder_name in copy_cat_encoder_names:
                         if verbose > 0:
@@ -501,12 +486,6 @@ class DataBunch(object):
                             if not isinstance(test_encodet, str):
                                 test_data = pd.concat([test_data, test_encodet], axis=1)
 
-                        if verbose > 0:
-                            if not isinstance(data_encodet, str):
-                                addl_features = data_encodet.shape[1] - original_number_features
-                                count_number_features += addl_features
-                                print(' + added ', addl_features, ' additional Features using', encoder_name)
-
         # Generate Target related Encoder features for cat variables:
 
         target_encoders = [x for x in self.cat_encoder_names if x in self.target_encoders_names_list]
@@ -514,15 +493,10 @@ class DataBunch(object):
             target_enc_cat_features = True
         if target_enc_cat_features:
             if encodet_features_names:
-                if verbose > 0:
-                    print('> Generate Target Encoded categorical features')
-
                 if len(target_encoders) == 0:
                     target_encoders = ['TargetEncoder']  ### set the default as TargetEncoder if nothing is specified
                 copy_target_encoders = copy.deepcopy(target_encoders)
                 for encoder_name in copy_target_encoders:
-                    if verbose > 0:
-                        print(' + To know more, click: %s' % self.target_encoders_names[encoder_name][1])
                     data_encodet, train_encoder = self.gen_target_encodet_features(
                         data[encodet_features_names], self.y_train_source, encoder_name
                     )
@@ -536,11 +510,33 @@ class DataBunch(object):
                         if not isinstance(test_encodet, str):
                             test_data = pd.concat([test_data, test_encodet], axis=1)
 
+                if verbose > 0:
+                    if not isinstance(data_encodet, str):
+                        addl_features = data_encodet.shape[1] - original_number_features
+                        count_number_features += addl_features
+                        print(' + added ', len(encodet_features_names), ' additional Features using ', encoder_name)
+
+        # Clean NaNs in Numeric variables only
+        if clean_nan:
+            data = self.clean_nans(data, cols=num_features)
+            if test_data is not None:
+                test_data = self.clean_nans(test_data, cols=num_features)
+            ### Sometimes, train has nulls while test doesn't and vice versa
+            if test_data is not None:
+                rem_cols = left_subtract(list(data), list(test_data))
+                if len(rem_cols) > 0:
+                    for rem_col in rem_cols:
+                        test_data[rem_col] = 0
+                elif len(left_subtract(list(test_data), list(data))) > 0:
+                    rem_cols = left_subtract(list(test_data), list(data))
+                    for rem_col in rem_cols:
+                        data[rem_col] = 0
+                else:
+                    print(' + test and train have similar NaN columns')
+
         # Generate interaction features for Numeric variables
         if num_generator_features:
             if len(num_features) > 1:
-                if verbose > 0:
-                    print('> Generate Interactions features among Numeric variables')
                 fe_df = self.gen_numeric_interaction_features(
                     data[num_features],
                     num_features,
@@ -557,16 +553,6 @@ class DataBunch(object):
                     )
                     if not isinstance(fe_test, str):
                         test_data = pd.concat([test_data, fe_test], axis=1)
-
-                if verbose > 0:
-                    if not isinstance(fe_df, str):
-                        addl_features = fe_df.shape[1]
-                        count_number_features += addl_features
-                        print(
-                            ' + added ',
-                            addl_features,
-                            ' Interaction Features ',
-                        )
 
         # Generate Group Encoded Features for Numeric variables only using all Categorical variables
         if group_generator_features:
@@ -590,11 +576,6 @@ class DataBunch(object):
                         if not isinstance(test_encodet, str):
                             test_data = pd.concat([test_data, test_encodet], axis=1)
 
-                if verbose > 0:
-                    addl_features = data_encodet.shape[1] * len(num_features)
-                    count_number_features += addl_features
-                    print(' + added ', addl_features, ' Group-by Encoded Features using JamesSteinEncoder')
-
         # Drop source cat features
         if not len(cat_encoder_names) == 0:
             ### if there is no categorical encoding, then let the categorical_vars pass through.
@@ -615,27 +596,12 @@ class DataBunch(object):
 
         # Normalization Data
         if normalization:
-            if verbose > 0:
-                print('> Normalization Features')
             columns_name = X_train.columns.values
             scaler = StandardScaler().fit(X_train)
             X_train = scaler.transform(X_train)
             X_test = scaler.transform(X_test)
             X_train = pd.DataFrame(X_train, columns=columns_name)
             X_test = pd.DataFrame(X_test, columns=columns_name)
-
-        if verbose > 0:
-            print('#' * 50)
-            print('> Final Number of Features: ', (X_train.shape[1]))
-            print('#' * 50)
-            print('New X_train rows: %s, X_test rows: %s' % (X_train.shape[0], X_test.shape[0]))
-            print('New X_train columns: %s, X_test columns: %s' % (X_train.shape[1], X_test.shape[1]))
-            if len(left_subtract(X_test.columns, X_train.columns)) > 0:
-                print(
-                    """There are more columns in test than train 
-                    due to missing columns being more in test than train. Continuing..."""
-                )
-
         return X_train, X_test
 
 

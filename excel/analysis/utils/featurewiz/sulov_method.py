@@ -46,7 +46,7 @@ def find_remove_duplicates(list_of_values):
     return output
 
 
-def FE_remove_variables_using_SULOV_method(df, numvars, modeltype, target, corr_limit=0.70, verbose=0):
+def FE_remove_variables_using_SULOV_method(df, numvars, modeltype, target, corr_limit=0.70):
     """
     FE stands for Feature Engineering - it means this function performs feature engineering
     ###########################################################################################
@@ -115,18 +115,6 @@ def FE_remove_variables_using_SULOV_method(df, numvars, modeltype, target, corr_
             # fs = SelectKBest(score_func=sel_function, k=max_feats)
         ##### you must ensure there are no infinite nor null values in corr_list df ##
         df_fit = df[corr_list]
-        ### Now check if there are any NaN values in the dataset #####
-
-        if df_fit.isnull().sum().sum() > 0:
-            df_fit = df_fit.dropna()
-        else:
-            print('    there are no null values in dataset...')
-        ##### Reduce memory usage and find mutual information score ####
-        # try:
-        #    df_fit = reduce_mem_usage(df_fit)
-        # except:
-        #    print('Reduce memory erroring. Continuing...')
-        ##### Ready to perform fit and find mutual information score ####
 
         try:
             # fs.fit(df_fit, df_target)
@@ -178,83 +166,81 @@ def FE_remove_variables_using_SULOV_method(df, numvars, modeltype, target, corr_
                 print('    Following (%d) vars selected: %s' % (len(final_list), final_list))
         ##############    D R A W   C O R R E L A T I O N   N E T W O R K ##################
         selected = copy.deepcopy(final_list)
-        if verbose:
-            try:
-                import networkx as nx
 
-                #### Now start building the graph ###################
-                gf = nx.Graph()
-                ### the mutual info score gives the size of the bubble ###
-                multiplier = 2100
-                for each in orig_sorted:
-                    gf.add_node(each, size=int(max(1, mutual_info[each] * multiplier)))
-                ######### This is where you calculate the size of each node to draw
-                sizes = [mutual_info[x] * multiplier for x in list(gf.nodes())]
-                ####  The sizes of the bubbles for each node is determined by its mutual information score value
-                corr = df_fit.corr()
-                high_corr = corr[abs(corr) > corr_limit]
-                ## high_corr is the dataframe of a few variables that are highly correlated to each other
-                combos = combinations(corr_list, 2)
-                ### this gives the strength of correlation between 2 nodes ##
-                multiplier = 20
-                for (var1, var2) in combos:
-                    if np.isnan(high_corr.loc[var1, var2]):
-                        pass
-                    else:
-                        gf.add_edge(var1, var2, weight=multiplier * high_corr.loc[var1, var2])
-                ######## Now start building the networkx graph ##########################
-                widths = nx.get_edge_attributes(gf, 'weight')
-                nodelist = gf.nodes()
-                cols = 5
-                height_size = 5
-                width_size = 15
-                rows = int(len(corr_list) / cols)
-                if rows < 1:
-                    rows = 1
-                plt.figure(figsize=(width_size, min(20, height_size * rows)))
-                pos = nx.shell_layout(gf)
-                nx.draw_networkx_nodes(gf, pos, nodelist=nodelist, node_size=sizes, node_color='blue', alpha=0.5)
-                nx.draw_networkx_edges(
-                    gf, pos, edgelist=widths.keys(), width=list(widths.values()), edge_color='lightblue', alpha=0.6
-                )
-                pos_higher = {}
-                x_off = 0.04  # offset on the x axis
-                y_off = 0.04  # offset on the y axis
-                for k, v in pos.items():
-                    pos_higher[k] = (v[0] + x_off, v[1] + y_off)
-                if len(selected) == 0:
-                    nx.draw_networkx_labels(
-                        gf, pos=pos_higher, labels=dict(zip(nodelist, nodelist)), font_color='black'
-                    )
+        try:
+            import networkx as nx
+
+            #### Now start building the graph ###################
+            gf = nx.Graph()
+            ### the mutual info score gives the size of the bubble ###
+            multiplier = 2100
+            for each in orig_sorted:
+                gf.add_node(each, size=int(max(1, mutual_info[each] * multiplier)))
+            ######### This is where you calculate the size of each node to draw
+            sizes = [mutual_info[x] * multiplier for x in list(gf.nodes())]
+            ####  The sizes of the bubbles for each node is determined by its mutual information score value
+            corr = df_fit.corr()
+            high_corr = corr[abs(corr) > corr_limit]
+            ## high_corr is the dataframe of a few variables that are highly correlated to each other
+            combos = combinations(corr_list, 2)
+            ### this gives the strength of correlation between 2 nodes ##
+            multiplier = 20
+            for (var1, var2) in combos:
+                if np.isnan(high_corr.loc[var1, var2]):
+                    pass
                 else:
-                    nx.draw_networkx_labels(
-                        gf,
-                        pos=pos_higher,
-                        labels=dict(
-                            zip(nodelist, [x + ' (selected)' if x in selected else x + ' (removed)' for x in nodelist])
-                        ),
-                        font_color='black',
-                    )
-                plt.box(True)
-                plt.title(
-                    """In SULOV, we repeatedly remove features with lower mutual info scores among highly correlated pairs (see figure),
-                            SULOV selects the feature with higher mutual info score related to target when choosing between a pair. """,
-                    fontsize=10,
+                    gf.add_edge(var1, var2, weight=multiplier * high_corr.loc[var1, var2])
+            ######## Now start building the networkx graph ##########################
+            widths = nx.get_edge_attributes(gf, 'weight')
+            nodelist = gf.nodes()
+            cols = 5
+            height_size = 5
+            width_size = 15
+            rows = int(len(corr_list) / cols)
+            if rows < 1:
+                rows = 1
+            plt.figure(figsize=(width_size, min(20, height_size * rows)))
+            pos = nx.shell_layout(gf)
+            nx.draw_networkx_nodes(gf, pos, nodelist=nodelist, node_size=sizes, node_color='blue', alpha=0.5)
+            nx.draw_networkx_edges(
+                gf, pos, edgelist=widths.keys(), width=list(widths.values()), edge_color='lightblue', alpha=0.6
+            )
+            pos_higher = {}
+            x_off = 0.04  # offset on the x axis
+            y_off = 0.04  # offset on the y axis
+            for k, v in pos.items():
+                pos_higher[k] = (v[0] + x_off, v[1] + y_off)
+            if len(selected) == 0:
+                nx.draw_networkx_labels(
+                    gf, pos=pos_higher, labels=dict(zip(nodelist, nodelist)), font_color='black'
                 )
-                plt.suptitle('How SULOV Method Works by Removing Highly Correlated Features', fontsize=20, y=1.03)
-                red_patch = mpatches.Patch(
-                    color='blue', label='Bigger circle denotes higher mutual info score with target'
+            else:
+                nx.draw_networkx_labels(
+                    gf,
+                    pos=pos_higher,
+                    labels=dict(
+                        zip(nodelist, [x + ' (selected)' if x in selected else x + ' (removed)' for x in nodelist])
+                    ),
+                    font_color='black',
                 )
-                blue_patch = mpatches.Patch(
-                    color='lightblue', label='Thicker line denotes higher correlation between two variables'
-                )
-                plt.legend(handles=[red_patch, blue_patch], loc='best')
-                plt.show()
-                #####    N E T W O R K     D I A G R A M    C O M P L E T E   #################
-                return final_list
-            except Exception as e:
-                print('    Networkx library visualization crashing due to %s' % e)
-                print('Completed SULOV. %d features selected' % len(final_list))
-        else:
+            plt.box(True)
+            plt.title(
+                """In SULOV, we repeatedly remove features with lower mutual info scores among highly correlated pairs (see figure),
+                        SULOV selects the feature with higher mutual info score related to target when choosing between a pair. """,
+                fontsize=10,
+            )
+            plt.suptitle('How SULOV Method Works by Removing Highly Correlated Features', fontsize=20, y=1.03)
+            red_patch = mpatches.Patch(
+                color='blue', label='Bigger circle denotes higher mutual info score with target'
+            )
+            blue_patch = mpatches.Patch(
+                color='lightblue', label='Thicker line denotes higher correlation between two variables'
+            )
+            plt.legend(handles=[red_patch, blue_patch], loc='best')
+            plt.show()
+            #####    N E T W O R K     D I A G R A M    C O M P L E T E   #################
+            return final_list
+        except Exception as e:
+            print('    Networkx library visualization crashing due to %s' % e)
             print('Completed SULOV. %d features selected' % len(final_list))
         return final_list

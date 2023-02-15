@@ -58,7 +58,7 @@ class Stacking_Classifier(BaseEstimator, ClassifierMixin, TransformerMixin):
     def fit(self, X, y):
         import lightgbm as lgb
 
-        models_dict = stacking_models_list(X_train=X, y_train=y, modeltype='Classification', verbose=1)
+        models_dict = stacking_models_list(X_train=X, y_train=y, modeltype='Classification')
         self.base_models = list(models_dict.values())
         self.base_models_ = [list() for x in self.base_models]
         if y.ndim >= 2:
@@ -170,7 +170,7 @@ class Stacking_Regressor(BaseEstimator, RegressorMixin, TransformerMixin):
 
         import lightgbm as lgb
 
-        models_dict = stacking_models_list(X_train=X, y_train=y, modeltype='Regression', verbose=1)
+        models_dict = stacking_models_list(X_train=X, y_train=y, modeltype='Regression')
         self.base_models = list(models_dict.values())
         self.base_models_ = [list() for x in self.base_models]
         if y.ndim >= 2:
@@ -253,7 +253,7 @@ class Stacking_Regressor(BaseEstimator, RegressorMixin, TransformerMixin):
             return self.meta_model_.predict(meta_features)
 
 
-def find_rare_class(classes, verbose=0):
+def find_rare_class(classes):
     """
     Works on Multi Class too. Prints class percentages count of target variable.
     It returns the name of the Rare class (the one with the minimum class member count).
@@ -261,10 +261,6 @@ def find_rare_class(classes, verbose=0):
     """
     counts = OrderedDict(Counter(classes))
     total = sum(counts.values())
-    if verbose >= 1:
-        print(' Class  -> Counts -> Percent')
-        for cls in counts.keys():
-            print("%6s: % 7d  ->  % 5.1f%%" % (cls, counts[cls], counts[cls] / total * 100))
     if type(pd.Series(counts).idxmin()) == str:
         return pd.Series(counts).idxmin()
     else:
