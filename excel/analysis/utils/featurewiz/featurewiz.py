@@ -415,9 +415,6 @@ def featurewiz(dataname, target, corr_limit=0.8, feature_engg='', category_encod
                 data_temp, numvars, settings.modeltype, target, corr_limit
             )
             del data_temp
-    elif skip_sulov:
-        print('    Skipping SULOV method. Continuing ...')
-        final_list = copy.deepcopy(numvars)
     else:
         print('    Skipping SULOV method since there are no continuous vars. Continuing ...')
         final_list = copy.deepcopy(numvars)
@@ -463,9 +460,6 @@ def featurewiz(dataname, target, corr_limit=0.8, feature_engg='', category_encod
         ## Some cases, this errors, so pass ###
         pass
 
-    ### we reload the dataframes into dask since columns may have been dropped ##
-    train = copy.deepcopy(dataname)
-    test = copy.deepcopy(test_data)
     ########  Conversion completed for train and test data ##########
     #### If Category Encoding took place, these cat variables are no longer needed in Train. So remove them!
     if feature_gen or feature_type:
@@ -746,41 +740,6 @@ def remove_highly_correlated_vars_fast(df, corr_limit=0.70):
     return to_drop
 
 
-#############################################################################################
-import xgboost
-
-
-def draw_feature_importances_multi_label(bst_models):
-    rows = int(len(bst_models) / 2 + 0.5)
-    colus = 2
-    fig, ax = plt.subplots(rows, colus)
-    fig.set_size_inches(min(colus * 5, 20), rows * 5)
-    fig.subplots_adjust(hspace=0.5)  ### This controls the space betwen rows
-    fig.subplots_adjust(wspace=0.5)  ### This controls the space between columns
-    counter = 0
-    if rows == 1:
-        ax = ax.reshape(-1, 1).T
-    for k in np.arange(rows):
-        for l in np.arange(colus):
-            if counter < len(bst_models):
-                try:
-                    bst_booster = bst_models[counter].estimators_[0]
-                    ax1 = xgboost.plot_importance(
-                        bst_booster,
-                        height=0.8,
-                        show_values=False,
-                        importance_type='gain',
-                        max_num_features=10,
-                        ax=ax[k][l],
-                    )
-                    ax1.set_title('Multi_label: Top 10 features for first label: round %s' % (counter + 1))
-                except:
-                    pass
-            counter += 1
-    plt.show()
-
-
-########################################################################################
 def draw_feature_importances_single_label(bst_models):
     rows = int(len(bst_models) / 2 + 0.5)
     colus = 2
@@ -2162,48 +2121,19 @@ class FeatureWiz(BaseEstimator, TransformerMixin):
         self.X_sel = None
 
     def fit(self, X, y):
-        start_time = time.time()
-        if isinstance(X, np.ndarray):
-            print('X input must be a dataframe since we use column names to build data pipelines. Returning')
-            return X, y
         X_index = X.index
-        if isinstance(y, np.ndarray):
-            print('   y input is an numpy array and hence convert into a series or dataframe and re-try.')
-            return X, y
         y_index = y.index
-        if (X_index == y_index).all():
-            df = pd.concat([X, y], axis=1)
-        else:
-            df = pd.concat([X.reset_index(drop=True), y], axis=1)
-            df.index = X_index
-        ### Now you can process the X and y datasets ####
-        if isinstance(y, pd.Series):
-            target = y.name
-            if target is None:
-                print('   y input is a pandas series with no name. Convert it and re-try.')
-                return X, y
-        elif isinstance(y, pd.DataFrame):
-            target = y.columns.tolist()
-        elif isinstance(X, np.ndarray):
-            print('y must be a pd.Series or pd.DataFrame since we use column names to build data pipeline. Returning')
-            return {}, {}
-        #### Send target variable as it is so that y_train is analyzed properly ###
-        # Select features using featurewiz
+        if (X_index != y_index).all():
+            raise ValueError('X and y must have the same index')
+        df = pd.concat([X, y], axis=1)
+        target = y.name
         features, X_sel = featurewiz(df, target, self.corr_limit, self.feature_engg, self.category_encoders)
-        # Convert the remaining column names back to integers and drop the
-        difftime = max(1, int(time.time() - start_time))
-        print('    Time taken to create entire pipeline = %s second(s)' % difftime)
-        # column of labels
         self.features = features
         self.X_sel = X_sel
         return self
 
     def transform(self, X):
-        try:
-            return X[self.features]
-        except:
-            print('Returning transformed dataframe with %d features' % len(self.features))
-            return self.X_sel
+        return X[self.features]
 
 
 def EDA_remove_special_chars(df):
