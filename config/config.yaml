@@ -1,4 +1,4 @@
-logging_level: 'INFO'  # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+logging_level: 'DEBUG'  # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 defaults:
   - dataset: train
@@ -26,7 +26,7 @@ merge:
 
 analysis:
   experiment:
-    name: 'phenomapping_l1norm' # experiment name (i.e. file name in which to store merged data)
+    name: 'phenomapping' # experiment name (i.e. file name in which to store merged data)
     axes: ['long_axis', 'short_axis'] # ['long_axis', 'short_axis']
     metrics: ['strain']  # ['strain', 'strain_rate', 'displacement', 'velocity']
     segments: ['roi']   # ['global', 'aha', 'roi']
@@ -35,8 +35,11 @@ analysis:
 
   run:
     seed: 42  # random seed
+    variance_thresh: 0.9  # remove binary features with same value in more than variance_thresh subjects
+    corr_method: 'pearson' # correlation method
     corr_thresh: 0.6  # threshold above which correlated features are removed
-    variance_thresh: 0.9  # threshold below which features are removed
+    corr_drop_features: True # whether to drop highly correlated features
+    rfe_estimator: 'forest' # estimator for recursive feature elimination (RFE)
     jobs: [
-      ['drop_by_pearson_correlation', 'pca']
+      ['l1_norm', 'feature_reduction']
     ]

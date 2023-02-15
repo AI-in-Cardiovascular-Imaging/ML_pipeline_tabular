@@ -1,6 +1,8 @@
 import pandas as pd
 from sklearn import preprocessing
 
+from loguru import logger
+
 
 class Normaliser:
     def __init__(self) -> None:
@@ -9,11 +11,10 @@ class Normaliser:
     def l1_norm(self, data: pd.DataFrame) -> pd.DataFrame:
         """L1 normalise data"""
         tmp = data[self.target_label]  # keep label col as is
-        data = data.drop(self.target_label, axis=1)  # now remove column
         x = data.values  # returns a numpy array
         x_trans = preprocessing.Normalizer(norm='l1').fit_transform(x.T).T  # l1 normalisation with transposed data
-        data = pd.DataFrame(x_trans, columns=data.columns)
-        data = data.join(tmp)
+        data = pd.DataFrame(x_trans, index=data.index, columns=data.columns)
+        data[self.target_label] = tmp
         return data
 
     def l2_norm(self, data: pd.DataFrame) -> pd.DataFrame:

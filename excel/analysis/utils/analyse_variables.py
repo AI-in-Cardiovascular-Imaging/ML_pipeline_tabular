@@ -19,7 +19,10 @@ class AnalyseVariables:
         self.metadata = None
         self.seed = None
         self.target_label = None
+        self.corr_method = None
         self.corr_thresh = None
+        self.corr_drop_features = None
+        self.rfe_estimator = None
 
     def univariate_analysis(self, data: pd.DataFrame):
         """
@@ -68,51 +71,45 @@ class AnalyseVariables:
         """
         pass
 
-    def pearson_correlation(self, data: pd.DataFrame):
+    def correlation(self, data: pd.DataFrame):
         """
         Compute correlation between features and optionally drop highly correlated ones
         """
-        matrix = data.corr(method='pearson').round(2)
-        plt.figure(figsize=(50, 50))
-        sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
-        plt.xticks(rotation=90)
-        plt.savefig(os.path.join(self.job_dir, 'corr_plot.pdf'))
-        plt.clf()
-        return data
+        matrix = data.corr(method=self.corr_method).round(2)
 
-    def drop_by_pearson_correlation(self, data: pd.DataFrame):
-        """
-        Compute correlation between features and optionally drop highly correlated ones
-        """
-        matrix = data.corr(method='pearson').round(2)
-        abs_corr = matrix.abs()
-        upper_tri = abs_corr.where(np.triu(np.ones(abs_corr.shape), k=1).astype(bool))
-        cols_to_drop = [col for col in upper_tri.columns if any(upper_tri[col] > self.corr_thresh)]
-        metadata = [col for col in self.metadata if col not in cols_to_drop]
-        to_analyse = data.drop(cols_to_drop, axis=1)
-        logger.info(
-            f'Removed {len(cols_to_drop)} redundant features with correlation above {self.corr_thresh}, '
-            f'number of remaining features: {len(to_analyse.columns)}'
-        )
-        matrix = to_analyse.corr(method='pearson').round(2)
+        if self.corr_drop_features:
+            abs_corr = matrix.abs()
+            upper_tri = abs_corr.where(np.triu(np.ones(abs_corr.shape), k=1).astype(bool))
+            cols_to_drop = [col for col in upper_tri.columns if any(upper_tri[col] > self.corr_thresh)]
+            to_analyse = data.drop(cols_to_drop, axis=1)
+            logger.info(
+                f'Removed {len(cols_to_drop)} redundant features with correlation above {self.corr_thresh}, '
+                f'number of remaining features: {len(to_analyse.columns)}'
+            )
+            matrix = to_analyse.corr(method='pearson').round(2)
 
         # plot correlation heatmap
-        plt.figure(figsize=(50, 50))
+        plt.figure(figsize=(20, 20))
         sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
         plt.xticks(rotation=90)
         plt.savefig(os.path.join(self.job_dir, 'corr_plot.pdf'))
         plt.clf()
         return data
 
-    def forest_reduction(self, data: pd.DataFrame):
+
+    def feature_reduction(self, data: pd.DataFrame):
         """
         Calculate feature importance and remove features with low importance
         """
-        estimator = RandomForestClassifier(random_state=self.seed)
-        method = 'forest'
+        if self.rfe_estimator == 'forest':
+            estimator = RandomForestClassifier(random_state=self.seed)
+        else:
+            logger.error(f'The RFE estimator you requested ({self.rfe_estimator}) has not yet been implemented.')
+            raise NotImplementedError
 
-        X = to_analyse.drop(self.target_label, axis=1)
-        y = to_analyse[self.target_label]
+        X = data.drop(self.target_label, axis=1)
+        y = data[self.target_label]
+        # logger.debug(y)
 
         min_features = 1
         cross_validator = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
@@ -138,30 +135,30 @@ class AnalyseVariables:
             selector.cv_results_['mean_test_score'],
             yerr=selector.cv_results_['std_test_score'],
         )
-        plt.title(f'Recursive Feature Elimination for {method} estimator')
-        plt.savefig(os.path.join(self.job_dir, f'RFECV_{method}.pdf'))
+        plt.title(f'Recursive Feature Elimination for {self.rfe_estimator} estimator')
+        plt.savefig(os.path.join(self.job_dir, f'RFECV_{self.rfe_estimator}.pdf'))
         plt.clf()
 
-        to_analyse = pd.concat((X.loc[:, selector.support_], to_analyse[self.target_label]), axis=1)
-        metadata = [col for col in metadata if col in to_analyse.columns]
+        data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)
         importances = pd.Series(selector.estimator_.feature_importances_, index=X.columns[selector.support_])
         importances = importances.sort_values(ascending=False)
 
         # Plot importances
         fig, ax = plt.subplots()
         importances.plot.bar(ax=ax)
-        ax.set_title(f'Feature importances using {method} estimator')
+        ax.set_title(f'Feature importances using {self.rfe_estimator} estimator')
         fig.tight_layout()
-        plt.savefig(os.path.join(self.job_dir, f'feature_importance_{method}.pdf'))
+        plt.savefig(os.path.join(self.job_dir, f'feature_importance_{self.rfe_estimator}.pdf'))
         plt.clf()
 
         # Plot patient/feature value heatmap
         # plt.figure(figsize=(figsize, figsize))
-        # sns.heatmap(to_analyse.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
+        # sns.heatmap(data.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
         # plt.xticks(rotation=90)
         # fig.tight_layout()
         # plt.savefig(os.path.join(self.job_dir, 'heatmap_after_reduction.pdf'))
         # plt.clf()
+        return data
 
     def drop_outliers(self, data: pd.DataFrame):
         """Detect outliers in the data, optionally removing or further investigating them

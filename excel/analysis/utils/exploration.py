@@ -26,8 +26,11 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables):
         self.out_dir = os.path.join(config.dataset.out_dir, '6_exploration', config.analysis.experiment.name)
         self.jobs = config.analysis.run.jobs
         self.seed = config.analysis.run.seed
-        self.corr_thresh = config.analysis.run.corr_thresh
         self.variance_thresh = config.analysis.run.variance_thresh
+        self.corr_method = config.analysis.run.corr_method
+        self.corr_thresh = config.analysis.run.corr_thresh
+        self.corr_drop_features = config.analysis.run.corr_drop_features
+        self.rfe_estimator = config.analysis.run.rfe_estimator
         self.metadata = config.analysis.experiment.metadata
         self.target_label = config.analysis.experiment.target_label
 
