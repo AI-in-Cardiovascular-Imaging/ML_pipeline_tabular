@@ -41,6 +41,10 @@ def variance_threshold(data: pd.DataFrame, label: str, thresh: float) -> pd.Data
     selector = VarianceThreshold(threshold=thresh * (1 - thresh))
     selector.fit(data)
     data = data.loc[:, selector.get_support()]
+    logger.info(
+        f'Removed {len(selector.get_support()) - len(data.columns)} features with same value in more than {int(thresh*100)}% of subjects, '
+        f'number of remaining features: {len(data.columns)}'
+    )
 
     if label not in data.columns:  # ensure label col is kept
         logger.warning(f'Target label {label} has variance below threshold {thresh}.')
