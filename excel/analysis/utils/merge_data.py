@@ -5,9 +5,10 @@ import os
 
 from loguru import logger
 import pandas as pd
+import numpy as np
 from omegaconf import DictConfig
 from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
-from sklearn.impute import SimpleImputer, IterativeImputer
+from sklearn.impute import SimpleImputer, IterativeImputer, MissingIndicator
 
 from excel.global_helpers import checked_dir
 from excel.analysis.utils.helpers import save_tables
@@ -129,9 +130,7 @@ class MergeData:
             table = table[table.roi.str.contains('|'.join(to_keep)) == True]
 
         if self.impute:  # data imputation (table-wise)
-            table.iloc[:, info_cols:] = self.impute_data(table.iloc[:, info_cols:], categorical=[])
-        # else: # remove patients with any NaN values
-        #     table = table.dropna(axis=0, how='any')
+            table.iloc[:, info_cols:] = self.impute_data(table.iloc[:, info_cols:])
 
         # Circumferential and longitudinal strain and strain rate peak at minimum value
         if 'strain' in self.table_name and ('circumf' in self.table_name or 'longit' in self.table_name):
@@ -153,19 +152,12 @@ class MergeData:
 
         self.subject_data = pd.concat((self.subject_data, pd.Series(list(table.iloc[:, 0]), index=col_names)), axis=0)
 
-    def impute_data(self, table: pd.DataFrame, categorical: list = []):
-        """Impute missing values in table"""
-        cat_imputer = SimpleImputer(strategy='most_frequent', keep_empty_features=True)
-        for col in categorical:
-            try:
-                table[col] = cat_imputer.fit_transform(table[[col]])
-            except KeyError:
-                pass  # skip if column is not found
-
-        num_imputer = IterativeImputer(
+    def impute_data(self, table: pd.DataFrame):
+        """Impute missing values in table"""     
+        imputer = IterativeImputer(
             initial_strategy='median', max_iter=100, random_state=self.seed, keep_empty_features=True
         )
-        table = num_imputer.fit_transform(table)
+        table = imputer.fit_transform(table)
         return table
 
     def add_metadata(self, tables):
@@ -222,17 +214,18 @@ class MergeData:
 
             # Impute missing metadata if desired
             if self.impute:
-                categorical = [col for col in self.metadata if col not in ['bmi']]
-                imputed_tables = self.impute_data(tables, categorical)
+                indicator = MissingIndicator(missing_values=np.nan, features='all')
+                mask_missing_values = indicator.fit_transform(tables)
+                style_df = pd.DataFrame('', index=tables.index, columns=tables.columns)
+                style_df = style_df.mask(mask_missing_values, 'background-color: cyan')
+
+                imputed_tables = self.impute_data(tables)
                 tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
 
-                # convert integer cols explicitly to int
-                int_cols = ['age']
-                for col in int_cols:
-                    try:
-                        tables[col] = tables[col].astype(int)
-                    except KeyError:
-                        pass  # skip if column is not found
+                tables.style.apply(lambda _: style_df, axis=None).to_excel(
+                    os.path.join(self.src, '5_merged', f'{self.experiment_name}_highlighted_missing_metadata.xlsx')
+                )
+
             else:  # remove patients with any NaN values
                 logger.info(f'Number of patients before dropping NaN metadata: {len(tables.index)}')
                 tables = tables.dropna(axis=0, how='any')
@@ -242,6 +235,5 @@ class MergeData:
             nunique = tables.nunique()
             cols_to_drop = nunique[nunique == 1].index
             tables = tables.drop(cols_to_drop, axis=1)
-
 
         return tables
