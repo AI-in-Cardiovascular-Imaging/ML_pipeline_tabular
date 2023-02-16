@@ -1,17 +1,19 @@
 import os
 
-from loguru import logger
 import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import numpy as np
+import pandas as pd
+import seaborn as sns
+from loguru import logger
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.inspection import permutation_importance
 from sklearn.feature_selection import RFECV
 from sklearn.model_selection import StratifiedKFold
-from excel.analysis.utils.featurewiz import FeatureWiz
+from numpy import sort
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.inspection import permutation_importance
+from sklearn.feature_selection import SelectFromModel
 
-from excel.analysis.utils.helpers import save_tables, split_data
+from excel.analysis.utils.helpers import split_data
 
 
 class AnalyseVariables:
@@ -146,9 +148,9 @@ class AnalyseVariables:
         importances = pd.Series(selector.estimator_.feature_importances_, index=X.columns[selector.support_])
         importances = importances.sort_values(ascending=False)
         logger.info(
-                f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {self.rfe_estimator} estimator, '
-                f'number of remaining features: {len(data.columns) - 1}'
-            )
+            f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {self.rfe_estimator} estimator, '
+            f'number of remaining features: {len(data.columns) - 1}'
+        )
 
         # Plot importances
         fig, ax = plt.subplots()
@@ -230,21 +232,51 @@ class AnalyseVariables:
         ).to_excel(os.path.join(self.job_dir, 'investigate_outliers.xlsx'), index=True)
         return data
 
-    def feature_wiz(self, data: pd.DataFrame) -> pd.DataFrame:
+    # TODO: maybe helper function
+    def __test_train_data_split(self, data: pd.DataFrame, test_frac: float = 0.1) -> tuple:
+        """Split data into training and test set"""
         y_train = data[self.target_label]
         x_train = data.drop(self.target_label, axis=1)
+        samples = int(len(x_train) * test_frac)
+        row_idx = np.random.random_integers(0, int(len(x_train) - 1), samples)
+        x_test = x_train.take(row_idx, axis=0)
+        x_train = x_train.drop(x_test.index)
+        y_test = y_train.take(row_idx, axis=0)
+        y_train = y_train.drop(x_test.index)
+        return x_train, x_test, y_train, y_test
 
-        features = FeatureWiz(
-            corr_limit=0.70,
-            feature_engg='',
-            category_encoders='SumEncoder',
-            dask_xgboost_flag=False,
-            nrows=None,
-            verbose=2,
-        )
-        selected_features = features.fit_transform(x_train, y_train)
-        # print(features.features)
-        return selected_features
+    def __run_xgboost(self, data: pd.DataFrame) -> tuple:
+        """Run XGBoost model"""
+        x_train, x_test, y_train, y_test = self.__test_train_data_split(data)
+        model = GradientBoostingClassifier()
+        model.fit(x_train, y_train)
+        thresholds = sort(model.feature_importances_)
+        for thresh in thresholds:
+            selection = SelectFromModel(model, threshold=thresh, prefit=True)  # select features using threshold
+            select_x_train = selection.transform(x_train.values)
+            selection_model = GradientBoostingClassifier()
+            selection_model.fit(select_x_train, y_train)  # train model
+            logger.trace(f'Thresh={thresh:.3f}, n={select_x_train.shape[1]}, Acc: {model.score(x_test, y_test):.3f}')
+        # feature_importance = model.feature_importances_
+        # features_data = sort(tuple(zip(feature_names, feature_importance)))
+        feature_names = x_train.columns
+        return model, feature_names
+
+    def xgboost(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Use XGBoost to select features"""
+        model, feature_names = self.__run_xgboost(data)
+        feature_importance = model.feature_importances_
+        sorted_idx = np.argsort(feature_importance)
+
+        fig = plt.figure(figsize=(18, 20))
+        pos = np.arange(sorted_idx.shape[0]) + 0.5
+        plt.barh(pos, feature_importance[sorted_idx], align='center')
+        plt.yticks(pos, np.array(feature_names)[sorted_idx])
+        plt.title(f'Feature Importance for Target: {self.target_label}')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.job_dir, f'feature_importance_xgboost.pdf'), dpi=fig.dpi)
+        plt.clf()
+        return data
 
 
 def highlight(df: pd.DataFrame, lower_limit: np.array, upper_limit: np.array):
