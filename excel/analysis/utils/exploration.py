@@ -46,6 +46,7 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables):
             for step in job:
                 data, error = self.process_job(step, data)
                 if error:
+                    logger.error(f'Step {step} is invalid, skipping...')
                     break
 
     @classmethod
@@ -63,13 +64,11 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables):
                     f'\nThe previous step does not seem to produce any output.'
                 )
                 return None, True
-            # try:
             data = getattr(self, step)(data)
-            # except:
-            #     logger.warning(f'Error in step: {step} in {self.job_name}.')
             return data, False
-        # raise logger.error(f'Invalid step name: "{step}",\nvalid step names: {self.get_member_methods()}')
 
+        else:
+            return data, True
 
 
     def variance_threshold(self, data):

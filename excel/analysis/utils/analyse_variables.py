@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import RFECV
 from sklearn.model_selection import StratifiedKFold
@@ -112,6 +112,8 @@ class AnalyseVariables:
             estimator = RandomForestClassifier(random_state=self.seed)
         elif self.rfe_estimator == 'extreme_forest':
             estimator = ExtraTreesClassifier(random_state=self.seed)
+        elif self.rfe_estimator == 'adaboost':
+            estimator = AdaBoostClassifier(random_state=self.seed)
         elif self.rfe_estimator == 'logistic_regression':
             estimator = LogisticRegression(random_state=self.seed)
         else:
@@ -158,17 +160,17 @@ class AnalyseVariables:
             importances = np.abs(np.squeeze(selector.estimator_.coef_))
 
         importances = pd.Series(importances, index=X.columns[selector.support_])
-        importances = importances.sort_values(ascending=False)
+        importances = importances.sort_values(ascending=True)
         logger.info(
             f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {self.rfe_estimator} estimator, '
             f'number of remaining features: {len(data.columns) - 1}'
         )
 
         # Plot importances
-        fig, ax = plt.subplots()
-        importances.plot.bar(ax=ax)
-        ax.set_title(f'Feature importances using {self.rfe_estimator} estimator')
-        fig.tight_layout()
+        fig = plt.figure(figsize=(10, 10))
+        importances.plot.barh()
+        plt.title(f'Feature importances using {self.rfe_estimator} estimator for target label: {self.target_label}')
+        plt.tight_layout()
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_{self.rfe_estimator}.pdf'))
         plt.clf()
 
@@ -269,8 +271,6 @@ class AnalyseVariables:
             selection_model = GradientBoostingClassifier(random_state=self.seed)
             selection_model.fit(select_x_train, y_train)  # train model
             logger.trace(f'Thresh={thresh:.3f}, n={select_x_train.shape[1]}, Acc: {model.score(x_test, y_test):.3f}')
-        # feature_importance = model.feature_importances_
-        # features_data = sort(tuple(zip(feature_names, feature_importance)))
         feature_names = x_train.columns
         return model, feature_names
 
@@ -280,11 +280,11 @@ class AnalyseVariables:
         feature_importance = model.feature_importances_
         sorted_idx = np.argsort(feature_importance)
 
-        fig = plt.figure(figsize=(18, 20))
+        fig = plt.figure(figsize=(10, 10))
         pos = np.arange(sorted_idx.shape[0]) + 0.5
         plt.barh(pos, feature_importance[sorted_idx], align='center')
         plt.yticks(pos, np.array(feature_names)[sorted_idx])
-        plt.title(f'Feature Importance for Target: {self.target_label}')
+        plt.title(f'Feature importances using XGBoost estimator for target label: {self.target_label}')
         plt.tight_layout()
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_xgboost.pdf'), dpi=fig.dpi)
         plt.clf()
