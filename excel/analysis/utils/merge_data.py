@@ -70,6 +70,7 @@ class MergeData:
             tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
         else:  # remove patients with any NaN values
             tables = tables.dropna(axis=0, how='any')
+        # logger.debug(len(tables.index))
 
         if self.metadata:  # read and clean metadata
             tables = self.add_metadata(tables)
@@ -164,7 +165,6 @@ class MergeData:
         num_imputer = IterativeImputer(
             initial_strategy='median', max_iter=100, random_state=self.seed, keep_empty_features=True
         )
-        # logger.debug(f'\n{table}')
         table = num_imputer.fit_transform(table)
         return table
 
@@ -186,15 +186,18 @@ class MergeData:
 
             # clean subject IDs
             mdata['pat_id'].fillna(mdata['redcap_id'], inplace=True)  # patients without pat_id get redcap_id
+            # logger.debug(mdata['pat_id'][mdata['pat_id'].duplicated(keep=False)])
             mdata = mdata[mdata['pat_id'].notna()]  # remove rows without pat_id and redcap_id
             mdata = mdata.rename(columns={'pat_id': 'subject'})
             mdata['subject'] = mdata['subject'].astype(int)
 
             # merge the cvi42 data with available metadata
-            tables = tables.merge(mdata, how='left', on='subject')
+            tables = tables.merge(mdata, how='inner', on='subject')
             tables = tables.drop('subject', axis=1)  # use redcap_id as subject id
+            # logger.debug(len(tables.index))
             tables = tables[tables['redcap_id'].notna()]  # remove rows without redcap_id
             tables = tables.rename(columns={'redcap_id': 'subject'})
+            # logger.debug(len(tables.index))
 
             # remove any metadata columns containing less than threshold data
             threshold = 0.9
@@ -208,6 +211,14 @@ class MergeData:
             # remove these columns from the metadata list
             self.metadata = [col for col in self.metadata if col in tables.columns]
             self.config.analysis.experiment.metadata = self.metadata
+
+            # remove any subject row containing less than threshold data
+            num_subjects = len(tables.index)
+            tables = tables.dropna(axis=0, thresh=threshold * len(tables.columns))
+            logger.info(
+                f'Removed {num_subjects - len(tables.index) - 1} subjects with less than {int(threshold*100)}% data, '
+                f'number of remaining subjects: {len(tables.index) - 1}'
+            )
 
             # Impute missing metadata if desired
             if self.impute:
@@ -223,9 +234,9 @@ class MergeData:
                     except KeyError:
                         pass  # skip if column is not found
             else:  # remove patients with any NaN values
-                logger.debug(f'Number of patients before dropping NaN metadata: {len(tables.index)}')
+                logger.info(f'Number of patients before dropping NaN metadata: {len(tables.index)}')
                 tables = tables.dropna(axis=0, how='any')
-                logger.debug(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
+                logger.info(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
 
             # Remove features containing the same value for all patients
             nunique = tables.nunique()
