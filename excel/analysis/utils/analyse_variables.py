@@ -6,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 from loguru import logger
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import RFECV
 from sklearn.model_selection import StratifiedKFold
 from numpy import sort
@@ -20,6 +21,7 @@ class AnalyseVariables:
         self.job_dir = None
         self.metadata = None
         self.seed = None
+        np.random.seed(self.seed)
         self.target_label = None
         self.corr_method = None
         self.corr_thresh = None
@@ -110,6 +112,8 @@ class AnalyseVariables:
             estimator = RandomForestClassifier(random_state=self.seed)
         elif self.rfe_estimator == 'extreme_forest':
             estimator = ExtraTreesClassifier(random_state=self.seed)
+        elif self.rfe_estimator == 'logistic_regression':
+            estimator = LogisticRegression(random_state=self.seed)
         else:
             logger.error(f'The RFE estimator you requested ({self.rfe_estimator}) has not yet been implemented.')
             raise NotImplementedError
@@ -146,7 +150,14 @@ class AnalyseVariables:
         plt.clf()
 
         data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)
-        importances = pd.Series(selector.estimator_.feature_importances_, index=X.columns[selector.support_])
+
+        try: # some estimators return feature_importances_ attribute, others coef_
+            importances = selector.estimator_.feature_importances_
+        except AttributeError:
+            logger.warning(f'Note that absolute coefficient values do not necessarily represent feature importances.')
+            importances = np.abs(np.squeeze(selector.estimator_.coef_))
+
+        importances = pd.Series(importances, index=X.columns[selector.support_])
         importances = importances.sort_values(ascending=False)
         logger.info(
             f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {self.rfe_estimator} estimator, '
@@ -255,7 +266,7 @@ class AnalyseVariables:
         for thresh in thresholds:
             selection = SelectFromModel(model, threshold=thresh, prefit=True)  # select features using threshold
             select_x_train = selection.transform(x_train.values)
-            selection_model = GradientBoostingClassifier()
+            selection_model = GradientBoostingClassifier(random_state=self.seed)
             selection_model.fit(select_x_train, y_train)  # train model
             logger.trace(f'Thresh={thresh:.3f}, n={select_x_train.shape[1]}, Acc: {model.score(x_test, y_test):.3f}')
         # feature_importance = model.feature_importances_
