@@ -5,12 +5,11 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn.feature_selection import RFECV
 from sklearn.model_selection import StratifiedKFold
 from numpy import sort
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.inspection import permutation_importance
 from sklearn.feature_selection import SelectFromModel
 
 from excel.analysis.utils.helpers import split_data
@@ -109,6 +108,8 @@ class AnalyseVariables:
         """
         if self.rfe_estimator == 'forest':
             estimator = RandomForestClassifier(random_state=self.seed)
+        elif self.rfe_estimator == 'extreme_forest':
+            estimator = ExtraTreesClassifier(random_state=self.seed)
         else:
             logger.error(f'The RFE estimator you requested ({self.rfe_estimator}) has not yet been implemented.')
             raise NotImplementedError

@@ -39,7 +39,7 @@ analysis:
     corr_method: 'pearson' # correlation method
     corr_thresh: 0.6  # threshold above which correlated features are removed
     corr_drop_features: True # whether to drop highly correlated features
-    rfe_estimator: 'forest' # estimator for recursive feature elimination (RFE)
+    rfe_estimator: 'forest' # estimator for recursive feature elimination (RFE) ['forest', 'extreme_forest'] https://arxiv.org/abs/2201.12865v1
     jobs: [
-      ['l1_norm', 'feature_reduction']
+      ['l1_norm', 'feature_reduction'],
     ]
