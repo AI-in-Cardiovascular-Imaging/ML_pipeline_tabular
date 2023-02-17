@@ -153,7 +153,7 @@ class MergeData:
         self.subject_data = pd.concat((self.subject_data, pd.Series(list(table.iloc[:, 0]), index=col_names)), axis=0)
 
     def impute_data(self, table: pd.DataFrame):
-        """Impute missing values in table"""     
+        """Impute missing values in table"""
         imputer = IterativeImputer(
             initial_strategy='median', max_iter=100, random_state=self.seed, keep_empty_features=True
         )
@@ -199,6 +199,9 @@ class MergeData:
                 f'Removed {num_features - len(tables.columns) - 1} features with less than {int(threshold*100)}% data, '
                 f'number of remaining features: {len(tables.columns) - 1}'
             )
+            assert (
+                self.target_label in tables.columns
+            ), f'Target label {self.target_label} was removed due to NaN threshold.'
 
             # remove these columns from the metadata list
             self.metadata = [col for col in self.metadata if col in tables.columns]
@@ -208,8 +211,8 @@ class MergeData:
             num_subjects = len(tables.index)
             tables = tables.dropna(axis=0, thresh=threshold * len(tables.columns))
             logger.info(
-                f'Removed {num_subjects - len(tables.index) - 1} subjects with less than {int(threshold*100)}% data, '
-                f'number of remaining subjects: {len(tables.index) - 1}'
+                f'Removed {num_subjects - len(tables.index)} subjects with less than {int(threshold*100)}% data, '
+                f'number of remaining subjects: {len(tables.index)}'
             )
 
             # Impute missing metadata if desired
