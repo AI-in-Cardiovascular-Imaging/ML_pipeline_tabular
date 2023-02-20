@@ -12,6 +12,7 @@ from sklearn.model_selection import StratifiedKFold
 from numpy import sort
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.feature_selection import SelectFromModel
+from featurewiz import FeatureWiz
 
 from excel.analysis.utils.helpers import split_data
 
@@ -153,7 +154,7 @@ class AnalyseVariables:
 
         data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)
 
-        try: # some estimators return feature_importances_ attribute, others coef_
+        try:  # some estimators return feature_importances_ attribute, others coef_
             importances = selector.estimator_.feature_importances_
         except AttributeError:
             logger.warning(f'Note that absolute coefficient values do not necessarily represent feature importances.')
@@ -289,6 +290,22 @@ class AnalyseVariables:
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_xgboost.pdf'), dpi=fig.dpi)
         plt.clf()
         return data
+
+    def feature_wiz(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Use feature_wiz to select features"""
+        y_train = data[self.target_label]
+        x_train = data.drop(self.target_label, axis=1)
+
+        features = FeatureWiz(
+            corr_limit=self.corr_thresh,
+            feature_engg='',
+            category_encoders='',
+            dask_xgboost_flag=False,
+            nrows=None,
+            verbose=2,
+        )
+        selected_features = features.fit_transform(x_train, y_train)
+        return selected_features.join(y_train)
 
 
 def highlight(df: pd.DataFrame, lower_limit: np.array, upper_limit: np.array):
