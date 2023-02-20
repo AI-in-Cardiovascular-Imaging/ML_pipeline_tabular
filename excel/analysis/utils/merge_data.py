@@ -196,8 +196,8 @@ class MergeData:
             num_features = len(tables.columns)
             tables = tables.dropna(axis=1, thresh=threshold * len(tables.index))
             logger.info(
-                f'Removed {num_features - len(tables.columns) - 1} features with less than {int(threshold*100)}% data, '
-                f'number of remaining features: {len(tables.columns) - 1}'
+                f'Removed {num_features - len(tables.columns)} features with less than {int(threshold*100)}% data, '
+                f'number of remaining features: {len(tables.columns)}'
             )
             assert (
                 self.target_label in tables.columns
