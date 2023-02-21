@@ -34,6 +34,8 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
         self.job_name = ''
 
     def __call__(self) -> None:
+        """Run all jobs"""
+
         for job in self.jobs:
             logger.info(f'Running {job}')
             self.job_name = '_'.join(job)  # name of current job
@@ -46,6 +48,14 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
+
+    def job_name_checker(self, job_name: str) -> bool:  # todo: check it
+        """Check if the given job name is valid"""
+        all_methods = self.get_member_methods()
+        if job_name in all_methods:
+            return True
+        else:
+            return False
 
     @classmethod
     def get_member_methods(cls):

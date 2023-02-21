@@ -276,8 +276,8 @@ class FeatureReduction:
         )
 
         # plot importances as bar chart
-        fig = plt.figure(figsize=(20, 5))
-        importances.plot.barh()
+        ax = importances.plot.barh()
+        fig = ax.get_figure()
         plt.title(
             f'Feature importance (top {number_of_top_features})'
             f'\n{rfe_estimator} estimator for target: {self.target_label}'
@@ -377,8 +377,8 @@ class FeatureReduction:
         features = {k: v for k, v in sorted(features.items(), key=lambda item: item[1], reverse=False)}  # sort by value
         db = pd.DataFrame.from_dict(features, orient='index', columns=['importance'])
 
-        fig = plt.figure(figsize=(20, 30))
-        db.plot.barh()
+        ax = db.plot.barh()
+        fig = ax.get_figure()
         plt.title(f'Feature importance\nAll estimators for target: {self.target_label}')
         plt.xlabel(f'Summed importance (max {number_of_estimators*min_len})')
         plt.tight_layout()
