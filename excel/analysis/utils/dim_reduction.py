@@ -23,7 +23,7 @@ class DimensionReductions:
         self.seed = None
         self.target_label = None
 
-    def pca(self, data: pd.DataFrame):
+    def pca(self, data: pd.DataFrame) -> pd.DataFrame:
         """Perform Principal Component Analysis (PCA)
 
         Args:
@@ -62,8 +62,9 @@ class DimensionReductions:
         plt.title('Principal Component Analysis')
         plt.savefig(os.path.join(self.job_dir, f'PCA_{suffix}.pdf'), bbox_inches='tight')
         plt.clf()
+        return data
 
-    def tsne(self,data: pd.DataFrame):
+    def tsne(self,data: pd.DataFrame) -> pd.DataFrame:
         """Perform t-SNE dimensionality reduction and visualisation
 
         Args:
@@ -90,8 +91,9 @@ class DimensionReductions:
             plt.clf()
 
         logger.info(f'{len(analysis.index)} subjects ({suffix}).')
+        return data
 
-    def umap(self, data: pd.DataFrame):
+    def umap(self, data: pd.DataFrame) -> pd.DataFrame:
         """Perform UMAP dimensionality reduction and visualisation
 
         Args:
@@ -125,3 +127,4 @@ class DimensionReductions:
         plt.savefig(os.path.join(self.job_dir, f'Umap_{suffix}.pdf'), bbox_inches='tight')
         plt.clf()
         logger.info(f'{len(analysis.index)} subjects ({suffix}).')
+        return data

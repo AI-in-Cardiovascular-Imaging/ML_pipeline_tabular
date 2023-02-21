@@ -28,7 +28,6 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
         self.corr_method = config.analysis.run.corr_method
         self.corr_thresh = config.analysis.run.corr_thresh
         self.corr_drop_features = config.analysis.run.corr_drop_features
-        self.rfe_estimator = config.analysis.run.rfe_estimator
         self.metadata = config.analysis.experiment.metadata
         self.target_label = config.analysis.experiment.target_label
 
@@ -42,9 +41,10 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
             os.makedirs(self.job_dir, exist_ok=True)
             data = deepcopy(self.original_data)
             for step in job:
+                logger.debug(f'Running step: {step}')
                 data, error = self.process_job(step, data)
                 if error:
-                    logger.error(f'Step {step} is invalid, skipping...')
+                    logger.error(f'Step {step} is invalid')
                     break
 
     @classmethod
@@ -64,7 +64,6 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
                 return None, True
             data = getattr(self, step)(data)
             return data, False
-
         else:
             return data, True
 

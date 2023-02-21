@@ -5,13 +5,10 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, AdaBoostClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import RFECV
 from sklearn.model_selection import StratifiedKFold
-from numpy import sort
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.feature_selection import SelectFromModel
 
 from excel.analysis.utils.helpers import split_data
 
@@ -166,53 +163,10 @@ class AnalyseVariables:
         ).to_excel(os.path.join(self.job_dir, 'investigate_outliers.xlsx'), index=True)
         return data
 
-    # TODO: maybe helper function
-    def __test_train_data_split(self, data: pd.DataFrame, test_frac: float = 0.1) -> tuple:
-        """Split data into training and test set"""
-        y_train = data[self.target_label]
-        x_train = data.drop(self.target_label, axis=1)
-        samples = int(len(x_train) * test_frac)
-        row_idx = np.random.random_integers(0, int(len(x_train) - 1), samples)
-        x_test = x_train.take(row_idx, axis=0)
-        x_train = x_train.drop(x_test.index)
-        y_test = y_train.take(row_idx, axis=0)
-        y_train = y_train.drop(x_test.index)
-        return x_train, x_test, y_train, y_test
-
-    def __run_xgboost(self, data: pd.DataFrame) -> tuple:
-        """Run XGBoost model"""
-        x_train, x_test, y_train, y_test = self.__test_train_data_split(data)
-        model = GradientBoostingClassifier()
-        model.fit(x_train, y_train)
-        thresholds = sort(model.feature_importances_)
-        for thresh in thresholds:
-            selection = SelectFromModel(model, threshold=thresh, prefit=True)  # select features using threshold
-            select_x_train = selection.transform(x_train.values)
-            selection_model = GradientBoostingClassifier(random_state=self.seed)
-            selection_model.fit(select_x_train, y_train)  # train model
-            logger.trace(f'Thresh={thresh:.3f}, n={select_x_train.shape[1]}, Acc: {model.score(x_test, y_test):.3f}')
-        feature_names = x_train.columns
-        return model, feature_names
-
-    def xgboost(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Use XGBoost to select features"""
-        model, feature_names = self.__run_xgboost(data)
-        feature_importance = model.feature_importances_
-        sorted_idx = np.argsort(feature_importance)
-
-        fig = plt.figure(figsize=(10, 10))
-        pos = np.arange(sorted_idx.shape[0]) + 0.5
-        plt.barh(pos, feature_importance[sorted_idx], align='center')
-        plt.yticks(pos, np.array(feature_names)[sorted_idx])
-        plt.title(f'Feature importances using XGBoost estimator for target label: {self.target_label}')
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.job_dir, f'feature_importance_xgboost.pdf'), dpi=fig.dpi)
-        plt.clf()
-        return data
-
     def feature_wiz(self, data: pd.DataFrame) -> pd.DataFrame:
         """Use feature_wiz to select features"""
         from featurewiz import FeatureWiz
+
         y_train = data[self.target_label]
         x_train = data.drop(self.target_label, axis=1)
 
@@ -241,7 +195,6 @@ def highlight(df: pd.DataFrame, lower_limit: np.array, upper_limit: np.array):
 
 
 class FeatureReduction:
-
     def __init__(self) -> None:
         self.job_dir = None
         self.metadata = None
@@ -252,7 +205,7 @@ class FeatureReduction:
         self.corr_thresh = None
         self.corr_drop_features = None
 
-    def __reduction(self, data, rfe_estimator) -> None:
+    def __reduction(self, data: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
         if rfe_estimator == 'forest':
             estimator = RandomForestClassifier(random_state=self.seed)
         elif rfe_estimator == 'extreme_forest':
@@ -261,6 +214,8 @@ class FeatureReduction:
             estimator = AdaBoostClassifier(random_state=self.seed)
         elif rfe_estimator == 'logistic_regression':
             estimator = LogisticRegression(random_state=self.seed)
+        elif rfe_estimator == 'xgboost':
+            estimator = GradientBoostingClassifier(random_state=self.seed)
         else:
             logger.error(f'The RFE estimator you requested ({rfe_estimator}) has not yet been implemented.')
             raise NotImplementedError
@@ -296,7 +251,7 @@ class FeatureReduction:
         plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.pdf'))
         plt.clf()
 
-        data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)
+        data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)  # concat with target label
 
         try:  # some estimators return feature_importances_ attribute, others coef_
             importances = selector.estimator_.feature_importances_
@@ -304,8 +259,8 @@ class FeatureReduction:
             logger.warning(f'Note that absolute coefficient values do not necessarily represent feature importances.')
             importances = np.abs(np.squeeze(selector.estimator_.coef_))
 
-        importances = pd.Series(importances, index=X.columns[selector.support_])
-        importances = importances.sort_values(ascending=True)
+        importances = pd.DataFrame(importances, index=X.columns[selector.support_], columns=['importance'])
+        importances = importances.sort_values(by='importance', ascending=True)
         logger.info(
             f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {rfe_estimator} estimator, '
             f'number of remaining features: {len(data.columns) - 1}'
@@ -316,9 +271,10 @@ class FeatureReduction:
         importances.plot.barh()
         plt.title(f'Feature importances using {rfe_estimator} estimator for target label: {self.target_label}')
         plt.tight_layout()
+        plt.gca().get_legend().remove()
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'))
         plt.clf()
-
+        # print(selector.cv_results_['mean_test_score'])
         # Plot patient/feature value heatmap
         # plt.figure(figsize=(figsize, figsize))
         # sns.heatmap(data.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
@@ -326,19 +282,98 @@ class FeatureReduction:
         # fig.tight_layout()
         # plt.savefig(os.path.join(self.job_dir, 'heatmap_after_reduction.pdf'))
         # plt.clf()
+
+        return data, importances
+
+    def fr_logistic_regression(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Feature reduction using logistic regression estimator"""
+        data, _ = self.__reduction(data, 'logistic_regression')
         return data
 
-    def fr_forest(self, data):
-        return self.__reduction(data, 'forest')
+    def fr_forest(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Feature reduction using random forest estimator"""
+        data, _ = self.__reduction(data, 'forest')
+        return data
 
-    def fr_gradient_boosting(self, data):
-        return self.__reduction(data, 'gradient_boosting')
+    def fr_extreme_forest(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Feature reduction using extreme forest estimator"""
+        data, _ = self.__reduction(data, 'extreme_forest')
+        return data
 
-    def fr_logistic_regression(self, data):
-        return self.__reduction(data, 'logistic_regression')
+    def fr_adaboost(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Feature reduction using adaboost estimator"""
+        data, _ = self.__reduction(data, 'adaboost')
+        return data
 
-    def fr_adaboost(self, data):
-        return self.__reduction(data, 'adaboost')
+    def fr_xgboost(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Feature reduction using xgboost estimator"""
+        data, _ = self.__reduction(data, 'xgboost')
+        return data
 
-    def fr_extreme_forest(self, data):
-        return self.__reduction(data, 'extreme_forest')
+    def fr_all(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Feature reduction using all estimators in an ensemble manner"""
+        number_of_estimators = 4
+        _, f_data = self.__reduction(data, 'forest')
+        _, xg_data = self.__reduction(data, 'xgboost')
+        _, ada_data = self.__reduction(data, 'adaboost')
+        _, ef_data = self.__reduction(data, 'extreme_forest')
+
+        f_features = f_data.index.tolist()[::-1]
+        xg_features = xg_data.index.tolist()[::-1]
+        ada_features = ada_data.index.tolist()[::-1]
+        ef_features = ef_data.index.tolist()[::-1]
+
+        min_len = min(
+            len(f_features),
+            len(xg_features),
+            len(ada_features),
+            len(ef_features),
+        )  # take the minimum length
+        if min_len >= 10:
+            min_len = 10
+
+        sub_f_features = f_features[:min_len]  # take the top features
+        sub_xg_features = xg_features[:min_len]
+        sub_ada_features = ada_features[:min_len]
+        sub_ef_features = ef_features[:min_len]
+
+        f_features = {f: i for i, f in enumerate(sub_f_features[::-1], start=1)}  # reverse the order and assign weights
+        xg_features = {f: i for i, f in enumerate(sub_xg_features[::-1], start=1)}
+        ada_features = {f: i for i, f in enumerate(sub_ada_features[::-1], start=1)}
+        ef_features = {f: i for i, f in enumerate(sub_ef_features[::-1], start=1)}
+
+        all_keys = set(f_features.keys()).union(xg_features.keys()).union(ada_features.keys()).union(ef_features.keys())
+
+        features = {}
+        for key in all_keys:  # sum up the weights
+            features[key] = 0
+            counter = 0
+            if key in f_features.keys():
+                counter += 1
+                features[key] += f_features[key]
+            if key in xg_features.keys():
+                counter += 1
+                features[key] += xg_features[key]
+            if key in ada_features.keys():
+                counter += 1
+                features[key] += ada_features[key]
+            if key in ef_features.keys():
+                counter += 1
+                features[key] += ef_features[key]
+            features[key] = round(features[key], 1)
+
+        features = {k: v for k, v in sorted(features.items(), key=lambda item: item[1], reverse=False)}  # sort by value
+
+        fig = plt.figure(figsize=(10, 10))
+        plt.barh(range(len(features)), list(features.values()), align='center')
+        plt.yticks(range(len(features)), list(features.keys()))
+        plt.xlabel(f'Summed feature importance (max points {min_len*number_of_estimators})')
+        plt.ylabel('Feature names')
+        plt.title(f'Feature importances using all estimators for target label: {self.target_label}')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.job_dir, 'feature_importance_all.pdf'))
+        plt.clf()
+
+        features[self.target_label] = 0  # add target label to features to keep it in the data
+        data = data.drop(columns=[c for c in data.columns if c not in features.keys()], axis=1)
+        return data
