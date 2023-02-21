@@ -8,18 +8,16 @@ from loguru import logger
 import pandas as pd
 from omegaconf import DictConfig
 
-from excel.analysis.utils import analyse_variables
-from excel.analysis.utils import dim_reduction
 from excel.analysis.utils.helpers import variance_threshold
 from excel.analysis.utils.normalisers import Normaliser
 from excel.analysis.utils.dim_reduction import DimensionReductions
-from excel.analysis.utils.analyse_variables import AnalyseVariables
+from excel.analysis.utils.analyse_variables import AnalyseVariables, FeatureReduction
 
 
 from types import FunctionType
 
 
-class ExploreData(Normaliser, DimensionReductions, AnalyseVariables):
+class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureReduction):
     def __init__(self, data: pd.DataFrame, config: DictConfig) -> None:
         super().__init__()
         self.original_data = data
@@ -69,7 +67,6 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables):
 
         else:
             return data, True
-
 
     def variance_threshold(self, data):
         """Perform variance threshold based feature selection on the data"""

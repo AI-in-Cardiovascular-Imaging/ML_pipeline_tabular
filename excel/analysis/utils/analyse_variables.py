@@ -26,7 +26,6 @@ class AnalyseVariables:
         self.corr_method = None
         self.corr_thresh = None
         self.corr_drop_features = None
-        self.rfe_estimator = None
 
     def univariate_analysis(self, data: pd.DataFrame):
         """
@@ -102,85 +101,6 @@ class AnalyseVariables:
 
         data = pd.concat((to_analyse, data[self.target_label]), axis=1)
 
-        return data
-
-    def feature_reduction(self, data: pd.DataFrame):
-        """
-        Calculate feature importance and remove features with low importance
-        """
-        if self.rfe_estimator == 'forest':
-            estimator = RandomForestClassifier(random_state=self.seed)
-        elif self.rfe_estimator == 'extreme_forest':
-            estimator = ExtraTreesClassifier(random_state=self.seed)
-        elif self.rfe_estimator == 'adaboost':
-            estimator = AdaBoostClassifier(random_state=self.seed)
-        elif self.rfe_estimator == 'logistic_regression':
-            estimator = LogisticRegression(random_state=self.seed)
-        else:
-            logger.error(f'The RFE estimator you requested ({self.rfe_estimator}) has not yet been implemented.')
-            raise NotImplementedError
-
-        X = data.drop(self.target_label, axis=1)
-        y = data[self.target_label]
-
-        min_features = 1
-        cross_validator = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
-        selector = RFECV(
-            estimator=estimator,
-            step=1,
-            min_features_to_select=min_features,
-            cv=cross_validator,
-            scoring='average_precision',
-            n_jobs=4,
-        )
-        selector.fit(X, y)
-
-        # Plot performance for increasing number of features
-        n_scores = len(selector.cv_results_['mean_test_score'])
-        plt.figure()
-        plt.xlabel('Number of features selected')
-        plt.ylabel('Mean average precision')
-        plt.xticks(range(0, n_scores + 1, 5))
-        plt.grid(alpha=0.5)
-        plt.errorbar(
-            range(min_features, n_scores + min_features),
-            selector.cv_results_['mean_test_score'],
-            yerr=selector.cv_results_['std_test_score'],
-        )
-        plt.title(f'Recursive Feature Elimination for {self.rfe_estimator} estimator')
-        plt.savefig(os.path.join(self.job_dir, f'RFECV_{self.rfe_estimator}.pdf'))
-        plt.clf()
-
-        data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)
-
-        try:  # some estimators return feature_importances_ attribute, others coef_
-            importances = selector.estimator_.feature_importances_
-        except AttributeError:
-            logger.warning(f'Note that absolute coefficient values do not necessarily represent feature importances.')
-            importances = np.abs(np.squeeze(selector.estimator_.coef_))
-
-        importances = pd.Series(importances, index=X.columns[selector.support_])
-        importances = importances.sort_values(ascending=True)
-        logger.info(
-            f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {self.rfe_estimator} estimator, '
-            f'number of remaining features: {len(data.columns) - 1}'
-        )
-
-        # Plot importances
-        fig = plt.figure(figsize=(10, 10))
-        importances.plot.barh()
-        plt.title(f'Feature importances using {self.rfe_estimator} estimator for target label: {self.target_label}')
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.job_dir, f'feature_importance_{self.rfe_estimator}.pdf'))
-        plt.clf()
-
-        # Plot patient/feature value heatmap
-        # plt.figure(figsize=(figsize, figsize))
-        # sns.heatmap(data.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
-        # plt.xticks(rotation=90)
-        # fig.tight_layout()
-        # plt.savefig(os.path.join(self.job_dir, 'heatmap_after_reduction.pdf'))
-        # plt.clf()
         return data
 
     def drop_outliers(self, data: pd.DataFrame):
@@ -318,3 +238,107 @@ def highlight(df: pd.DataFrame, lower_limit: np.array, upper_limit: np.array):
     style_df = style_df.mask(mask, 'background-color: red')
     style_df.iloc[:, lower_limit.size :] = ''  # uncolor metadata
     return style_df
+
+
+class FeatureReduction:
+
+    def __init__(self) -> None:
+        self.job_dir = None
+        self.metadata = None
+        self.seed = None
+        np.random.seed(self.seed)
+        self.target_label = None
+        self.corr_method = None
+        self.corr_thresh = None
+        self.corr_drop_features = None
+
+    def __reduction(self, data, rfe_estimator) -> None:
+        if rfe_estimator == 'forest':
+            estimator = RandomForestClassifier(random_state=self.seed)
+        elif rfe_estimator == 'extreme_forest':
+            estimator = ExtraTreesClassifier(random_state=self.seed)
+        elif rfe_estimator == 'adaboost':
+            estimator = AdaBoostClassifier(random_state=self.seed)
+        elif rfe_estimator == 'logistic_regression':
+            estimator = LogisticRegression(random_state=self.seed)
+        else:
+            logger.error(f'The RFE estimator you requested ({rfe_estimator}) has not yet been implemented.')
+            raise NotImplementedError
+
+        X = data.drop(self.target_label, axis=1)
+        y = data[self.target_label]
+
+        min_features = 1
+        cross_validator = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
+        selector = RFECV(
+            estimator=estimator,
+            step=1,
+            min_features_to_select=min_features,
+            cv=cross_validator,
+            scoring='average_precision',
+            n_jobs=4,
+        )
+        selector.fit(X, y)
+
+        # Plot performance for increasing number of features
+        n_scores = len(selector.cv_results_['mean_test_score'])
+        plt.figure()
+        plt.xlabel('Number of features selected')
+        plt.ylabel('Mean average precision')
+        plt.xticks(range(0, n_scores + 1, 5))
+        plt.grid(alpha=0.5)
+        plt.errorbar(
+            range(min_features, n_scores + min_features),
+            selector.cv_results_['mean_test_score'],
+            yerr=selector.cv_results_['std_test_score'],
+        )
+        plt.title(f'Recursive Feature Elimination for {rfe_estimator} estimator')
+        plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.pdf'))
+        plt.clf()
+
+        data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)
+
+        try:  # some estimators return feature_importances_ attribute, others coef_
+            importances = selector.estimator_.feature_importances_
+        except AttributeError:
+            logger.warning(f'Note that absolute coefficient values do not necessarily represent feature importances.')
+            importances = np.abs(np.squeeze(selector.estimator_.coef_))
+
+        importances = pd.Series(importances, index=X.columns[selector.support_])
+        importances = importances.sort_values(ascending=True)
+        logger.info(
+            f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {rfe_estimator} estimator, '
+            f'number of remaining features: {len(data.columns) - 1}'
+        )
+
+        # Plot importances
+        fig = plt.figure(figsize=(10, 10))
+        importances.plot.barh()
+        plt.title(f'Feature importances using {rfe_estimator} estimator for target label: {self.target_label}')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'))
+        plt.clf()
+
+        # Plot patient/feature value heatmap
+        # plt.figure(figsize=(figsize, figsize))
+        # sns.heatmap(data.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
+        # plt.xticks(rotation=90)
+        # fig.tight_layout()
+        # plt.savefig(os.path.join(self.job_dir, 'heatmap_after_reduction.pdf'))
+        # plt.clf()
+        return data
+
+    def fr_forest(self, data):
+        return self.__reduction(data, 'forest')
+
+    def fr_gradient_boosting(self, data):
+        return self.__reduction(data, 'gradient_boosting')
+
+    def fr_logistic_regression(self, data):
+        return self.__reduction(data, 'logistic_regression')
+
+    def fr_adaboost(self, data):
+        return self.__reduction(data, 'adaboost')
+
+    def fr_extreme_forest(self, data):
+        return self.__reduction(data, 'extreme_forest')
