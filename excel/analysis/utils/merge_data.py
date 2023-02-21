@@ -22,6 +22,7 @@ class MergeData:
         self.src = config.dataset.out_dir
         dir_name = checked_dir(config.dataset.dims, config.dataset.strict)
         self.checked_src = os.path.join(config.dataset.out_dir, '4_checked', dir_name)
+        self.merged_dir = os.path.join(config.dataset.out_dir, '5_merged')
         self.dims = config.dataset.dims
         self.impute = config.merge.impute
         self.peak_values = config.merge.peak_values
@@ -77,7 +78,7 @@ class MergeData:
             tables = self.add_metadata(tables)
 
         tables = tables.sort_values(by='subject')  # save the tables for analysis
-        save_tables(src=self.src, experiment_name=self.experiment_name, tables=tables)
+        save_tables(out_dir=self.merged_dir, experiment_name=self.experiment_name, tables=tables)
 
     def __del__(self) -> None:
         logger.info('Data merging finished.')
@@ -173,6 +174,8 @@ class MergeData:
             # clean some errors in metadata
             if 'mace' in self.metadata:
                 mdata[mdata['mace'] == 999] = 0
+            if 'lge' in self.metadata:
+                mdata[mdata['lge'] == 999] = np.nan
             if 'fhxcad___1' in self.metadata:
                 mdata.loc[~mdata['fhxcad___1'].isin([0, 1]), 'fhxcad___1'] = 0
 
@@ -225,8 +228,10 @@ class MergeData:
                 imputed_tables = self.impute_data(tables)
                 tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
 
+
+                os.makedirs(self.merged_dir)
                 tables.style.apply(lambda _: style_df, axis=None).to_excel(
-                    os.path.join(self.src, '5_merged', f'{self.experiment_name}_highlighted_missing_metadata.xlsx')
+                    os.path.join(self.merged_dir, f'{self.experiment_name}_highlighted_missing_metadata.xlsx')
                 )
 
             else:  # remove patients with any NaN values

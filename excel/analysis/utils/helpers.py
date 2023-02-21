@@ -18,9 +18,9 @@ def merge_metadata(data, mdata_src, metadata) -> pd.DataFrame:
     return data
 
 
-def save_tables(src, experiment_name, tables) -> None:
+def save_tables(out_dir, experiment_name, tables) -> None:
     """Save tables to excel file"""
-    file_path = os.path.join(src, '5_merged', f'{experiment_name}.xlsx')
+    file_path = os.path.join(out_dir, f'{experiment_name}.xlsx')
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     tables.to_excel(file_path, index=False)
 
