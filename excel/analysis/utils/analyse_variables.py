@@ -95,11 +95,11 @@ class AnalyseVariables:
             matrix = to_analyse.corr(method=self.corr_method).round(2)
 
         # plot correlation heatmap
-        plt.figure(figsize=(20, 20))
+        fig = plt.figure(figsize=(20, 20))
         sns.heatmap(matrix, annot=True, xticklabels=True, yticklabels=True, cmap='viridis')
         plt.xticks(rotation=90)
         plt.savefig(os.path.join(self.job_dir, 'corr_plot.pdf'))
-        plt.clf()
+        plt.close(fig)
 
         data = pd.concat((to_analyse, data[self.target_label]), axis=1)
 
