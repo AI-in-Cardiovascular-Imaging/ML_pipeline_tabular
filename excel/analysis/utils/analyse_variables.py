@@ -5,9 +5,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, AdaBoostClassifier, GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    ExtraTreesClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+)
 from sklearn.feature_selection import RFECV
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 
 from excel.analysis.utils.helpers import split_data
@@ -220,6 +225,7 @@ class FeatureReduction:
             logger.error(f'The RFE estimator you requested ({rfe_estimator}) has not yet been implemented.')
             raise NotImplementedError
 
+        number_of_top_features = 20
         X = data.drop(self.target_label, axis=1)
         y = data[self.target_label]
 
@@ -227,7 +233,6 @@ class FeatureReduction:
         cross_validator = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
         selector = RFECV(
             estimator=estimator,
-            step=1,
             min_features_to_select=min_features,
             cv=cross_validator,
             scoring='average_precision',
@@ -261,19 +266,26 @@ class FeatureReduction:
 
         importances = pd.DataFrame(importances, index=X.columns[selector.support_], columns=['importance'])
         importances = importances.sort_values(by='importance', ascending=True)
+        importances = importances.iloc[
+            -number_of_top_features:, :
+        ]  # keep only the top 20 features with the highest importance
+
         logger.info(
             f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {rfe_estimator} estimator, '
             f'number of remaining features: {len(data.columns) - 1}'
         )
 
-        # Plot importances
-        fig = plt.figure(figsize=(10, 10))
+        # plot importances as bar chart
+        fig = plt.figure(figsize=(20, 5))
         importances.plot.barh()
-        plt.title(f'Feature importances using {rfe_estimator} estimator for target label: {self.target_label}')
+        plt.title(
+            f'Feature importance (top {number_of_top_features})'
+            f'\n{rfe_estimator} estimator for target: {self.target_label}'
+        )
         plt.tight_layout()
-        plt.gca().get_legend().remove()
-        plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'))
-        plt.clf()
+        plt.gca().legend_.remove()
+        plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'), dpi=fig.dpi)
+        plt.close(fig)
         # print(selector.cv_results_['mean_test_score'])
         # Plot patient/feature value heatmap
         # plt.figure(figsize=(figsize, figsize))
@@ -363,16 +375,16 @@ class FeatureReduction:
             features[key] = round(features[key], 1)
 
         features = {k: v for k, v in sorted(features.items(), key=lambda item: item[1], reverse=False)}  # sort by value
+        db = pd.DataFrame.from_dict(features, orient='index', columns=['importance'])
 
-        fig = plt.figure(figsize=(10, 10))
-        plt.barh(range(len(features)), list(features.values()), align='center')
-        plt.yticks(range(len(features)), list(features.keys()))
-        plt.xlabel(f'Summed feature importance (max points {min_len*number_of_estimators})')
-        plt.ylabel('Feature names')
-        plt.title(f'Feature importances using all estimators for target label: {self.target_label}')
+        fig = plt.figure(figsize=(20, 30))
+        db.plot.barh()
+        plt.title(f'Feature importance\nAll estimators for target: {self.target_label}')
+        plt.xlabel(f'Summed importance (max {number_of_estimators*min_len})')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.job_dir, 'feature_importance_all.pdf'))
-        plt.clf()
+        plt.gca().legend_.remove()
+        plt.savefig(os.path.join(self.job_dir, 'feature_importance_all.pdf'), dpi=fig.dpi)
+        plt.close(fig)
 
         features[self.target_label] = 0  # add target label to features to keep it in the data
         data = data.drop(columns=[c for c in data.columns if c not in features.keys()], axis=1)
