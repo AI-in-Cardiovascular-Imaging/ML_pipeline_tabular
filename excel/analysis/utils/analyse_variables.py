@@ -12,7 +12,6 @@ from sklearn.model_selection import StratifiedKFold
 from numpy import sort
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.feature_selection import SelectFromModel
-from featurewiz import FeatureWiz
 
 from excel.analysis.utils.helpers import split_data
 
@@ -293,6 +292,7 @@ class AnalyseVariables:
 
     def feature_wiz(self, data: pd.DataFrame) -> pd.DataFrame:
         """Use feature_wiz to select features"""
+        from featurewiz import FeatureWiz
         y_train = data[self.target_label]
         x_train = data.drop(self.target_label, axis=1)
 
