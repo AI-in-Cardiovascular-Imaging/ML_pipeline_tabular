@@ -242,7 +242,7 @@ class FeatureReduction:
 
         # Plot performance for increasing number of features
         n_scores = len(selector.cv_results_['mean_test_score'])
-        plt.figure()
+        fig = plt.figure()
         plt.xlabel('Number of features selected')
         plt.ylabel('Mean average precision')
         plt.xticks(range(0, n_scores + 1, 5))
@@ -254,7 +254,7 @@ class FeatureReduction:
         )
         plt.title(f'Recursive Feature Elimination for {rfe_estimator} estimator')
         plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.pdf'))
-        plt.clf()
+        plt.close(fig)
 
         data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)  # concat with target label
 
