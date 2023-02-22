@@ -5,19 +5,6 @@ from sklearn.feature_selection import VarianceThreshold
 from loguru import logger
 
 
-def merge_metadata(data, mdata_src, metadata) -> pd.DataFrame:
-    """Merge metadata with data"""
-    metadata = ['pat_id'] + metadata  # always want patient ID
-    mdata = pd.read_excel(mdata_src)
-    mdata = mdata[metadata]
-    mdata = mdata[mdata['pat_id'].notna()]  # remove rows without pat_id
-    mdata = mdata.rename(columns={'pat_id': 'subject'})
-    mdata['subject'] = mdata['subject'].astype(int)
-    data['subject'] = data['subject'].astype(int)
-    data = data.merge(mdata, how='left', on='subject')  # merge the cvi42 data with available metadata
-    return data
-
-
 def save_tables(out_dir, experiment_name, tables) -> None:
     """Save tables to excel file"""
     file_path = os.path.join(out_dir, f'{experiment_name}.xlsx')

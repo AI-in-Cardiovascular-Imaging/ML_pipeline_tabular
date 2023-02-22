@@ -33,9 +33,10 @@ metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',   # demographic
            'Diagn_modality_none', 'Diagn_modality_echo', 'Diagn_modality_catheter',
            'Diagn_modality_cct', 'Diagn_modality_emb', 'Diagn_modality_pet',
            'Diagn_modality_stress_ecg', 'Diagn_modality_holter', 'Diagn_modality_other',
+           'lge',
            ]
 
 # metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',
 #            'MACE_any_chf_hosp', 'Time2chf', 'MACE_any_vt', 'TimetoVT', 'MACE_any_death',
-#            'Timeto_death', 'MACE_any_myo', 'Time2myo'
+#            'Timeto_death', 'MACE_any_myo', 'Time2myo', 'lge', 'fhxcad___1',
 #           ]

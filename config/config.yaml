@@ -22,7 +22,6 @@ merge:
   impute: True  # impute missing data
   peak_values: True  # reduce data to peak values (i.e. lose time component)
   overwrite: False  # overwrite merged data
-  update_metadata: False  # overwrite metadata (without performing entire merging process again - unless overwrite=True)
 
 analysis:
   experiment:

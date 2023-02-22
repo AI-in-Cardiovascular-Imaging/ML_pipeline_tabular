@@ -11,6 +11,7 @@ from sklearn.ensemble import (
     GradientBoostingClassifier,
     RandomForestClassifier,
 )
+from sklearn.inspection import permutation_importance
 from sklearn.feature_selection import RFECV
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
@@ -81,11 +82,22 @@ class AnalyseVariables:
         Compute correlation between features and optionally drop highly correlated ones
         """
         to_analyse = data.drop(self.target_label, axis=1)
+        target = data[self.target_label]
         matrix = to_analyse.corr(method=self.corr_method).round(2)
 
         if self.corr_drop_features:
+            # calculate feature importances
+            estimator = RandomForestClassifier(random_state=self.seed)
+            estimator.fit(to_analyse, target)
+            perm_importances = permutation_importance(estimator, to_analyse, target, scoring='average_precision')
+            importances = perm_importances.importances_mean
+            importances = pd.Series(importances, index=to_analyse.columns)
+            importances = importances.sort_values(ascending=False)
+
+            matrix = matrix.reindex(index=importances.index, columns=importances.index) # sort matrix w.r.t. feature importance
             abs_corr = matrix.abs()
             upper_tri = abs_corr.where(np.triu(np.ones(abs_corr.shape), k=1).astype(bool))
+            
             cols_to_drop = [col for col in upper_tri.columns if any(upper_tri[col] > self.corr_thresh)]
             to_analyse = to_analyse.drop(cols_to_drop, axis=1)
             logger.info(
