@@ -45,7 +45,7 @@ class DimensionReductions:
         logger.info(f'Variance explained: {explained_var} for {len(analysis.index)} subjects ({suffix}).')
         # logger.info(f'\n{abs(pca.components_)}')
 
-        sns.lmplot(
+        fig = sns.lmplot(
             data=analysis,
             x='pc_1',
             y='pc_2',
@@ -56,12 +56,11 @@ class DimensionReductions:
             x_jitter=0.2,
             y_jitter=0.2,
         )
-        # plt.tight_layout()
         plt.xlabel(f'First PC (explains {int(round(explained_var[0], 2) * 100)}% of variance)')
         plt.ylabel(f'Second PC (explains {int(round(explained_var[1], 2) * 100)}% of variance)')
         plt.title('Principal Component Analysis')
         plt.savefig(os.path.join(self.job_dir, f'PCA_{suffix}.pdf'), bbox_inches='tight')
-        plt.clf()
+        plt.close(fig)
         return data
 
     def tsne(self,data: pd.DataFrame) -> pd.DataFrame:
@@ -85,10 +84,10 @@ class DimensionReductions:
             analysis = pd.DataFrame(analysis, index=to_analyse.index, columns=['tsne_1', 'tsne_2'])
             analysis = pd.concat((analysis, hue_df), axis=1)
 
-            sns.lmplot(data=analysis, x='tsne_1', y='tsne_2', hue=self.target_label, fit_reg=False, legend=True, scatter_kws={'s': 20})
+            fig = sns.lmplot(data=analysis, x='tsne_1', y='tsne_2', hue=self.target_label, fit_reg=False, legend=True, scatter_kws={'s': 20})
             plt.title(f't-SNE for perplexity {perp}')
             plt.savefig(os.path.join(self.job_dir, f'TSNE_{suffix}_perp_{perp}.pdf'), bbox_inches='tight')
-            plt.clf()
+            plt.close(fig)
 
         logger.info(f'{len(analysis.index)} subjects ({suffix}).')
         return data
@@ -112,7 +111,7 @@ class DimensionReductions:
         analysis = reducer.fit_transform(to_analyse)
         analysis = pd.DataFrame(analysis, index=to_analyse.index, columns=['umap_1', 'umap_2'])
         analysis = pd.concat((analysis, hue_df), axis=1)
-        sns.lmplot(
+        fig = sns.lmplot(
             data=analysis,
             x='umap_1',
             y='umap_2',
@@ -125,6 +124,6 @@ class DimensionReductions:
         )
         plt.title(f'Umap analysis')
         plt.savefig(os.path.join(self.job_dir, f'Umap_{suffix}.pdf'), bbox_inches='tight')
-        plt.clf()
+        plt.close(fig)
         logger.info(f'{len(analysis.index)} subjects ({suffix}).')
         return data
