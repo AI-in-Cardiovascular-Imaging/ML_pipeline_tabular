@@ -94,10 +94,12 @@ class AnalyseVariables:
             importances = pd.Series(importances, index=to_analyse.columns)
             importances = importances.sort_values(ascending=False)
 
-            matrix = matrix.reindex(index=importances.index, columns=importances.index) # sort matrix w.r.t. feature importance
+            matrix = matrix.reindex(
+                index=importances.index, columns=importances.index
+            )  # sort matrix w.r.t. feature importance
             abs_corr = matrix.abs()
             upper_tri = abs_corr.where(np.triu(np.ones(abs_corr.shape), k=1).astype(bool))
-            
+
             cols_to_drop = [col for col in upper_tri.columns if any(upper_tri[col] > self.corr_thresh)]
             to_analyse = to_analyse.drop(cols_to_drop, axis=1)
             logger.info(
@@ -367,6 +369,14 @@ class FeatureReduction:
         ef_features = {f: i for i, f in enumerate(sub_ef_features[::-1], start=1)}
 
         all_keys = set(f_features.keys()).union(xg_features.keys()).union(ada_features.keys()).union(ef_features.keys())
+        feature_scores = pd.DataFrame(all_keys, columns=['feature'])
+        feature_scores['forest'] = feature_scores['feature'].apply(lambda key: f_features.get(key))
+        feature_scores['xgboost'] = feature_scores['feature'].apply(lambda key: xg_features.get(key))
+        feature_scores['adaboost'] = feature_scores['feature'].apply(lambda key: ada_features.get(key))
+        feature_scores['extreme_forest'] = feature_scores['feature'].apply(lambda key: ef_features.get(key))
+        feature_scores = feature_scores.fillna(0)  # non-selected features get score of 0
+        feature_scores['all'] = feature_scores.iloc[:, 1:].sum(axis=1)
+        feature_scores = feature_scores.sort_values(by='all', ascending=True)
 
         features = {}
         for key in all_keys:  # sum up the weights
@@ -389,7 +399,10 @@ class FeatureReduction:
         features = {k: v for k, v in sorted(features.items(), key=lambda item: item[1], reverse=False)}  # sort by value
         db = pd.DataFrame.from_dict(features, orient='index', columns=['importance'])
 
-        ax = db.plot.barh()
+        ax = feature_scores.plot(
+            x='feature', y=['forest', 'xgboost', 'adaboost', 'extreme_forest'], kind='barh', stacked=True
+        )
+        ax.legend()
         fig = ax.get_figure()
         plt.title(f'Feature importance\nAll estimators for target: {self.target_label}')
         plt.xlabel(f'Summed importance (max {number_of_estimators*min_len})')
@@ -402,4 +415,3 @@ class FeatureReduction:
         logger.info(f'Top {min_len} features: {features.keys()}')
         data = data.drop(columns=[c for c in data.columns if c not in features.keys()], axis=1)
         return data
-

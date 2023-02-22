@@ -37,6 +37,7 @@ lightgbm = "^3.3.5"
 imbalanced-learn = "^0.10.1"
 featurewiz = "^0.2.4"
 kaleido = "0.2.1"
+llvmlite = "^0.39.1"
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"

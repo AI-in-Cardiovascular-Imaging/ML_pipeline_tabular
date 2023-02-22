@@ -43,7 +43,6 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
             os.makedirs(self.job_dir, exist_ok=True)
             data = deepcopy(self.original_data)
             for step in job:
-                logger.debug(f'Running step: {step}')
                 data, error = self.process_job(step, data)
                 if error:
                     logger.error(f'Step {step} is invalid')
