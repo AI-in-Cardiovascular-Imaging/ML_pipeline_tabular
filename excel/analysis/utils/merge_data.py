@@ -67,8 +67,7 @@ class MergeData:
         tables = tables.rename_axis('subject').reset_index()  # add a subject column and reset index
 
         if self.impute:  # data imputation (merged data)
-            imputed_tables = self.impute_data(tables)
-            tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
+            tables = self.impute_data(tables)
         else:  # remove patients with any NaN values
             tables = tables.dropna(axis=0, how='any')
         # logger.debug(len(tables.index))
@@ -156,11 +155,15 @@ class MergeData:
         imputer = IterativeImputer(
             initial_strategy='median', max_iter=100, random_state=self.seed, keep_empty_features=True
         )
-        try:
-            cols_to_impute = table.columns.difference(['subject'])
-            table[cols_to_impute] = imputer.fit_transform(table.drop('subject', axis=1))
-        except KeyError:
-            table = imputer.fit_transform(table)
+        if 'subject' in table.columns:
+            tmp = table['subject']
+            table = table.drop('subject', axis=1)
+            imputed_data = imputer.fit_transform(table)
+            imputed_data = pd.DataFrame(imputed_data, index=table.index, columns=table.columns)
+            table = pd.concat((tmp, imputed_data), axis=1)
+        else:
+            imputed_data = imputer.fit_transform(table)
+            table = pd.DataFrame(imputed_data, index=table.index, columns=table.columns)
 
         return table
 
@@ -179,9 +182,11 @@ class MergeData:
                 mdata.loc[mdata['mace'] == 999, 'mace'] = 0
             if 'lge' in self.metadata:
                 mdata.loc[mdata['lge'] == 999, 'lge'] = np.nan
+                mdata = mdata.rename(columns={'lge': 'LGE'})
             if 'fhxcad___1' in self.metadata:
                 mdata.loc[~mdata['fhxcad___1'].isin([0, 1]), 'fhxcad___1'] = 0
-
+                mdata = mdata.rename(columns={'fhxcad___1': 'T2'})
+                
             # clean subject IDs
             mdata = mdata[mdata['redcap_id'].notna()]  # remove rows without redcap_id
             mdata['redcap_id'] = mdata['redcap_id'].astype(int).astype(str) + '_rc'
@@ -229,8 +234,7 @@ class MergeData:
                 style_df = pd.DataFrame('', index=tables.index, columns=tables.columns)
                 style_df = style_df.mask(mask_missing_values, 'background-color: cyan')
 
-                imputed_tables = self.impute_data(tables)
-                tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
+                tables = self.impute_data(tables)
 
                 os.makedirs(self.merged_dir, exist_ok=True)
                 tables.style.apply(lambda _: style_df, axis=None).to_excel(
@@ -241,6 +245,15 @@ class MergeData:
                 logger.info(f'Number of patients before dropping NaN metadata: {len(tables.index)}')
                 tables = tables.dropna(axis=0, how='any')
                 logger.info(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
+
+            # LGE/T2 columns
+            if 'LGE' in tables.columns and 'T2' in tables.columns:
+                lge_bool = tables['LGE'].astype(bool)
+                t2_bool = tables['T2'].astype(bool)
+                tables['LGE+/T2+'] = (lge_bool & t2_bool).astype(int)
+                tables['LGE+/T2-'] = (lge_bool & (~t2_bool)).astype(int)
+                tables['LGE-/T2+'] = ((~lge_bool) & t2_bool).astype(int)
+                tables['LGE-/T2-'] = ((~lge_bool) & (~t2_bool)).astype(int)
 
             # Remove features containing the same value for all patients
             nunique = tables.nunique()
