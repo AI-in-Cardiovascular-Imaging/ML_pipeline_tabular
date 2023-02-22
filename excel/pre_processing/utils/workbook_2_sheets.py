@@ -9,9 +9,10 @@ from re import sub
 
 
 class ExtractWorkbook2Sheets:
-    def __init__(self, src: str, dst: str, save_intermediate: bool = True) -> None:
+    def __init__(self, src: str, dst: str, suffix: str, save_intermediate: bool = True) -> None:
         self.src_file = src
         self.dst_folder = dst
+        self.suffix = suffix
         self.save_intermediate = save_intermediate
         self.tic = time.time()
         self.wb = None
@@ -24,9 +25,6 @@ class ExtractWorkbook2Sheets:
 
     def __call__(self) -> dict:
         """Extract workbook to sheets"""
-        # total_memory = psutil.virtual_memory().total / (1024**3)  # in GB
-        # if total_memory < 30:  # warn if memory is less than 32GB
-        #     raise MemoryError('Not enough memory to extract workbook to sheets, 32 GB of RAM is required')
         logger.info('Extract workbook to sheets is running...')
         if not self.src_file.endswith('.xlsx') and not os.path.exists(self.src_file):
             raise ValueError(f'{self.src_file} is not a valid ".xlsx" file')
@@ -46,6 +44,7 @@ class ExtractWorkbook2Sheets:
             if self.check_sheet_name(sheet_name):
                 old_sheet = wb[sheet_name]  # extract sheet
                 clean_sheet_name = self.get_clean_sheet_name(sheet_name)
+                clean_sheet_name = f'{clean_sheet_name}{self.suffix}'
 
                 if self.save_intermediate:
                     new_wb = openpyxl.Workbook()  # create new workbook
@@ -53,7 +52,8 @@ class ExtractWorkbook2Sheets:
                     new_sheet.title = clean_sheet_name
                     for row in old_sheet:  # copy old sheet to new sheet
                         for cell in row:
-                            new_sheet[cell.coordinate].value = cell.value
+                            if cell.value is not None:
+                                new_sheet[cell.coordinate].value = cell.value
                     new_wb.save(f'{os.path.join(self.dst_folder, clean_sheet_name)}.xlsx')
                     new_wb.close()
 

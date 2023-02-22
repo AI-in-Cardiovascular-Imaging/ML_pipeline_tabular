@@ -51,8 +51,6 @@ class ExtractSheets2Tables:
                     for row in self.loop_row():
                         self.extract_table(row)
 
-                    # logger.info(self.count)
-
         return self.tables
 
     def __del__(self) -> None:
@@ -291,7 +289,7 @@ class ExtractSheets2Tables:
         row_end = self._table_row_end_finder(row, 2, None)
 
         if self.save_intermediate:
-            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row + 2, nrows=row_end, usecols='B:S')
+            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row + 1, nrows=row_end, usecols='B:S')
         else:
             df = self.sheet.iloc[row + 2 : row + row_end, 1:19]
 
@@ -322,7 +320,7 @@ class ExtractSheets2Tables:
         row_end = self._table_row_end_finder(row, 2, None)
 
         if self.save_intermediate:
-            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row + 2, nrows=row_end, usecols='B:R')
+            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row + 1, nrows=row_end, usecols='B:R')
         else:
             df = self.sheet.iloc[row + 2 : row + row_end, 1:18]
 
@@ -362,7 +360,7 @@ class ExtractSheets2Tables:
         col_end = self._table_col_end_finder(row)
 
         if self.save_intermediate:
-            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row + 1, nrows=row_end, ncols=col_end)
+            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row, nrows=row_end, usecols=range(1, col_end))
         else:
             df = self.sheet.iloc[row + 1 : row + row_end, 1:col_end]
 
@@ -378,7 +376,9 @@ class ExtractSheets2Tables:
         col_end = self._table_col_end_finder(row)
 
         if self.save_intermediate:
-            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row + 2, nrows=row_end, ncols=col_end)
+            df = pd.read_excel(
+                self.file_path, self.subject_name, skiprows=row + 1, nrows=row_end, usecols=range(1, col_end)
+            )
         else:
             df = self.sheet.iloc[row + 2 : row + row_end, 1:col_end]
 
@@ -394,7 +394,7 @@ class ExtractSheets2Tables:
         col_end = self._table_col_end_finder(row)
 
         if self.save_intermediate:
-            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row + 1, nrows=row_end, ncols=col_end)
+            df = pd.read_excel(self.file_path, self.subject_name, skiprows=row, nrows=row_end, usecols=range(1, col_end))
         else:
             df = self.sheet.iloc[row + 1 : row + row_end, 1:col_end]
 

@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from omegaconf import DictConfig
 from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
-from sklearn.impute import SimpleImputer, IterativeImputer, MissingIndicator
+from sklearn.impute import IterativeImputer, MissingIndicator
 
 from excel.global_helpers import checked_dir
 from excel.analysis.utils.helpers import save_tables
@@ -65,7 +65,6 @@ class MergeData:
         # Build DataFrame from list (each row represents a subject)
         tables = pd.DataFrame(tables_list, index=subjects, columns=self.col_names)
         tables = tables.rename_axis('subject').reset_index()  # add a subject column and reset index
-        tables['subject'] = tables['subject'].astype(int)
 
         if self.impute:  # data imputation (merged data)
             imputed_tables = self.impute_data(tables)
@@ -121,7 +120,6 @@ class MergeData:
     def extract_peak_values(self, table) -> None:
         """Extract peak values from ROI analysis tables"""
         info_cols = 1 if 'aha' in self.table_name else 2  # AHA data got one info col, ROI data got two info cols
-
         if 'long_axis' in self.table_name:  # ensure consistent naming between short and long axis
             table = table.rename(columns={'series, slice': 'slice'})
 
@@ -158,7 +156,12 @@ class MergeData:
         imputer = IterativeImputer(
             initial_strategy='median', max_iter=100, random_state=self.seed, keep_empty_features=True
         )
-        table = imputer.fit_transform(table)
+        try:
+            cols_to_impute = table.columns.difference(['subject'])
+            table[cols_to_impute] = imputer.fit_transform(table.drop('subject', axis=1))
+        except KeyError:
+            table = imputer.fit_transform(table)
+
         return table
 
     def add_metadata(self, tables):
@@ -173,26 +176,27 @@ class MergeData:
             mdata = mdata[self.metadata]
             # clean some errors in metadata
             if 'mace' in self.metadata:
-                mdata[mdata['mace'] == 999] = 0
+                mdata.loc[mdata['mace'] == 999, 'mace'] = 0
             if 'lge' in self.metadata:
-                mdata[mdata['lge'] == 999] = np.nan
+                mdata.loc[mdata['lge'] == 999, 'lge'] = np.nan
             if 'fhxcad___1' in self.metadata:
                 mdata.loc[~mdata['fhxcad___1'].isin([0, 1]), 'fhxcad___1'] = 0
 
             # clean subject IDs
+            mdata = mdata[mdata['redcap_id'].notna()]  # remove rows without redcap_id
+            mdata['redcap_id'] = mdata['redcap_id'].astype(int).astype(str) + '_rc'
+            mdata['pat_id'] = (
+                mdata['pat_id']
+                .astype(object)
+                .apply(lambda x: str(int(x)) + '_p' if pd.notnull(x) else x)
+            )
             mdata['pat_id'].fillna(mdata['redcap_id'], inplace=True)  # patients without pat_id get redcap_id
-            # logger.debug(mdata['pat_id'][mdata['pat_id'].duplicated(keep=False)])
-            mdata = mdata[mdata['pat_id'].notna()]  # remove rows without pat_id and redcap_id
             mdata = mdata.rename(columns={'pat_id': 'subject'})
-            mdata['subject'] = mdata['subject'].astype(int)
 
             # merge the cvi42 data with available metadata
             tables = tables.merge(mdata, how='inner', on='subject')
             tables = tables.drop('subject', axis=1)  # use redcap_id as subject id
-            # logger.debug(len(tables.index))
-            tables = tables[tables['redcap_id'].notna()]  # remove rows without redcap_id
             tables = tables.rename(columns={'redcap_id': 'subject'})
-            # logger.debug(len(tables.index))
 
             # remove any metadata columns containing less than threshold data
             threshold = 0.9
@@ -228,8 +232,7 @@ class MergeData:
                 imputed_tables = self.impute_data(tables)
                 tables = pd.DataFrame(imputed_tables, index=tables.index, columns=tables.columns)
 
-
-                os.makedirs(self.merged_dir)
+                os.makedirs(self.merged_dir, exist_ok=True)
                 tables.style.apply(lambda _: style_df, axis=None).to_excel(
                     os.path.join(self.merged_dir, f'{self.experiment_name}_highlighted_missing_metadata.xlsx')
                 )

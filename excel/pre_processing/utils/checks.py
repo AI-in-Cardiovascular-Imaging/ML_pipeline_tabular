@@ -53,7 +53,6 @@ class SplitByCompleteness:
             self.move_files()
 
         else:  # use dict of DataFrames
-            # Instead of dividing into complete and missing,
             # delete all subjects with missing tables in requested dims
             for subject in list(self.tables.keys()):
                 logger.info(f'Checking subject -> {subject}')
@@ -64,8 +63,6 @@ class SplitByCompleteness:
                 if count < self.target_count:
                     del self.tables[subject]
                     logger.info(f'Removed subject {subject} due to missing tables.')
-                # else:
-                #     logger.info(f'Complete subject -> {subject}')
 
         return self.tables
 

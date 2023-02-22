@@ -29,64 +29,79 @@ class Preprocessing:
         self.dir_name = checked_dir(self.dims, self.strict)
 
     def __call__(self) -> None:
-        if self.save_intermediate:
-            logger.info('Intermediate results will be saved between each pre-processing step.')
-            dst = os.path.join(self.dst_dir, '1_extracted')
-        else:
-            dst = os.path.join(self.dst_dir, '4_checked', self.dir_name)
 
         # Extract one sheet per patient from the available raw workbooks
         # additionally removes any colour formatting
         sheets = {}
-        for src_file in os.listdir(self.src_dir):
-            if src_file.endswith('.xlsx') and not src_file.startswith('.'):
-                logger.info(f'File -> {src_file}')
-                workbook_2_sheets = ExtractWorkbook2Sheets(
-                    src=os.path.join(self.src_dir, src_file), dst=dst, save_intermediate=self.save_intermediate
-                )
-                sheets = sheets | workbook_2_sheets()
+        for dir in os.listdir(self.src_dir):
+            if dir == 'redcap_id':
+                suffix = '_rc'
+            elif dir == 'pat_id':
+                suffix = '_p'
+            else:
+                logger.error('Unknown data source, must be either redcap_id or pat_id.')
+                raise NotImplementedError
 
-                if self.save_intermediate:  # update paths
-                    self.src_dir = dst
-                    dst = os.path.join(self.dst_dir, '2_case_wise')
+            for src_file in os.listdir(os.path.join(self.src_dir, dir)):
+                if src_file.endswith('.xlsx') and not src_file.startswith('.'):
+                    if self.save_intermediate:
+                        logger.info('Intermediate results will be saved between each pre-processing step.')
+                        dst = os.path.join(self.dst_dir, '1_extracted')
+                    else:
+                        dst = os.path.join(self.dst_dir, '4_checked', self.dir_name)
+                        
+                    logger.info(f'File -> {os.path.join(dir, src_file)}')
+                    workbook_2_sheets = ExtractWorkbook2Sheets(
+                        src=os.path.join(self.src_dir, dir, src_file),
+                        dst=dst,
+                        suffix=suffix,
+                        save_intermediate=self.save_intermediate,
+                    )
+                    sheets = sheets | workbook_2_sheets()
 
-                sheets_2_tables = ExtractSheets2Tables(
-                    src=self.src_dir, dst=dst, save_intermediate=self.save_intermediate, sheets=sheets
-                )
-                tables = sheets_2_tables()
+                    if self.save_intermediate:  # update paths
+                        src = dst
+                        dst = os.path.join(self.dst_dir, '2_case_wise')
+                    else:
+                        src = self.src_dir
 
-                if self.save_intermediate:  # update paths
-                    self.src_dir = dst
-                    dst = os.path.join(self.dst_dir, '3_cleaned')
+                    sheets_2_tables = ExtractSheets2Tables(
+                        src=src, dst=dst, save_intermediate=self.save_intermediate, sheets=sheets
+                    )
+                    tables = sheets_2_tables()
 
-                cleaner = TableCleaner(
-                    src=self.src_dir,
-                    dst=dst,
-                    save_intermediate=self.save_intermediate,
-                    dims=self.dims,
-                    tables=tables,
-                    strict=self.strict,
-                )
-                clean_tables = cleaner()
+                    if self.save_intermediate:  # update paths
+                        src = dst
+                        dst = os.path.join(self.dst_dir, '3_cleaned')
 
-                if self.save_intermediate:  # update paths
-                    self.src_dir = dst
-                    dst = os.path.join(self.dst_dir, '4_checked', self.dir_name)
+                    cleaner = TableCleaner(
+                        src=src,
+                        dst=dst,
+                        save_intermediate=self.save_intermediate,
+                        dims=self.dims,
+                        tables=tables,
+                        strict=self.strict,
+                    )
+                    clean_tables = cleaner()
 
-                checker = SplitByCompleteness(
-                    src=self.src_dir,
-                    dst=dst,
-                    save_intermediate=self.save_intermediate,
-                    dims=self.dims,
-                    tables=clean_tables,
-                    strict=self.strict,
-                )
-                complete_tables = checker()
+                    if self.save_intermediate:  # update paths
+                        src = dst
+                        dst = os.path.join(self.dst_dir, '4_checked', self.dir_name)
 
-                # Save final pre-processed tables (only relevant if save_intermediate=False)
-                if not self.save_intermediate and self.save_final:
-                    saver = SaveTables(dst=dst, tables=complete_tables)
-                    saver()
+                    checker = SplitByCompleteness(
+                        src=src,
+                        dst=dst,
+                        save_intermediate=self.save_intermediate,
+                        dims=self.dims,
+                        tables=clean_tables,
+                        strict=self.strict,
+                    )
+                    complete_tables = checker()
+
+                    # Save final pre-processed tables (only relevant if save_intermediate=False)
+                    if not self.save_intermediate and self.save_final:
+                        saver = SaveTables(dst=dst, tables=complete_tables)
+                        saver()
 
 
 if __name__ == '__main__':
