@@ -399,5 +399,7 @@ class FeatureReduction:
         plt.close(fig)
 
         features[self.target_label] = 0  # add target label to features to keep it in the data
+        logger.info(f'Top {min_len} features: {features.keys()}')
         data = data.drop(columns=[c for c in data.columns if c not in features.keys()], axis=1)
         return data
+

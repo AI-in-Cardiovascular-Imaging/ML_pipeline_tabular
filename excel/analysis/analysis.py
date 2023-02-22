@@ -11,6 +11,7 @@ import pandas as pd
 
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.utils.exploration import ExploreData
+from excel.analysis.verifications import VerifyFeatures
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
@@ -41,8 +42,18 @@ class Analysis:
         data = pd.read_excel(merged_path)  # Read in merged data
         data = data.set_index('subject')  # Use subject ID as index column
 
-        explorer = ExploreData(data, self.config)
+        verification_data = data.sample(frac=0.8, random_state=self.config.analysis.run.seed)
+        explore_data = data.drop(verification_data.index)
+
+        logger.debug('data', data.shape)
+        logger.debug('verification_data', verification_data.shape)
+        logger.debug('explore_data', explore_data.shape)
+
+        explorer = ExploreData(explore_data, self.config)
         explorer()
+
+        verify = VerifyFeatures(self.config, verification_data)
+        verify()
 
 
 if __name__ == '__main__':
