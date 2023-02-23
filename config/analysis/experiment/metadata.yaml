@@ -36,7 +36,7 @@ metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',   # demographic
            'lge',
            ]
 
-# metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace',
+# metadata: ['sex_0_male_1_female', 'age', 'bmi', 'mace', 'macefree_time',
 #            'MACE_any_chf_hosp', 'Time2chf', 'MACE_any_vt', 'TimetoVT', 'MACE_any_death',
 #            'Timeto_death', 'MACE_any_myo', 'Time2myo', 'lge', 'fhxcad___1',
 #           ]

@@ -43,13 +43,13 @@ class Analysis:
         data = pd.read_excel(merged_path)  # Read in merged data
         data = data.set_index('subject')  # Use subject ID as index column
 
-        # data = self.data_balancer(data)
-        # verification_data = data.sample(frac=0.9, random_state=self.config.analysis.run.seed)
+        # verification_data = data.sample(frac=0.8, random_state=self.config.analysis.run.seed)
         # explore_data = data.drop(verification_data.index)
+        explore_data = data
 
-        # logger.debug(f'data -> {data.shape}')
-        # logger.debug(f'explore_data -> {explore_data.shape}')
-        # logger.debug(f'verification_data -> {verification_data.shape}')
+        # logger.debug('data', data.shape)
+        # logger.debug('verification_data', verification_data.shape)
+        # logger.debug('explore_data', explore_data.shape)
 
         explorer = ExploreData(data, self.config)
         explorer()
