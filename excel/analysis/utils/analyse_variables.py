@@ -400,10 +400,14 @@ class FeatureReduction:
         db = pd.DataFrame.from_dict(features, orient='index', columns=['importance'])
 
         ax = feature_scores.plot(
-            x='feature', y=['forest', 'xgboost', 'adaboost', 'extreme_forest'], kind='barh', stacked=True
+            x='feature',
+            y=['forest', 'xgboost', 'adaboost', 'extreme_forest'],
+            kind='barh',
+            stacked=True,
+            colormap='viridis',
         )
-        ax.legend()
         fig = ax.get_figure()
+        fig.legend(loc='lower right', borderaxespad=4.5)
         plt.title(f'Feature importance\nAll estimators for target: {self.target_label}')
         plt.xlabel(f'Summed importance (max {number_of_estimators*min_len})')
         plt.tight_layout()
