@@ -378,27 +378,6 @@ class FeatureReduction:
         feature_scores['all'] = feature_scores.iloc[:, 1:].sum(axis=1)
         feature_scores = feature_scores.sort_values(by='all', ascending=True)
 
-        features = {}
-        for key in all_keys:  # sum up the weights
-            features[key] = 0
-            counter = 0
-            if key in f_features.keys():
-                counter += 1
-                features[key] += f_features[key]
-            if key in xg_features.keys():
-                counter += 1
-                features[key] += xg_features[key]
-            if key in ada_features.keys():
-                counter += 1
-                features[key] += ada_features[key]
-            if key in ef_features.keys():
-                counter += 1
-                features[key] += ef_features[key]
-            features[key] = round(features[key], 1)
-
-        features = {k: v for k, v in sorted(features.items(), key=lambda item: item[1], reverse=False)}  # sort by value
-        db = pd.DataFrame.from_dict(features, orient='index', columns=['importance'])
-
         ax = feature_scores.plot(
             x='feature',
             y=['forest', 'xgboost', 'adaboost', 'extreme_forest'],
@@ -415,7 +394,7 @@ class FeatureReduction:
         plt.savefig(os.path.join(self.job_dir, 'feature_importance_all.pdf'), dpi=fig.dpi)
         plt.close(fig)
 
-        features[self.target_label] = 0  # add target label to features to keep it in the data
-        logger.info(f'Top {min_len} features: {features.keys()}')
-        data = data.drop(columns=[c for c in data.columns if c not in features.keys()], axis=1)
+        logger.info(f'Top features: {list(feature_scores["feature"])}')
+        features_to_keep = list(feature_scores["feature"]) + list(self.target_label)
+        data = data.drop(columns=[c for c in data.columns if c not in features_to_keep], axis=1)
         return data
