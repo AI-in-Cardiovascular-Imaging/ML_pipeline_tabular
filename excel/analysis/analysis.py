@@ -12,6 +12,7 @@ import pandas as pd
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.utils.exploration import ExploreData
 from excel.analysis.verifications import VerifyFeatures
+from sklearn.model_selection import train_test_split
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
@@ -42,18 +43,28 @@ class Analysis:
         data = pd.read_excel(merged_path)  # Read in merged data
         data = data.set_index('subject')  # Use subject ID as index column
 
-        verification_data = data.sample(frac=0.8, random_state=self.config.analysis.run.seed)
-        explore_data = data.drop(verification_data.index)
+        # data = self.data_balancer(data)
+        # verification_data = data.sample(frac=0.9, random_state=self.config.analysis.run.seed)
+        # explore_data = data.drop(verification_data.index)
 
-        logger.debug('data', data.shape)
-        logger.debug('verification_data', verification_data.shape)
-        logger.debug('explore_data', explore_data.shape)
+        # logger.debug(f'data -> {data.shape}')
+        # logger.debug(f'explore_data -> {explore_data.shape}')
+        # logger.debug(f'verification_data -> {verification_data.shape}')
 
-        explorer = ExploreData(explore_data, self.config)
+        explorer = ExploreData(data, self.config)
         explorer()
 
-        verify = VerifyFeatures(self.config, verification_data)
-        verify()
+        # verify = VerifyFeatures(self.config, verification_data)
+        # verify()
+
+    def data_balancer(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Balance data"""
+        zero_data = data[data[self.config.analysis.experiment.target_label] == 0].sample(frac=0.20, random_state=self.config.analysis.run.seed)
+        one_data = data[data[self.config.analysis.experiment.target_label] == 1]
+        logger.debug(f'{len(zero_data)}')
+        logger.debug(f'{len(one_data)}')
+        data = pd.concat([zero_data, one_data])
+        return data
 
 
 if __name__ == '__main__':

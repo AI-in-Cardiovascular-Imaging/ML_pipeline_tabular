@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
-from loguru import logger
 import sklearn.ensemble as ensemble
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
 
 from excel.analysis.utils.normalisers import Normaliser
 
@@ -15,35 +15,52 @@ class VerifyFeatures(Normaliser):
         self.config = config
         self.target_label = config.analysis.experiment.target_label
 
-        v_data = self.l2_norm(v_data)
+        v_data = self.l1_norm(v_data)
 
-        features = ['fhxcad___0', 'Diagn_sympt_card_arrest', 'Diagn_sympt_edema', 'global_radial_strain',
-                    'global_circumf_strain', 'endo_circumf_strain', 'epi_longit_strain', 'epi_circumf_strain',
-                    'baseline_meds_diuretic', 'global_longit_strain', 'epi_radial_strain', 'Diagn_nyha3or4',
-                    'endo_longit_strain', 'endo_radial_strain', 'Diagn_nyha', 'bmi', 'age', 'mace']
+        features = [
+            'epi_radial_strain',
+            'endo_circumf_strain',
+            'Diagn_nyha2or3or4',
+            'epi_longit_strain',
+            'endo_radial_strain',
+            'age',
+            'endo_longit_strain',
+            'Diagn_nyha3or4',
+            'global_radial_strain',
+            'Diagn_nyha',
+            'bmi',
+            'mace',
+        ]
 
-        v_data = v_data.drop(columns=[c for c in v_data.columns if c not in features], axis=1)
+        v_data = v_data.drop(columns=[c for c in v_data.columns if c not in features], axis=1)  # Keep only features
 
-        test_data = v_data.sample(frac=0.3, random_state=self.config.analysis.run.seed)
-        train_data = v_data.drop(test_data.index)
+        without_target = v_data.drop(self.target_label, axis=1)  # Drop target label from data
 
-        logger.info('v_data', v_data.shape)
-        logger.info('train_data', train_data.shape)
-        logger.info('test_data', test_data.shape)
-
-        self.x_train = train_data.drop(self.config.analysis.experiment.target_label, axis=1)
-        self.y_train = train_data[self.config.analysis.experiment.target_label]
-
-        self.x_test = test_data.drop(self.config.analysis.experiment.target_label, axis=1)
-        self.y_test = test_data[self.config.analysis.experiment.target_label]
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
+            without_target,
+            v_data[self.target_label],
+            stratify=v_data[self.target_label],
+            test_size=0.20,
+            random_state=self.config.analysis.run.seed,
+        )
 
     def __call__(self):
         """Train random forest classifier to verify feature importance"""
-        clf = ensemble.GradientBoostingClassifier(random_state=self.config.analysis.run.seed)
+        clf = ensemble.VotingClassifier(
+            estimators=[
+                ('gb', ensemble.GradientBoostingClassifier()),
+                ('et', ensemble.ExtraTreesClassifier()),
+                ('ab', ensemble.RandomForestClassifier()),
+                ('rf', ensemble.AdaBoostClassifier()),
+                ('bc', ensemble.BaggingClassifier()),
+            ],
+            voting='hard',
+        )
+
         clf.fit(self.x_train, self.y_train)
         y_pred = clf.predict(self.x_test)
 
-        print('Accuracy', accuracy_score(self.y_test, y_pred))
+        print('Accuracy', accuracy_score(self.y_test, y_pred, normalize=True))
         print(classification_report(self.y_test, y_pred))
 
         cm = confusion_matrix(self.y_test, y_pred)
