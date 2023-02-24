@@ -35,7 +35,7 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
 
     def __call__(self) -> None:
         """Run all jobs"""
-
+        self.check_jobs()
         for job in self.jobs:
             logger.info(f'Running {job}')
             self.job_name = '_'.join(job)  # name of current job
@@ -48,33 +48,23 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
                     logger.error(f'Step {step} is invalid')
                     break
 
-    def job_name_checker(self, job_name: str) -> bool:  # todo: check it
-        """Check if the given job name is valid"""
-        all_methods = self.get_member_methods()
-        if job_name in all_methods:
-            return True
-        else:
-            return False
-
-    @classmethod
-    def get_member_methods(cls):
-        """Return a list of all methods of the class"""
-        all_methods = [x for x, y in cls.__dict__.items() if type(y) == FunctionType]
-        return [x for x in all_methods if not x.startswith('_') and x != 'process_job']
+    def check_jobs(self) -> None:
+        """Check if the given jobs are valid"""
+        valid_methods = set([x for x in dir(self) if not x.startswith('_') and x != 'process_job'])
+        jobs = set([x for sublist in self.jobs for x in sublist])
+        if not jobs.issubset(valid_methods):
+            raise ValueError(f'Invalide job, check -> {str(jobs - valid_methods)}')
 
     def process_job(self, step, data):
         """Process data according to the given step"""
-        if hasattr(self, step):
-            if data is None:
-                logger.warning(
-                    f'No data available for step: {step} in {self.job_name}. '
-                    f'\nThe previous step does not seem to produce any output.'
-                )
-                return None, True
-            data = getattr(self, step)(data)
-            return data, False
-        else:
-            return data, True
+        if data is None:
+            logger.warning(
+                f'No data available for step: {step} in {self.job_name}. '
+                f'\nThe previous step does not seem to produce any output.'
+            )
+            return None, True
+        data = getattr(self, step)(data)
+        return data, False
 
     def variance_threshold(self, data):
         """Perform variance threshold based feature selection on the data"""
