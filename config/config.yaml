@@ -1,4 +1,4 @@
-logging_level: 'DEBUG'  # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+logging_level: "DEBUG" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 defaults:
   - dataset: train
@@ -13,33 +13,35 @@ hydra:
     dir: .
 
 dataset:
-  save_intermediate: False  # save intermediate steps
-  save_final: True  # save the final pre-processed tables (only relevant if save_intermediate is False)
-  dims: ['2d']  # ['2d', '3d'], which data to include in the pre-processing/analysis
-  strict: False  # strict behaviour for cleaner and checker, strict=False leads to fewer patients dropped and possible data imputation later
+  save_intermediate: False # save intermediate steps
+  save_final: True # save the final pre-processed tables (only relevant if save_intermediate is False)
+  dims: ["2d"] # ['2d', '3d'], which data to include in the pre-processing/analysis
+  strict: False # strict behaviour for cleaner and checker, strict=False leads to fewer patients dropped and possible data imputation later
 
 merge:
-  impute: True  # impute missing data
-  peak_values: True  # reduce data to peak values (i.e. lose time component)
-  overwrite: False  # overwrite merged data
+  impute: True # impute missing data
+  peak_values: True # reduce data to peak values (i.e. lose time component)
+  overwrite: False # overwrite merged data
 
 analysis:
   experiment:
-    name: 'phenomapping' # experiment name (i.e. file name in which to store merged data)
-    axes: ['long_axis', 'short_axis'] # ['long_axis', 'short_axis']
-    metrics: ['strain']  # ['strain', 'strain_rate', 'displacement', 'velocity']
-    segments: ['roi']   # ['global', 'aha', 'roi']
-    orientations: ['radial', 'circumf', 'longit']  # ['radial', 'circumf', 'longit']
-    target_label: 'mace'  # which column to use as label for exploration, feature reduction and analysis
+    name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
+    axes: ["long_axis", "short_axis"] # ['long_axis', 'short_axis']
+    metrics: ["strain"] # ['strain', 'strain_rate', 'displacement', 'velocity']
+    segments: ["roi"] # ['global', 'aha', 'roi']
+    orientations: ["radial", "circumf", "longit"] # ['radial', 'circumf', 'longit']
+    target_label: "mace" # which column to use as label for exploration, feature reduction and analysis
 
   run:
-    seed: 42  # random seed
-    variance_thresh: 0.9  # remove binary features with same value in more than variance_thresh subjects
-    corr_method: 'pearson' # correlation method
-    corr_thresh: 0.6  # threshold above which correlated features are removed
+    seed: 545 # random seed
+    variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
+    corr_method: "pearson" # correlation method
+    corr_thresh: 0.6 # threshold above which correlated features are removed
     corr_drop_features: True # whether to drop highly correlated features
+    explore_frac: 0.3 # fraction of data to use for exploration, the rest is used for verification
+    oversample: True # whether to oversample minority class to balance training set
     jobs: [
-      # ['variance_threshold', 'z_score_norm', 'correlation', 'fr_all', 'pca', 'tsne', 'umap'],
-      # ['variance_threshold', 'z_score_norm', 'fr_all', 'pca', 'tsne', 'umap'],
-      ['variance_threshold', 'z_score_norm', 'correlation', 'fr_all'],
-    ]
+        # ['variance_threshold', 'z_score_norm', 'correlation', 'fr_all', 'pca', 'tsne', 'umap'],
+        # ['variance_threshold', 'z_score_norm', 'fr_all', 'pca', 'tsne', 'umap'],
+        ["variance_threshold", "z_score_norm", "correlation", "fr_all"],
+      ]

@@ -24,9 +24,11 @@ class Analysis:
     def __init__(self, config: DictConfig) -> None:
         self.config = config
         self.src_dir = config.dataset.out_dir
-        self.experiment_name = config.analysis.experiment.name
         self.impute = config.merge.impute
         self.overwrite = config.merge.overwrite
+        self.experiment_name = config.analysis.experiment.name
+        self.target_label = config.analysis.experiment.target_label
+        self.explore_frac = config.analysis.run.explore_frac
 
     def __call__(self) -> None:
         new_name = f'{self.experiment_name}_imputed' if self.impute else self.experiment_name
@@ -43,28 +45,18 @@ class Analysis:
         data = pd.read_excel(merged_path)  # Read in merged data
         data = data.set_index('subject')  # Use subject ID as index column
 
-        # verification_data = data.sample(frac=0.8, random_state=self.config.analysis.run.seed)
-        # explore_data = data.drop(verification_data.index)
-        explore_data = data
-
-        # logger.debug('data', data.shape)
-        # logger.debug('verification_data', verification_data.shape)
-        # logger.debug('explore_data', explore_data.shape)
+        if 0 < self.explore_frac < 1:
+            explore_data, verification_data = train_test_split(
+                data, stratify=data[self.target_label], test_size=1-self.explore_frac
+            )
+        else:
+            raise ValueError(f'Value {self.explore_frac} is invalid, must be float in (0, 1)')
 
         explorer = ExploreData(data, self.config)
-        explorer()
+        features = explorer()
 
-        # verify = VerifyFeatures(self.config, verification_data)
-        # verify()
-
-    def data_balancer(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Balance data"""
-        zero_data = data[data[self.config.analysis.experiment.target_label] == 0].sample(frac=0.20, random_state=self.config.analysis.run.seed)
-        one_data = data[data[self.config.analysis.experiment.target_label] == 1]
-        logger.debug(f'{len(zero_data)}')
-        logger.debug(f'{len(one_data)}')
-        data = pd.concat([zero_data, one_data])
-        return data
+        verify = VerifyFeatures(self.config, verification_data, features)
+        verify()
 
 
 if __name__ == '__main__':

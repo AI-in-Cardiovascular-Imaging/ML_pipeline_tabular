@@ -300,14 +300,6 @@ class FeatureReduction:
         plt.gca().legend_.remove()
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'), dpi=fig.dpi)
         plt.close(fig)
-        # print(selector.cv_results_['mean_test_score'])
-        # Plot patient/feature value heatmap
-        # plt.figure(figsize=(figsize, figsize))
-        # sns.heatmap(data.transpose(), annot=False, xticklabels=False, yticklabels=True, cmap='viridis')
-        # plt.xticks(rotation=90)
-        # fig.tight_layout()
-        # plt.savefig(os.path.join(self.job_dir, 'heatmap_after_reduction.pdf'))
-        # plt.clf()
 
         return data, importances
 

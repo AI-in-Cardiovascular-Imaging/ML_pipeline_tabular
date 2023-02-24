@@ -33,7 +33,7 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
 
         self.job_name = ''
 
-    def __call__(self) -> None:
+    def __call__(self) -> pd.DataFrame:
         """Run all jobs"""
         self.check_jobs()
         for job in self.jobs:
@@ -47,6 +47,8 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
+        
+        return data.columns
 
     def check_jobs(self) -> None:
         """Check if the given jobs are valid"""
