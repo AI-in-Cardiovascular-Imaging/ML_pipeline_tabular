@@ -24,18 +24,7 @@ def data_bubble(func):
 class Normaliser:
     def __init__(self, target_label=None) -> None:
         self.target_label = target_label
-
-        self.auto_norm_method = dict(
-            {'binary': 'l1_norm', 'continuous': 'l2_norm', 'object': 'z_score_norm', 'datatime': 'min_max_norm'}
-        )
-        self.__check_auto_norm_keys()
-
-    def __check_auto_norm_keys(self) -> None:
-        """Check if auto_norm_method keys are valid"""
-        valid_methods = set([x for x in dir(self) if not x.startswith('_') and x != 'process_job'])
-        selected_methods = set(self.auto_norm_method.values())
-        if not selected_methods.issubset(valid_methods):
-            raise ValueError(f'Invalide job, check -> {str(selected_methods - valid_methods)}')
+        self.auto_norm_method = None
 
     @data_bubble
     def l1_norm(self, data: pd.DataFrame) -> pd.DataFrame:
