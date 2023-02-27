@@ -79,7 +79,7 @@ class Normaliser:
 
     def auto_norm(self, data: pd.DataFrame) -> pd.DataFrame:
         """Auto normalise data based on data type per column"""
-        if df.isna().any(axis=None):
+        if data.isna().any(axis=None):
             raise ValueError('Data contains NaN values, consider imputing data')
         tmp_label = data[self.target_label]  # keep label col as i
         for col_name in data.columns:  # iterate over columns
@@ -93,7 +93,7 @@ class Normaliser:
         return data
 
     def __normalise_accordingly(self, data, col_name, data_type_name) -> pd.DataFrame:
-        logger.info(f'{data_type_name.capitalize()} data detected in {col_name}')
+        logger.trace(f'{data_type_name.capitalize()} data detected in {col_name}')
         col_data = data[col_name]
         col_values = col_data.values.reshape(-1, 1)
         norm = getattr(self, self.auto_norm_method[data_type_name])
