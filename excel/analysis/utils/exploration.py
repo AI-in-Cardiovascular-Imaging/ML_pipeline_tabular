@@ -4,17 +4,14 @@
 import os
 from copy import deepcopy
 
-from loguru import logger
 import pandas as pd
+from loguru import logger
 from omegaconf import DictConfig
 
+from excel.analysis.utils.analyse_variables import AnalyseVariables, FeatureReduction
+from excel.analysis.utils.dim_reduction import DimensionReductions
 from excel.analysis.utils.helpers import variance_threshold
 from excel.analysis.utils.normalisers import Normaliser
-from excel.analysis.utils.dim_reduction import DimensionReductions
-from excel.analysis.utils.analyse_variables import AnalyseVariables, FeatureReduction
-
-
-from types import FunctionType
 
 
 class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureReduction):
@@ -36,7 +33,8 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
 
     def __call__(self) -> pd.DataFrame:
         """Run all jobs"""
-        self.check_jobs()
+        self.__check_jobs()
+        self.__check_auto_norm_methods()
         for job in self.jobs:
             logger.info(f'Running {job}')
             self.job_name = '_'.join(job)  # name of current job
@@ -48,15 +46,22 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
-        
+
         return data.columns
 
-    def check_jobs(self) -> None:
+    def __check_jobs(self) -> None:
         """Check if the given jobs are valid"""
         valid_methods = set([x for x in dir(self) if not x.startswith('_') and x != 'process_job'])
         jobs = set([x for sublist in self.jobs for x in sublist])
         if not jobs.issubset(valid_methods):
             raise ValueError(f'Invalide job, check -> {str(jobs - valid_methods)}')
+
+    def __check_auto_norm_methods(self) -> None:
+        """Check if auto_norm_method keys are valid"""
+        valid_methods = set([x for x in dir(self) if not x.startswith('_') and x.endswith('norm')])
+        selected_methods = set(self.auto_norm_method.values())
+        if not selected_methods.issubset(valid_methods):
+            raise ValueError(f'Invalid auto norm method, check -> {str(selected_methods - valid_methods)}')
 
     def process_job(self, step, data):
         """Process data according to the given step"""
@@ -77,4 +82,3 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
             thresh=self.variance_thresh,
         )
         return data
-
