@@ -8,6 +8,7 @@ import hydra
 from loguru import logger
 from omegaconf import DictConfig
 import pandas as pd
+import numpy as np
 
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.utils.exploration import ExploreData
@@ -29,6 +30,8 @@ class Analysis:
         self.experiment_name = config.analysis.experiment.name
         self.target_label = config.analysis.experiment.target_label
         self.explore_frac = config.analysis.run.explore_frac
+        self.seed = config.analysis.run.seed
+        np.random.seed(self.seed)
 
     def __call__(self) -> None:
         new_name = f'{self.experiment_name}_imputed' if self.impute else self.experiment_name
@@ -47,15 +50,21 @@ class Analysis:
 
         if 0 < self.explore_frac < 1:
             explore_data, verification_data = train_test_split(
-                data, stratify=data[self.target_label], test_size=1-self.explore_frac
+                data, stratify=data[self.target_label], test_size=1 - self.explore_frac, random_state=self.seed
             )
+            verification_data_test = None
+        elif self.explore_frac == 0:  # special mode in which entire train data is used for exploration and verification
+            verification_data, verification_data_test = train_test_split(
+                data, stratify=data[self.target_label], test_size=0.2, random_state=self.seed
+            )
+            explore_data = verification_data
         else:
             raise ValueError(f'Value {self.explore_frac} is invalid, must be float in (0, 1)')
 
         explorer = ExploreData(explore_data, self.config)
         features = explorer()
 
-        verify = VerifyFeatures(self.config, verification_data, features)
+        verify = VerifyFeatures(self.config, verification_data, verification_data_test, features)
         verify()
 
 
