@@ -1,3 +1,4 @@
+from loguru import logger
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import (
@@ -7,7 +8,7 @@ from sklearn.ensemble import (
     RandomForestClassifier,
     VotingClassifier
 )
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegressionCV
 from sklearn.metrics import accuracy_score, average_precision_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
@@ -30,7 +31,9 @@ class VerifyFeatures(Normaliser):
             v_data = self.z_score_norm(v_data)
             x = v_data.drop(
                 columns=[c for c in v_data.columns if c not in features], axis=1
-            )  # Keep only selected features (drops target col)
+            )  # Keep only selected features
+            if self.target_label in x.columns: # ensure that target column is dropped
+                x = x.drop(self.target_label, axis=1)
 
             self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
                 x,
@@ -46,11 +49,15 @@ class VerifyFeatures(Normaliser):
             v_data_test = self.z_score_norm(v_data_test)
             self.x_train = v_data.drop(
                 columns=[c for c in v_data.columns if c not in features], axis=1
-            )  # Keep only selected features (drops target col)
+            )  # Keep only selected features
+            if self.target_label in self.x_train.columns: # ensure that target column is dropped
+                self.x_train = self.x_train.drop(self.target_label, axis=1)
             self.x_test = v_data_test.drop(
                 columns=[c for c in v_data.columns if c not in features], axis=1
             )
-
+            if self.target_label in self.x_test.columns: # ensure that target column is dropped
+                self.x_test = self.x_test.drop(self.target_label, axis=1)
+            logger.debug(self.x_train.columns)
         if self.oversample:
             oversampler = RandomOverSampler(random_state=self.seed)
             self.x_train, self.y_train = oversampler.fit_resample(self.x_train, self.y_train)
@@ -67,8 +74,7 @@ class VerifyFeatures(Normaliser):
         #     ],
         #     voting='hard',
         # )
-        clf = LogisticRegression(random_state=self.seed, class_weight=None)
-
+        clf = LogisticRegressionCV(scoring='average_precision', random_state=self.seed, class_weight='balanced')
         clf.fit(self.x_train, self.y_train)
         y_pred = clf.predict(self.x_test)
 

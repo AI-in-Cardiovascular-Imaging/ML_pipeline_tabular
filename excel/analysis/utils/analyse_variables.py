@@ -223,16 +223,17 @@ class FeatureReduction:
         self.corr_method = None
         self.corr_thresh = None
         self.corr_drop_features = None
+        self.class_weight = None
 
     def __reduction(self, data: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
         if rfe_estimator == 'forest':
-            estimator = RandomForestClassifier(random_state=self.seed)
+            estimator = RandomForestClassifier(random_state=self.seed, class_weight=self.class_weight)
         elif rfe_estimator == 'extreme_forest':
-            estimator = ExtraTreesClassifier(random_state=self.seed)
+            estimator = ExtraTreesClassifier(random_state=self.seed, class_weight=self.class_weight)
         elif rfe_estimator == 'adaboost':
             estimator = AdaBoostClassifier(random_state=self.seed)
         elif rfe_estimator == 'logistic_regression':
-            estimator = LogisticRegression(random_state=self.seed)
+            estimator = LogisticRegression(random_state=self.seed, class_weight=self.class_weight)
         elif rfe_estimator == 'xgboost':
             estimator = GradientBoostingClassifier(random_state=self.seed)
         else:
@@ -301,7 +302,7 @@ class FeatureReduction:
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'), dpi=fig.dpi)
         plt.close(fig)
 
-        return data, importances
+        return data, importances.index.tolist()[::-1]
 
     def fr_logistic_regression(self, data: pd.DataFrame) -> pd.DataFrame:
         """Feature reduction using logistic regression estimator"""
@@ -331,15 +332,10 @@ class FeatureReduction:
     def fr_all(self, data: pd.DataFrame) -> pd.DataFrame:
         """Feature reduction using all estimators in an ensemble manner"""
         number_of_estimators = 4
-        _, f_data = self.__reduction(data, 'forest')
-        _, xg_data = self.__reduction(data, 'xgboost')
-        _, ada_data = self.__reduction(data, 'adaboost')
-        _, ef_data = self.__reduction(data, 'extreme_forest')
-
-        f_features = f_data.index.tolist()[::-1]
-        xg_features = xg_data.index.tolist()[::-1]
-        ada_features = ada_data.index.tolist()[::-1]
-        ef_features = ef_data.index.tolist()[::-1]
+        _, f_features = self.__reduction(data, 'forest')
+        _, xg_features = self.__reduction(data, 'xgboost')
+        _, ada_features = self.__reduction(data, 'adaboost')
+        _, ef_features = self.__reduction(data, 'extreme_forest')
 
         min_len = min(
             len(f_features),
@@ -389,4 +385,4 @@ class FeatureReduction:
         logger.info(f'Top features: {list(feature_scores["feature"])}')
         features_to_keep = list(feature_scores["feature"]) + list(self.target_label)
         data = data.drop(columns=[c for c in data.columns if c not in features_to_keep], axis=1)
-        return data
+        return data, feature_scores['feature'].tolist()[::-1]

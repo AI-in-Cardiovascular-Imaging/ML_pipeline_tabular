@@ -38,7 +38,7 @@ analysis:
     corr_method: "pearson" # correlation method
     corr_thresh: 0.6 # threshold above which correlated features are removed
     corr_drop_features: True # whether to drop highly correlated features
-    explore_frac: 0.3 # fraction of data to use for exploration, the rest is used for verification
+    explore_frac: 0 # fraction of data to use for exploration, the rest is used for verification
     oversample: True # whether to oversample minority class to balance training set
     auto_norm_method:
       binary: "z_score_norm"
@@ -50,4 +50,5 @@ analysis:
         # ['variance_threshold', 'z_score_norm', 'correlation', 'fr_all', 'pca', 'tsne', 'umap'],
         # ['variance_threshold', 'z_score_norm', 'fr_all', 'pca', 'tsne', 'umap'],
         ["variance_threshold", "z_score_norm", "correlation", "fr_all"],
+        # ["variance_threshold", "z_score_norm", "correlation"],
       ]

@@ -28,6 +28,7 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
         self.metadata = config.analysis.experiment.metadata
         self.target_label = config.analysis.experiment.target_label
         self.auto_norm_method = config.analysis.run.auto_norm_method
+        self.class_weight = 'balanced'
 
         self.job_name = ''
 
@@ -46,7 +47,7 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
-
+        
         return data.columns
 
     def __check_jobs(self) -> None:
