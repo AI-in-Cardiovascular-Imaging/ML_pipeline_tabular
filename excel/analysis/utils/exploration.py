@@ -30,6 +30,7 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
         self.corr_drop_features = config.analysis.run.corr_drop_features
         self.metadata = config.analysis.experiment.metadata
         self.target_label = config.analysis.experiment.target_label
+        self.auto_norm_method = config.analysis.run.auto_norm_method
 
         self.job_name = ''
 

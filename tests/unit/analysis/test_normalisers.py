@@ -1,5 +1,5 @@
-from pytest import mark
 import pandas as pd
+from pytest import mark
 
 df = pd.DataFrame({'A': [0, 0, 0], 'B': [1, 2, 1], 'C': [-1, 0, 1], 'D': [1, 2, 3]})
 
@@ -47,39 +47,39 @@ class NormaliserTests:
 
     @staticmethod
     @mark.parametrize('element', [df])
-    def test_min_max_scale(element, normaliser):
+    def test_min_max_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.0, 1.0, 0.0], 'C': [0.0, 0.5, 1.0], 'D': [1, 2, 3]})
-        result = normaliser.min_max_scale(element).round(6)
+        result = normaliser.min_max_norm(element).round(6)
         assert result.equals(expected) is True
 
     @staticmethod
     @mark.parametrize('element', [df])
-    def test_max_abs_scale(element, normaliser):
+    def test_max_abs_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.5, 1.0, 0.5], 'C': [-1.0, 0.0, 1.0], 'D': [1, 2, 3]})
-        result = normaliser.max_abs_scale(element).round(6)
+        result = normaliser.max_abs_norm(element).round(6)
         assert result.equals(expected) is True
 
     @staticmethod
     @mark.parametrize('element', [df])
-    def test_robust_scale(element, normaliser):
+    def test_robust_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.0, 2.0, 0.0], 'C': [-1.0, 0.0, 1.0], 'D': [1, 2, 3]})
-        result = normaliser.robust_scale(element).round(6)
+        result = normaliser.robust_norm(element).round(6)
         assert result.equals(expected) is True
 
     @staticmethod
     @mark.parametrize('element', [df])
-    def test_quantile_transform(element, normaliser):
+    def test_quantile_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.0, 1.0, 0.0], 'C': [0.0, 0.5, 1.0], 'D': [1, 2, 3]})
-        result = normaliser.quantile_transform(element).round(6)
+        result = normaliser.quantile_norm(element).round(6)
         assert result.equals(expected) is True
 
     @staticmethod
     @mark.parametrize('element', [df])
-    def test_power_transform(element, normaliser):
+    def test_power_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame(
             {
@@ -89,5 +89,5 @@ class NormaliserTests:
                 'D': [1, 2, 3],
             }
         )
-        result = normaliser.power_transform(element).round(6)
+        result = normaliser.power_norm(element).round(6)
         assert result.equals(expected) is True
