@@ -52,7 +52,7 @@ class Analysis:
         else:
             raise ValueError(f'Value {self.explore_frac} is invalid, must be float in (0, 1)')
 
-        explorer = ExploreData(data, self.config)
+        explorer = ExploreData(explore_data, self.config)
         features = explorer()
 
         verify = VerifyFeatures(self.config, verification_data, features)
