@@ -48,7 +48,10 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
                     logger.error(f'Step {step} is invalid')
                     break
         
-        return data.columns
+        if isinstance(data, tuple): # return features
+            return data[1]
+        else:
+            return data.columns
 
     def __check_jobs(self) -> None:
         """Check if the given jobs are valid"""

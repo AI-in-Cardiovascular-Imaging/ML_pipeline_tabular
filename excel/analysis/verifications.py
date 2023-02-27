@@ -57,7 +57,6 @@ class VerifyFeatures(Normaliser):
             )
             if self.target_label in self.x_test.columns: # ensure that target column is dropped
                 self.x_test = self.x_test.drop(self.target_label, axis=1)
-            logger.debug(self.x_train.columns)
         if self.oversample:
             oversampler = RandomOverSampler(random_state=self.seed)
             self.x_train, self.y_train = oversampler.fit_resample(self.x_train, self.y_train)

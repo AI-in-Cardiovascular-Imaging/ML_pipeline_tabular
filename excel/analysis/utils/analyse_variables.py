@@ -240,7 +240,7 @@ class FeatureReduction:
             logger.error(f'The RFE estimator you requested ({rfe_estimator}) has not yet been implemented.')
             raise NotImplementedError
 
-        number_of_top_features = 20
+        number_of_top_features = 30
         X = data.drop(self.target_label, axis=1)
         y = data[self.target_label]
 
@@ -306,28 +306,28 @@ class FeatureReduction:
 
     def fr_logistic_regression(self, data: pd.DataFrame) -> pd.DataFrame:
         """Feature reduction using logistic regression estimator"""
-        data, _ = self.__reduction(data, 'logistic_regression')
-        return data
+        data, features = self.__reduction(data, 'logistic_regression')
+        return data, features
 
     def fr_forest(self, data: pd.DataFrame) -> pd.DataFrame:
         """Feature reduction using random forest estimator"""
-        data, _ = self.__reduction(data, 'forest')
-        return data
+        data, features = self.__reduction(data, 'forest')
+        return data, features
 
     def fr_extreme_forest(self, data: pd.DataFrame) -> pd.DataFrame:
         """Feature reduction using extreme forest estimator"""
-        data, _ = self.__reduction(data, 'extreme_forest')
-        return data
+        data, features = self.__reduction(data, 'extreme_forest')
+        return data, features
 
     def fr_adaboost(self, data: pd.DataFrame) -> pd.DataFrame:
         """Feature reduction using adaboost estimator"""
-        data, _ = self.__reduction(data, 'adaboost')
-        return data
+        data, features = self.__reduction(data, 'adaboost')
+        return data, features
 
     def fr_xgboost(self, data: pd.DataFrame) -> pd.DataFrame:
         """Feature reduction using xgboost estimator"""
-        data, _ = self.__reduction(data, 'xgboost')
-        return data
+        data, features = self.__reduction(data, 'xgboost')
+        return data, features
 
     def fr_all(self, data: pd.DataFrame) -> pd.DataFrame:
         """Feature reduction using all estimators in an ensemble manner"""
