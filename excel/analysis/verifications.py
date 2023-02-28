@@ -30,7 +30,7 @@ class VerifyFeatures(Normaliser):
         self.param_grids = config.analysis.run.verification.param_grids
 
         if v_data_test is None:
-            x, y = self.clean_data(v_data, features_to_keep=features)
+            x, y = self.prepare_data(v_data, features_to_keep=features)
             self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
                 x,
                 y,
@@ -39,8 +39,8 @@ class VerifyFeatures(Normaliser):
                 random_state=self.seed,
             )
         else:  # v_data already split in train and test set
-            self.x_train, self.y_train = self.clean_data(v_data, features_to_keep=features)
-            self.x_test, self.y_test = self.clean_data(v_data_test, features_to_keep=features)
+            self.x_train, self.y_train = self.prepare_data(v_data, features_to_keep=features)
+            self.x_test, self.y_test = self.prepare_data(v_data_test, features_to_keep=features)
             
         if self.oversample:
             oversampler = RandomOverSampler(random_state=self.seed)
@@ -75,7 +75,7 @@ class VerifyFeatures(Normaliser):
         plt.ylabel('Truth')
         # plt.show()
 
-    def clean_data(self, data: pd.DataFrame, features_to_keep: list=None):
+    def prepare_data(self, data: pd.DataFrame, features_to_keep: list=None):
         y = data[self.target_label]
         data = self.z_score_norm(data)
         x = data.drop(
