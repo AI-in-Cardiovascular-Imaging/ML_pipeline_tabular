@@ -1,4 +1,5 @@
 from loguru import logger
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import (
@@ -24,17 +25,12 @@ class VerifyFeatures(Normaliser):
         self.config = config
         self.target_label = config.analysis.experiment.target_label
         self.seed = config.analysis.run.seed
-        self.oversample = config.analysis.run.oversample
+        self.oversample = config.analysis.run.verification.oversample
+        self.models = config.analysis.run.verification.models
+        self.param_grids = config.analysis.run.verification.param_grids
 
         if v_data_test is None:
-            y = v_data[self.target_label]
-            v_data = self.z_score_norm(v_data)
-            x = v_data.drop(
-                columns=[c for c in v_data.columns if c not in features], axis=1
-            )  # Keep only selected features
-            if self.target_label in x.columns: # ensure that target column is dropped
-                x = x.drop(self.target_label, axis=1)
-
+            x, y = self.clean_data(v_data, features_to_keep=features)
             self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
                 x,
                 y,
@@ -43,20 +39,9 @@ class VerifyFeatures(Normaliser):
                 random_state=self.seed,
             )
         else:  # v_data already split in train and test set
-            self.y_train = v_data[self.target_label]
-            self.y_test = v_data_test[self.target_label]
-            v_data = self.z_score_norm(v_data)
-            v_data_test = self.z_score_norm(v_data_test)
-            self.x_train = v_data.drop(
-                columns=[c for c in v_data.columns if c not in features], axis=1
-            )  # Keep only selected features
-            if self.target_label in self.x_train.columns: # ensure that target column is dropped
-                self.x_train = self.x_train.drop(self.target_label, axis=1)
-            self.x_test = v_data_test.drop(
-                columns=[c for c in v_data.columns if c not in features], axis=1
-            )
-            if self.target_label in self.x_test.columns: # ensure that target column is dropped
-                self.x_test = self.x_test.drop(self.target_label, axis=1)
+            self.x_train, self.y_train = self.clean_data(v_data, features_to_keep=features)
+            self.x_test, self.y_test = self.clean_data(v_data_test, features_to_keep=features)
+            
         if self.oversample:
             oversampler = RandomOverSampler(random_state=self.seed)
             self.x_train, self.y_train = oversampler.fit_resample(self.x_train, self.y_train)
@@ -89,3 +74,14 @@ class VerifyFeatures(Normaliser):
         plt.xlabel('Predicted')
         plt.ylabel('Truth')
         # plt.show()
+
+    def clean_data(self, data: pd.DataFrame, features_to_keep: list=None):
+        y = data[self.target_label]
+        data = self.z_score_norm(data)
+        x = data.drop(
+            columns=[c for c in data.columns if c not in features_to_keep], axis=1
+        )  # Keep only selected features
+        if self.target_label in x.columns: # ensure that target column is dropped
+            x = x.drop(self.target_label, axis=1)
+
+        return x, y

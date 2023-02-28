@@ -29,7 +29,7 @@ class Analysis:
         self.overwrite = config.merge.overwrite
         self.experiment_name = config.analysis.experiment.name
         self.target_label = config.analysis.experiment.target_label
-        self.explore_frac = config.analysis.run.explore_frac
+        self.explore_frac = config.analysis.run.verification.explore_frac
         self.seed = config.analysis.run.seed
         np.random.seed(self.seed)
 
@@ -64,8 +64,9 @@ class Analysis:
         explorer = ExploreData(explore_data, self.config)
         features = explorer()
 
-        verify = VerifyFeatures(self.config, verification_data, verification_data_test, features)
-        verify()
+        for feat in [verification_data.columns, features]: # compare all features with reduced features
+            verify = VerifyFeatures(self.config, verification_data, verification_data_test, feat)
+            verify()
 
 
 if __name__ == '__main__':

@@ -38,17 +38,30 @@ analysis:
     corr_method: "pearson" # correlation method
     corr_thresh: 0.6 # threshold above which correlated features are removed
     corr_drop_features: True # whether to drop highly correlated features
-    explore_frac: 0 # fraction of data to use for exploration, the rest is used for verification
-    oversample: True # whether to oversample minority class to balance training set
     auto_norm_method:
       binary: "z_score_norm"
       continuous: "min_max_norm"
       object: "z_score_norm"
       datatime: "z_score_norm"
+    verification:
+      explore_frac: 0 # fraction of data to use for exploration, the rest is used for verification
+      oversample: True # whether to oversample minority class to balance training set
+      models:
+        {
+          "logistic_regression": True,
+          "forest": False,
+          "extreme_forest": False,
+        }
+      param_grids: { "logistic_regression": {
+              "lr__penalty": ["l1", "l2", "elasticnet", "none"],
+              "lr__C": [0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000],
+              "solver": "saga", # supports both l1 and l2 penalties
+            } }
+      scoring: "average_precision"
 
     jobs: [
         # ['variance_threshold', 'z_score_norm', 'correlation', 'fr_all', 'pca', 'tsne', 'umap'],
         # ['variance_threshold', 'z_score_norm', 'fr_all', 'pca', 'tsne', 'umap'],
-        ["variance_threshold", "z_score_norm", "correlation", "fr_all"],
-        # ["variance_threshold", "z_score_norm", "correlation"],
+        ["variance_threshold", "z_score_norm", "correlation", "fr_xgboost"],
       ]
+# ["variance_threshold", "z_score_norm", "correlation"],
