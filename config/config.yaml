@@ -30,38 +30,50 @@ analysis:
     metrics: ["strain"] # ['strain', 'strain_rate', 'displacement', 'velocity']
     segments: ["roi"] # ['global', 'aha', 'roi']
     orientations: ["radial", "circumf", "longit"] # ['radial', 'circumf', 'longit']
-    target_label: "mace" # which column to use as label for exploration, feature reduction and analysis
+    target_label: "MACE_any_chf_hosp" # which column to use as label for exploration, feature reduction and analysis
 
   run:
-    seed: 545 # random seed
+    seed: 67 # random seed
     variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
     corr_method: "pearson" # correlation method
     corr_thresh: 0.6 # threshold above which correlated features are removed
     corr_drop_features: True # whether to drop highly correlated features
+    scoring: "average_precision"
+    class_weight: "balanced"
     auto_norm_method:
       binary: "z_score_norm"
       continuous: "min_max_norm"
       object: "z_score_norm"
       datatime: "z_score_norm"
     verification:
-      explore_frac: 0 # fraction of data to use for exploration, the rest is used for verification
-      oversample: True # whether to oversample minority class to balance training set
+      explore_frac: 0 # fraction of data to use for exploration, the rest is used for verification (set to 0 to use all training data for exploration and verification)
+      oversample: False # whether to oversample minority class to balance training set
       models:
         {
           "logistic_regression": True,
           "forest": False,
           "extreme_forest": False,
         }
-      param_grids: { "logistic_regression": {
-              "lr__penalty": ["l1", "l2", "elasticnet", "none"],
-              "lr__C": [0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000],
-              "solver": "saga", # supports both l1 and l2 penalties
-            } }
-      scoring: "average_precision"
+      param_grids:
+        {
+          "logistic_regression":
+            {
+              "penalty": ["l1", "l2"],
+              "C": [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000],
+              "solver": ["saga"], # supports both l1 and l2 penalties
+            },
+          "forest":
+            {
+              "bootstrap": [True, False],
+              "max_depth": [10, 50, 100, null],
+              "max_features": ["sqrt", "log2", null],
+              "n_estimators": [100, 500, 1000],
+            },
+        }
 
     jobs: [
         # ['variance_threshold', 'z_score_norm', 'correlation', 'fr_all', 'pca', 'tsne', 'umap'],
         # ['variance_threshold', 'z_score_norm', 'fr_all', 'pca', 'tsne', 'umap'],
-        ["variance_threshold", "z_score_norm", "correlation", "fr_xgboost"],
+        ["variance_threshold", "z_score_norm", "feature_wiz"],
       ]
 # ["variance_threshold", "z_score_norm", "correlation"],

@@ -28,7 +28,8 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
         self.metadata = config.analysis.experiment.metadata
         self.target_label = config.analysis.experiment.target_label
         self.auto_norm_method = config.analysis.run.auto_norm_method
-        self.class_weight = 'balanced'
+        self.scoring = config.analysis.run.scoring
+        self.class_weight = config.analysis.run.class_weight
 
         self.job_name = ''
 

@@ -3,7 +3,25 @@ from copy import deepcopy
 import pandas as pd
 from sklearn.feature_selection import VarianceThreshold
 from loguru import logger
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    AdaBoostRegressor,
+    ExtraTreesClassifier,
+    ExtraTreesRegressor,
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    RandomForestClassifier,
+    RandomForestRegressor
+)
+from sklearn.linear_model import LogisticRegression
 
+
+def target_statistics(data: pd.DataFrame, target_label: str):
+        logger.info('Calculating target statistics...')
+        target = data[target_label]
+        if target.nunique() == 2: # binary target
+            ratio = (target.sum() / len(target.index)).round(2)
+            logger.info(f'Positive class makes up {target.sum()} samples out of {len(target.index)}, i.e. {ratio*100}%.')
 
 def save_tables(out_dir, experiment_name, tables) -> None:
     """Save tables to excel file"""
@@ -38,3 +56,37 @@ def variance_threshold(data: pd.DataFrame, label: str, thresh: float) -> pd.Data
         data = pd.concat((data, tmp), axis=1)
 
     return data
+
+
+def init_estimator(estimator_name: str, classification: bool, seed, class_weight):
+    if classification:
+        if estimator_name == 'forest':
+            estimator = RandomForestClassifier(random_state=seed, class_weight=class_weight)
+        elif estimator_name == 'extreme_forest':
+            estimator = ExtraTreesClassifier(random_state=seed, class_weight=class_weight)
+        elif estimator_name == 'adaboost':
+            estimator = AdaBoostClassifier(random_state=seed)
+        elif estimator_name == 'logistic_regression':
+            estimator = LogisticRegression(random_state=seed, class_weight=class_weight)
+        elif estimator_name == 'xgboost':
+            estimator = GradientBoostingClassifier(random_state=seed)
+        else:
+            logger.error(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
+            raise NotImplementedError
+    
+    else: # regression
+        if estimator_name == 'forest':
+            estimator = RandomForestRegressor(random_state=seed, class_weight=class_weight)
+        elif estimator_name == 'extreme_forest':
+            estimator = ExtraTreesRegressor(random_state=seed, class_weight=class_weight)
+        elif estimator_name == 'adaboost':
+            estimator = AdaBoostRegressor(random_state=seed)
+        elif estimator_name == 'logistic_regression':
+            estimator = LogisticRegression(random_state=seed, class_weight=class_weight)
+        elif estimator_name == 'xgboost':
+            estimator = GradientBoostingRegressor(random_state=seed)
+        else:
+            logger.error(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
+            raise NotImplementedError
+    
+    return estimator

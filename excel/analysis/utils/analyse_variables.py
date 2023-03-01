@@ -16,7 +16,7 @@ from sklearn.feature_selection import RFECV
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 
-from excel.analysis.utils.helpers import split_data
+from excel.analysis.utils.helpers import split_data, init_estimator
 
 
 class AnalyseVariables:
@@ -29,6 +29,7 @@ class AnalyseVariables:
         self.corr_method = None
         self.corr_thresh = None
         self.corr_drop_features = None
+        self.scoring = None
 
     def univariate_analysis(self, data: pd.DataFrame):
         """
@@ -89,7 +90,7 @@ class AnalyseVariables:
             # calculate feature importances
             estimator = RandomForestClassifier(random_state=self.seed)
             estimator.fit(to_analyse, target)
-            perm_importances = permutation_importance(estimator, to_analyse, target, scoring='average_precision')
+            perm_importances = permutation_importance(estimator, to_analyse, target, scoring=self.scoring)
             importances = perm_importances.importances_mean
             importances = pd.Series(importances, index=to_analyse.columns)
             importances = importances.sort_values(ascending=False)
@@ -223,34 +224,23 @@ class FeatureReduction:
         self.corr_method = None
         self.corr_thresh = None
         self.corr_drop_features = None
+        self.scoring = None
         self.class_weight = None
 
     def __reduction(self, data: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
-        if rfe_estimator == 'forest':
-            estimator = RandomForestClassifier(random_state=self.seed, class_weight=self.class_weight)
-        elif rfe_estimator == 'extreme_forest':
-            estimator = ExtraTreesClassifier(random_state=self.seed, class_weight=self.class_weight)
-        elif rfe_estimator == 'adaboost':
-            estimator = AdaBoostClassifier(random_state=self.seed)
-        elif rfe_estimator == 'logistic_regression':
-            estimator = LogisticRegression(random_state=self.seed, class_weight=self.class_weight)
-        elif rfe_estimator == 'xgboost':
-            estimator = GradientBoostingClassifier(random_state=self.seed)
-        else:
-            logger.error(f'The RFE estimator you requested ({rfe_estimator}) has not yet been implemented.')
-            raise NotImplementedError
+        estimator = init_estimator(rfe_estimator, True, self.seed, self.class_weight)
 
         number_of_top_features = 30
         X = data.drop(self.target_label, axis=1)
         y = data[self.target_label]
 
         min_features = 1
-        cross_validator = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
+        cross_validator = StratifiedKFold(shuffle=True, random_state=self.seed)
         selector = RFECV(
             estimator=estimator,
             min_features_to_select=min_features,
             cv=cross_validator,
-            scoring='average_precision',
+            scoring=self.scoring,
             n_jobs=4,
         )
         selector.fit(X, y)
@@ -259,7 +249,7 @@ class FeatureReduction:
         n_scores = len(selector.cv_results_['mean_test_score'])
         fig = plt.figure()
         plt.xlabel('Number of features selected')
-        plt.ylabel('Mean average precision')
+        plt.ylabel(f'Mean {self.scoring}')
         plt.xticks(range(0, n_scores + 1, 5))
         plt.grid(alpha=0.5)
         plt.errorbar(

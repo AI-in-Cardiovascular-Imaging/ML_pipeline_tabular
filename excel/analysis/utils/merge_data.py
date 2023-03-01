@@ -178,8 +178,10 @@ class MergeData:
         if mdata is not None:
             mdata = mdata[self.metadata]
             # clean some errors in metadata
-            if 'mace' in self.metadata:
+            if 'mace' in self.metadata: # TODO: add for other mace types as well (e.g. in function)
                 mdata.loc[mdata['mace'] == 999, 'mace'] = 0
+            if 'MACE_any_chf_hosp' in self.metadata:
+                mdata.loc[mdata['MACE_any_chf_hosp'] == 999, 'MACE_any_chf_hosp'] = 0
             if 'lge' in self.metadata:
                 mdata.loc[mdata['lge'] == 999, 'lge'] = np.nan
                 mdata = mdata.rename(columns={'lge': 'LGE'})

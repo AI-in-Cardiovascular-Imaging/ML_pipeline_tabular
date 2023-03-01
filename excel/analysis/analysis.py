@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split
 from excel.analysis.utils.exploration import ExploreData
 from excel.analysis.utils.merge_data import MergeData
 from excel.analysis.verifications import VerifyFeatures
+from excel.analysis.utils.helpers import target_statistics
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
@@ -47,6 +48,7 @@ class Analysis:
 
         data = pd.read_excel(merged_path)  # Read in merged data
         data = data.set_index('subject')  # Use subject ID as index column
+        target_statistics(data, self.target_label)
 
         if 0 < self.explore_frac < 1:
             explore_data, verification_data = train_test_split(
@@ -64,9 +66,8 @@ class Analysis:
         explorer = ExploreData(explore_data, self.config)
         features = explorer()
 
-        for feat in [verification_data.columns, features]: # compare all features with reduced features
-            verify = VerifyFeatures(self.config, verification_data, verification_data_test, feat)
-            verify()
+        verify = VerifyFeatures(self.config, verification_data, verification_data_test, features)
+        verify()
 
 
 if __name__ == '__main__':
