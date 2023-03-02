@@ -30,7 +30,7 @@ analysis:
     metrics: ["strain"] # ['strain', 'strain_rate', 'displacement', 'velocity']
     segments: ["roi"] # ['global', 'aha', 'roi']
     orientations: ["radial", "circumf", "longit"] # ['radial', 'circumf', 'longit']
-    target_label: "MACE_any_chf_hosp" # which column to use as label for exploration, feature reduction and analysis
+    target_label: "mace" # which column to use as label for exploration, feature reduction and analysis
 
   run:
     seed: 67 # random seed
@@ -54,9 +54,11 @@ analysis:
       oversample: False # whether to oversample minority class to balance training set
       models:
         {
-          "logistic_regression": True,
+          "logistic_regression": False,
           "forest": False,
           "extreme_forest": False,
+          "adaboost": False,
+          "xgboost": True,
         }
       param_grids:
         {
@@ -68,10 +70,31 @@ analysis:
             },
           "forest":
             {
-              "bootstrap": [True, False],
+              "n_estimators": [100, 500, 1000],
+              "criterion": ["gini", "entropy"],
               "max_depth": [10, 50, 100, null],
               "max_features": ["sqrt", "log2", null],
+              "bootstrap": [True, False],
+            },
+          "extreme_forest":
+            {
               "n_estimators": [100, 500, 1000],
+              "criterion": ["gini", "entropy"],
+              "max_depth": [10, 50, 100, null],
+              "max_features": ["sqrt", "log2", null],
+              "bootstrap": [True, False],
+            },
+          "adaboost":
+            {
+              "n_estimators": [100, 500, 1000],
+              "learning_rate": [0.0001, 0.001, 0.01, 0.1, 1],
+            },
+          "xgboost":
+            {
+              "n_estimators": [100, 500, 1000],
+              "learning_rate": [0.0001, 0.001, 0.01, 0.1, 1],
+              "max_depth": [10, 50, 100, null],
+              "max_features": ["sqrt", "log2", null],
             },
         }
 
@@ -80,4 +103,3 @@ analysis:
         # ['variance_threshold', 'z_score_norm', 'fr_all', 'pca', 'tsne', 'umap'],
         ["variance_threshold", "z_score_norm", "fr_forest"],
       ]
-# ["variance_threshold", "z_score_norm", "correlation"],

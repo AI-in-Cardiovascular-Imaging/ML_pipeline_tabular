@@ -14,7 +14,7 @@ from sklearn.ensemble import (
     RandomForestRegressor,
 )
 from sklearn.feature_selection import VarianceThreshold
-from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import KFold, StratifiedKFold
 
 
