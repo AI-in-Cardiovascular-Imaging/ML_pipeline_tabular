@@ -48,25 +48,25 @@ class Analysis:
 
         data = pd.read_excel(merged_path)  # Read in merged data
         data = data.set_index('subject')  # Use subject ID as index column
-        target_statistics(data, self.target_label)
+        task, stratify = target_statistics(data, self.target_label)
 
         if 0 < self.explore_frac < 1:
             explore_data, verification_data = train_test_split(
-                data, stratify=data[self.target_label], test_size=1 - self.explore_frac, random_state=self.seed
+                data, stratify=stratify, test_size=1 - self.explore_frac, random_state=self.seed
             )
             verification_data_test = None
         elif self.explore_frac == 0:  # special mode in which entire train data is used for exploration and verification
             verification_data, verification_data_test = train_test_split(
-                data, stratify=data[self.target_label], test_size=0.2, random_state=self.seed
+                data, stratify=stratify, test_size=0.2, random_state=self.seed
             )
             explore_data = verification_data
         else:
             raise ValueError(f'Value {self.explore_frac} is invalid, must be float in (0, 1)')
 
-        explorer = ExploreData(explore_data, self.config)
+        explorer = ExploreData(self.config, explore_data, task)
         features = explorer()
 
-        verify = VerifyFeatures(self.config, verification_data, verification_data_test, features)
+        verify = VerifyFeatures(self.config, verification_data, verification_data_test, features, task)
         verify()
 
 

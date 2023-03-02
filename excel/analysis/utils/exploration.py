@@ -15,7 +15,7 @@ from excel.analysis.utils.normalisers import Normaliser
 
 
 class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureReduction):
-    def __init__(self, data: pd.DataFrame, config: DictConfig) -> None:
+    def __init__(self, config: DictConfig, data: pd.DataFrame, task: str) -> None:
         super().__init__()
         self.original_data = data
         self.out_dir = os.path.join(config.dataset.out_dir, '6_exploration', config.analysis.experiment.name)
@@ -30,6 +30,7 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
         self.auto_norm_method = config.analysis.run.auto_norm_method
         self.scoring = config.analysis.run.scoring
         self.class_weight = config.analysis.run.class_weight
+        self.task = task
 
         self.job_name = ''
 

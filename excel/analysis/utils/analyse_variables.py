@@ -226,21 +226,22 @@ class FeatureReduction:
         self.corr_drop_features = None
         self.scoring = None
         self.class_weight = None
+        self.task = None
 
     def __reduction(self, data: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
-        estimator = init_estimator(rfe_estimator, True, self.seed, self.class_weight)
+        estimator, cross_validator, scoring = init_estimator(rfe_estimator, self.task, self.seed, self.scoring, self.class_weight)
 
         number_of_top_features = 30
         X = data.drop(self.target_label, axis=1)
         y = data[self.target_label]
 
         min_features = 1
-        cross_validator = StratifiedKFold(shuffle=True, random_state=self.seed)
+
         selector = RFECV(
             estimator=estimator,
             min_features_to_select=min_features,
             cv=cross_validator,
-            scoring=self.scoring,
+            scoring=scoring,
             n_jobs=4,
         )
         selector.fit(X, y)

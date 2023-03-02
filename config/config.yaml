@@ -38,7 +38,11 @@ analysis:
     corr_method: "pearson" # correlation method
     corr_thresh: 0.6 # threshold above which correlated features are removed
     corr_drop_features: True # whether to drop highly correlated features
-    scoring: "average_precision"
+    scoring:
+      {
+        "classification": "average_precision",
+        "regression": "neg_mean_absolute_error",
+      }
     class_weight: "balanced"
     auto_norm_method:
       binary: "z_score_norm"
@@ -74,6 +78,6 @@ analysis:
     jobs: [
         # ['variance_threshold', 'z_score_norm', 'correlation', 'fr_all', 'pca', 'tsne', 'umap'],
         # ['variance_threshold', 'z_score_norm', 'fr_all', 'pca', 'tsne', 'umap'],
-        ["variance_threshold", "z_score_norm", "feature_wiz"],
+        ["variance_threshold", "z_score_norm", "fr_forest"],
       ]
 # ["variance_threshold", "z_score_norm", "correlation"],

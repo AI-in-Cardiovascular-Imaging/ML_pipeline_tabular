@@ -14,22 +14,25 @@ from sklearn.ensemble import (
     RandomForestRegressor,
 )
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, KFold
 
 
 def target_statistics(data: pd.DataFrame, target_label: str):
     logger.info('Calculating target statistics...')
     target = data[target_label]
-    if target.nunique() == 2:  # binary target
+    if target.nunique() == 2:  # binary target -> classification
         ratio = (target.sum() / len(target.index)).round(2)
         logger.info(
             f'\nSummary statistics for binary target variable {target_label}:\n'
             f'Positive class makes up {target.sum()} samples out of {len(target.index)}, i.e. {ratio*100}%.'
         )
-    else:
+        return 'classification', target # stratify w.r.t. target classes
+    else: # continous target -> regression
         logger.info(
             f'\nSummary statistics for continuous target variable {target_label}:\n'
             f'{target.describe(percentiles=[]).round(2)}'
         )
+        return 'regression', None # do not stratify for regression task
 
 
 def save_tables(out_dir, experiment_name, tables) -> None:
@@ -67,8 +70,8 @@ def variance_threshold(data: pd.DataFrame, label: str, thresh: float) -> pd.Data
     return data
 
 
-def init_estimator(estimator_name: str, classification: bool, seed, class_weight):
-    if classification:
+def init_estimator(estimator_name: str, task: str, seed, scoring, class_weight):
+    if task == 'classification':
         if estimator_name == 'forest':
             estimator = RandomForestClassifier(random_state=seed, class_weight=class_weight)
         elif estimator_name == 'extreme_forest':
@@ -82,20 +85,24 @@ def init_estimator(estimator_name: str, classification: bool, seed, class_weight
         else:
             logger.error(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
             raise NotImplementedError
+        cv = StratifiedKFold(shuffle=True, random_state=seed)
 
     else:  # regression
         if estimator_name == 'forest':
-            estimator = RandomForestRegressor(random_state=seed, class_weight=class_weight)
+            estimator = RandomForestRegressor(random_state=seed)
         elif estimator_name == 'extreme_forest':
-            estimator = ExtraTreesRegressor(random_state=seed, class_weight=class_weight)
+            estimator = ExtraTreesRegressor(random_state=seed)
         elif estimator_name == 'adaboost':
             estimator = AdaBoostRegressor(random_state=seed)
         elif estimator_name == 'logistic_regression':
-            estimator = LogisticRegression(random_state=seed, class_weight=class_weight)
+            estimator = LogisticRegression(random_state=seed)
         elif estimator_name == 'xgboost':
             estimator = GradientBoostingRegressor(random_state=seed)
         else:
             logger.error(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
             raise NotImplementedError
+        cv = KFold(shuffle=True, random_state=seed)
 
-    return estimator
+    scoring = scoring[task]
+
+    return estimator, cv, scoring

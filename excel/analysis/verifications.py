@@ -10,7 +10,7 @@ from sklearn.ensemble import (
     VotingClassifier,
 )
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, average_precision_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, average_precision_score, mean_absolute_error, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 
@@ -22,7 +22,7 @@ from excel.analysis.utils.helpers import init_estimator
 class VerifyFeatures(Normaliser):
     """Train random forest classifier to verify feature importance"""
 
-    def __init__(self, config, v_data, v_data_test=None, features=None):
+    def __init__(self, config, v_data, v_data_test=None, features=None, task: str='classification'):
         super().__init__()
         self.target_label = config.analysis.experiment.target_label
         self.seed = config.analysis.run.seed
@@ -32,6 +32,7 @@ class VerifyFeatures(Normaliser):
         models_dict = config.analysis.run.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
         self.param_grids = config.analysis.run.verification.param_grids
+        self.task = task
 
         if v_data_test is None:  # v_data needs to be split into train and test set
             x, y = self.prepare_data(v_data, features_to_keep=features)
@@ -54,12 +55,12 @@ class VerifyFeatures(Normaliser):
         """Train random forest classifier to verify feature importance"""
         for model in self.models:
             param_grid = self.param_grids[model]
-            estimator = init_estimator(model, True, self.seed, self.class_weight)
+            estimator, cross_validator, scoring = init_estimator(model, self.task, self.seed, self.scoring, self.class_weight)
 
-            cross_validator = CrossValidation(
-                self.x_train, self.y_train, estimator, param_grid, self.scoring, self.seed
+            optimiser = CrossValidation(
+                self.x_train, self.y_train, estimator, cross_validator, param_grid, scoring, self.seed
             )
-            best_estimator = cross_validator()
+            best_estimator = optimiser()
             y_pred = best_estimator.predict(self.x_test)
 
             print(f'Model was optimised using {self.scoring}.')
