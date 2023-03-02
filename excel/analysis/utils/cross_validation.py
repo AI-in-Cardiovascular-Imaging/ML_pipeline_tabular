@@ -1,6 +1,5 @@
 from loguru import logger
-from sklearn.experimental import enable_halving_search_cv
-from sklearn.model_selection import HalvingGridSearchCV, StratifiedKFold
+from sklearn.model_selection import GridSearchCV
 
 
 class CrossValidation:
@@ -14,7 +13,7 @@ class CrossValidation:
         self.seed = seed
 
     def __call__(self):
-        selector = HalvingGridSearchCV(
+        selector = GridSearchCV(
             estimator=self.estimator,
             param_grid=self.param_grid,
             scoring=self.scoring,
@@ -23,3 +22,5 @@ class CrossValidation:
         selector.fit(self.x_train, self.y_train)
 
         return selector
+
+    # TODO: voting classifier cv
