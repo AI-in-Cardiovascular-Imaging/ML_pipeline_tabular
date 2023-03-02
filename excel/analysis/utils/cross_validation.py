@@ -19,7 +19,6 @@ class CrossValidation:
             param_grid=self.param_grid,
             scoring=self.scoring,
             cv=self.cross_validator,
-            max_resources=1000,
         )
         selector.fit(self.x_train, self.y_train)
 
