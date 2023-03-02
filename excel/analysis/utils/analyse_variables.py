@@ -5,18 +5,11 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from loguru import logger
-from sklearn.ensemble import (
-    AdaBoostClassifier,
-    ExtraTreesClassifier,
-    GradientBoostingClassifier,
-    RandomForestClassifier,
-)
-from sklearn.inspection import permutation_importance
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFECV
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold
+from sklearn.inspection import permutation_importance
 
-from excel.analysis.utils.helpers import split_data, init_estimator
+from excel.analysis.utils.helpers import init_estimator, split_data
 
 
 class AnalyseVariables:
@@ -229,7 +222,9 @@ class FeatureReduction:
         self.task = None
 
     def __reduction(self, data: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
-        estimator, cross_validator, scoring = init_estimator(rfe_estimator, self.task, self.seed, self.scoring, self.class_weight)
+        estimator, cross_validator, scoring = init_estimator(
+            rfe_estimator, self.task, self.seed, self.scoring, self.class_weight
+        )
 
         number_of_top_features = 30
         X = data.drop(self.target_label, axis=1)

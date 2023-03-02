@@ -1,7 +1,7 @@
 import os
 from copy import deepcopy
+
 import pandas as pd
-from sklearn.feature_selection import VarianceThreshold
 from loguru import logger
 from sklearn.ensemble import (
     AdaBoostClassifier,
@@ -13,12 +13,12 @@ from sklearn.ensemble import (
     RandomForestClassifier,
     RandomForestRegressor,
 )
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.model_selection import KFold, StratifiedKFold
 
 
 def target_statistics(data: pd.DataFrame, target_label: str):
-    logger.info('Calculating target statistics...')
     target = data[target_label]
     if target.nunique() == 2:  # binary target -> classification
         ratio = (target.sum() / len(target.index)).round(2)
@@ -26,13 +26,13 @@ def target_statistics(data: pd.DataFrame, target_label: str):
             f'\nSummary statistics for binary target variable {target_label}:\n'
             f'Positive class makes up {target.sum()} samples out of {len(target.index)}, i.e. {ratio*100}%.'
         )
-        return 'classification', target # stratify w.r.t. target classes
-    else: # continous target -> regression
+        return 'classification', target  # stratify w.r.t. target classes
+    else:  # continous target -> regression
         logger.info(
             f'\nSummary statistics for continuous target variable {target_label}:\n'
             f'{target.describe(percentiles=[]).round(2)}'
         )
-        return 'regression', None # do not stratify for regression task
+        return 'regression', None  # do not stratify for regression task
 
 
 def save_tables(out_dir, experiment_name, tables) -> None:
@@ -95,7 +95,7 @@ def init_estimator(estimator_name: str, task: str, seed, scoring, class_weight):
         elif estimator_name == 'adaboost':
             estimator = AdaBoostRegressor(random_state=seed)
         elif estimator_name == 'logistic_regression':
-            estimator = LogisticRegression(random_state=seed)
+            raise ValueError('Logistic regression can only be used for classification.')
         elif estimator_name == 'xgboost':
             estimator = GradientBoostingRegressor(random_state=seed)
         else:

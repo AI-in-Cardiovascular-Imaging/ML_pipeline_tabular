@@ -3,14 +3,6 @@ import pandas as pd
 import seaborn as sns
 from imblearn.over_sampling import RandomOverSampler
 from loguru import logger
-from sklearn.ensemble import (
-    AdaBoostClassifier,
-    ExtraTreesClassifier,
-    GradientBoostingClassifier,
-    RandomForestClassifier,
-    VotingClassifier,
-)
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
@@ -61,6 +53,7 @@ class VerifyFeatures(Normaliser):
     def __call__(self):
         """Train random forest classifier to verify feature importance"""
         for model in self.models:
+            logger.info(f'Optimising {model} model...')
             param_grid = self.param_grids[model]
             estimator, cross_validator, scoring = init_estimator(
                 model, self.task, self.seed, self.scoring, self.class_weight
@@ -71,8 +64,7 @@ class VerifyFeatures(Normaliser):
             )
             best_estimator = optimiser()
             y_pred = best_estimator.predict(self.x_test)
-
-            print(f'Model was optimised using {self.scoring[self.task]}.')
+            logger.info(f'Model was optimised using {self.scoring[self.task]}.')
 
             if self.task == 'classification':
                 print('Accuracy', accuracy_score(self.y_test, y_pred, normalize=True))
@@ -90,13 +82,12 @@ class VerifyFeatures(Normaliser):
             else:  # regression
                 print('Mean absolute error', mean_absolute_error(self.y_test, y_pred))
                 print('R2 score', r2_score(self.y_test, y_pred))
-
                 plt.figure(figsize=(10, 7))
                 plt.title(f'Regression on {self.target_label}')
-
-                sns.scatterplot(x=self.y_test, y=self.y_pred, annot=True, fmt='d')
-                plt.xlabel('Predicted')
-                plt.ylabel('Truth')
+                sns.regplot(x=self.y_test, y=y_pred, ci=None)
+                plt.xlabel(f'True {self.target_label}')
+                plt.ylabel(f'Predicted {self.target_label}')
+                plt.show()
 
     def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None):
         y = data[self.target_label]
