@@ -93,7 +93,8 @@ class VerifyFeatures(Normaliser):
 
                 plt.figure(figsize=(10, 7))
                 plt.title(f'Regression on {self.target_label}')
-                sns.scatterplot(x=self.y_test, annot=True, fmt='d')
+
+                sns.scatterplot(x=self.y_test, y=self.y_pred, annot=True, fmt='d')
                 plt.xlabel('Predicted')
                 plt.ylabel('Truth')
 
