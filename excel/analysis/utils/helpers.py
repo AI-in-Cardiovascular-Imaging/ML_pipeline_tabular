@@ -11,17 +11,26 @@ from sklearn.ensemble import (
     GradientBoostingClassifier,
     GradientBoostingRegressor,
     RandomForestClassifier,
-    RandomForestRegressor
+    RandomForestRegressor,
 )
 from sklearn.linear_model import LogisticRegression
 
 
 def target_statistics(data: pd.DataFrame, target_label: str):
-        logger.info('Calculating target statistics...')
-        target = data[target_label]
-        if target.nunique() == 2: # binary target
-            ratio = (target.sum() / len(target.index)).round(2)
-            logger.info(f'Positive class makes up {target.sum()} samples out of {len(target.index)}, i.e. {ratio*100}%.')
+    logger.info('Calculating target statistics...')
+    target = data[target_label]
+    if target.nunique() == 2:  # binary target
+        ratio = (target.sum() / len(target.index)).round(2)
+        logger.info(
+            f'\nSummary statistics for binary target variable {target_label}:\n'
+            f'Positive class makes up {target.sum()} samples out of {len(target.index)}, i.e. {ratio*100}%.'
+        )
+    else:
+        logger.info(
+            f'\nSummary statistics for continuous target variable {target_label}:\n'
+            f'{target.describe(percentiles=[]).round(2)}'
+        )
+
 
 def save_tables(out_dir, experiment_name, tables) -> None:
     """Save tables to excel file"""
@@ -73,8 +82,8 @@ def init_estimator(estimator_name: str, classification: bool, seed, class_weight
         else:
             logger.error(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
             raise NotImplementedError
-    
-    else: # regression
+
+    else:  # regression
         if estimator_name == 'forest':
             estimator = RandomForestRegressor(random_state=seed, class_weight=class_weight)
         elif estimator_name == 'extreme_forest':
@@ -88,5 +97,5 @@ def init_estimator(estimator_name: str, classification: bool, seed, class_weight
         else:
             logger.error(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
             raise NotImplementedError
-    
+
     return estimator
