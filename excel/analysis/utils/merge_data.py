@@ -3,15 +3,17 @@
 
 import os
 
-from loguru import logger
-import pandas as pd
 import numpy as np
+import pandas as pd
+from loguru import logger
 from omegaconf import DictConfig
-from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
-from sklearn.impute import IterativeImputer, MissingIndicator
 
-from excel.global_helpers import checked_dir
 from excel.analysis.utils.helpers import save_tables
+from excel.global_helpers import checked_dir
+
+# from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
+# from sklearn.impute import IterativeImputer, MissingIndicator
+
 
 
 class MergeData:
@@ -24,7 +26,7 @@ class MergeData:
         self.checked_src = os.path.join(config.dataset.out_dir, '4_checked', dir_name)
         self.merged_dir = os.path.join(config.dataset.out_dir, '5_merged')
         self.dims = config.dataset.dims
-        self.impute = config.merge.impute
+        # self.impute = config.merge.impute
         self.peak_values = config.merge.peak_values
         self.mdata_src = config.dataset.mdata_src
         self.target_label = config.analysis.experiment.target_label
@@ -66,11 +68,11 @@ class MergeData:
         tables = pd.DataFrame(tables_list, index=subjects, columns=self.col_names)
         tables = tables.rename_axis('subject').reset_index()  # add a subject column and reset index
 
-        if self.impute:  # data imputation (merged data)
-            tables = self.impute_data(tables)
-        else:  # remove patients with any NaN values
-            tables = tables.dropna(axis=0, how='any')
-        # logger.debug(len(tables.index))
+        # if self.impute:  # data imputation (merged data)
+        #     tables = self.impute_data(tables)
+        # else:  # remove patients with any NaN values
+        #     tables = tables.dropna(axis=0, how='any')
+        # # logger.debug(len(tables.index))
 
         if self.metadata:  # read and clean metadata
             tables = self.add_metadata(tables)
@@ -127,8 +129,8 @@ class MergeData:
             to_keep = ['global', 'endo', 'epi']
             table = table[table.roi.str.contains('|'.join(to_keep)) == True]
 
-        if self.impute:  # data imputation (table-wise)
-            table.iloc[:, info_cols:] = self.impute_data(table.iloc[:, info_cols:])
+        # if self.impute:  # data imputation (table-wise)
+        #     table.iloc[:, info_cols:] = self.impute_data(table.iloc[:, info_cols:])
 
         # Circumferential and longitudinal strain and strain rate peak at minimum value
         if 'strain' in self.table_name and ('circumf' in self.table_name or 'longit' in self.table_name):
@@ -150,22 +152,22 @@ class MergeData:
 
         self.subject_data = pd.concat((self.subject_data, pd.Series(list(table.iloc[:, 0]), index=col_names)), axis=0)
 
-    def impute_data(self, table: pd.DataFrame):
-        """Impute missing values in table"""
-        imputer = IterativeImputer(
-            initial_strategy='median', max_iter=100, random_state=self.seed, keep_empty_features=True
-        )
-        if 'subject' in table.columns:
-            tmp = table['subject']
-            table = table.drop('subject', axis=1)
-            imputed_data = imputer.fit_transform(table)
-            imputed_data = pd.DataFrame(imputed_data, index=table.index, columns=table.columns)
-            table = pd.concat((tmp, imputed_data), axis=1)
-        else:
-            imputed_data = imputer.fit_transform(table)
-            table = pd.DataFrame(imputed_data, index=table.index, columns=table.columns)
-
-        return table
+    # def impute_data(self, table: pd.DataFrame):
+    #     """Impute missing values in table"""
+    #     imputer = IterativeImputer(
+    #         initial_strategy='median', max_iter=100, random_state=self.seed, keep_empty_features=True
+    #     )
+    #     if 'subject' in table.columns:
+    #         tmp = table['subject']
+    #         table = table.drop('subject', axis=1)
+    #         imputed_data = imputer.fit_transform(table)
+    #         imputed_data = pd.DataFrame(imputed_data, index=table.index, columns=table.columns)
+    #         table = pd.concat((tmp, imputed_data), axis=1)
+    #     else:
+    #         imputed_data = imputer.fit_transform(table)
+    #         table = pd.DataFrame(imputed_data, index=table.index, columns=table.columns)
+    #
+    #     return table
 
     def add_metadata(self, tables):
         """Add metadata to tables"""
@@ -178,7 +180,7 @@ class MergeData:
         if mdata is not None:
             mdata = mdata[self.metadata]
             # clean some errors in metadata
-            if 'mace' in self.metadata: # TODO: add for other mace types as well (e.g. in function)
+            if 'mace' in self.metadata:  # TODO: add for other mace types as well (e.g. in function)
                 mdata.loc[mdata['mace'] == 999, 'mace'] = 0
             if 'MACE_any_chf_hosp' in self.metadata:
                 mdata.loc[mdata['MACE_any_chf_hosp'] == 999, 'MACE_any_chf_hosp'] = 0
@@ -188,15 +190,11 @@ class MergeData:
             if 'fhxcad___1' in self.metadata:
                 mdata.loc[~mdata['fhxcad___1'].isin([0, 1]), 'fhxcad___1'] = 0
                 mdata = mdata.rename(columns={'fhxcad___1': 'T2'})
-                
+
             # clean subject IDs
             mdata = mdata[mdata['redcap_id'].notna()]  # remove rows without redcap_id
             mdata['redcap_id'] = mdata['redcap_id'].astype(int).astype(str) + '_rc'
-            mdata['pat_id'] = (
-                mdata['pat_id']
-                .astype(object)
-                .apply(lambda x: str(int(x)) + '_p' if pd.notnull(x) else x)
-            )
+            mdata['pat_id'] = mdata['pat_id'].astype(object).apply(lambda x: str(int(x)) + '_p' if pd.notnull(x) else x)
             mdata['pat_id'].fillna(mdata['redcap_id'], inplace=True)  # patients without pat_id get redcap_id
             mdata = mdata.rename(columns={'pat_id': 'subject'})
 
@@ -229,24 +227,24 @@ class MergeData:
                 f'number of remaining subjects: {len(tables.index)}'
             )
 
-            # Impute missing metadata if desired
-            if self.impute:
-                indicator = MissingIndicator(missing_values=np.nan, features='all')
-                mask_missing_values = indicator.fit_transform(tables)
-                style_df = pd.DataFrame('', index=tables.index, columns=tables.columns)
-                style_df = style_df.mask(mask_missing_values, 'background-color: cyan')
-
-                tables = self.impute_data(tables)
-
-                os.makedirs(self.merged_dir, exist_ok=True)
-                tables.style.apply(lambda _: style_df, axis=None).to_excel(
-                    os.path.join(self.merged_dir, f'{self.experiment_name}_highlighted_missing_metadata.xlsx')
-                )
-
-            else:  # remove patients with any NaN values
-                logger.info(f'Number of patients before dropping NaN metadata: {len(tables.index)}')
-                tables = tables.dropna(axis=0, how='any')
-                logger.info(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
+            # # Impute missing metadata if desired
+            # if self.impute:
+            #     indicator = MissingIndicator(missing_values=np.nan, features='all')
+            #     mask_missing_values = indicator.fit_transform(tables)
+            #     style_df = pd.DataFrame('', index=tables.index, columns=tables.columns)
+            #     style_df = style_df.mask(mask_missing_values, 'background-color: cyan')
+            #
+            #     tables = self.impute_data(tables)
+            #
+            #     os.makedirs(self.merged_dir, exist_ok=True)
+            #     tables.style.apply(lambda _: style_df, axis=None).to_excel(
+            #         os.path.join(self.merged_dir, f'{self.experiment_name}_highlighted_missing_metadata.xlsx')
+            #     )
+            #
+            # else:  # remove patients with any NaN values
+            #     logger.info(f'Number of patients before dropping NaN metadata: {len(tables.index)}')
+            #     tables = tables.dropna(axis=0, how='any')
+            #     logger.info(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
 
             # LGE/T2 columns
             if 'LGE' in tables.columns and 'T2' in tables.columns:

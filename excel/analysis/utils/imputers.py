@@ -1,82 +1,83 @@
-# imputer = IterativeImputer(
-#     initial_strategy='median', max_iter=100, random_state=self.seed, keep_empty_features=True
-# )
-# if 'subject' in table.columns:
-#     tmp = table['subject']
-#     table = table.drop('subject', axis=1)
-#     imputed_data = imputer.fit_transform(table)
-#     imputed_data = pd.DataFrame(imputed_data, index=table.index, columns=table.columns)
-#     table = pd.concat((tmp, imputed_data), axis=1)
-# else:
-#     imputed_data = imputer.fit_transform(table)
-#     table = pd.DataFrame(imputed_data, index=table.index, columns=table.columns)
-#
-#
-# Impute missing metadata if desired
-# if self.impute:
-#     indicator = MissingIndicator(missing_values=np.nan, features='all')
-#     mask_missing_values = indicator.fit_transform(tables)
-#     style_df = pd.DataFrame('', index=tables.index, columns=tables.columns)
-#     style_df = style_df.mask(mask_missing_values, 'background-color: cyan')
-#
-#     tables = self.impute_data(tables)
-#
-#     os.makedirs(self.merged_dir, exist_ok=True)
-#     tables.style.apply(lambda _: style_df, axis=None).to_excel(
-#         os.path.join(self.merged_dir, f'{self.experiment_name}_highlighted_missing_metadata.xlsx')
-#     )
-#
-# else:  # remove patients with any NaN values
-#     logger.info(f'Number of patients before dropping NaN metadata: {len(tables.index)}')
-#     tables = tables.dropna(axis=0, how='any')
-#     logger.info(f'Number of patients after dropping NaN metadata: {len(tables.index)}')
-
-from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
-from sklearn.impute import IterativeImputer, MissingIndicator
+import numpy as np
 import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
+from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
+from sklearn.impute import IterativeImputer, KNNImputer, MissingIndicator, SimpleImputer
+
+
+def data_bubble(func):
+    def wrapper(self, *args):
+        data = args[0]
+        impute = func(self)
+        imp_data = impute.fit_transform(data)
+        imp_data = pd.DataFrame(imp_data, index=data.index, columns=data.columns)
+        logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_data)}')
+        return imp_data
+
+    return wrapper
 
 
 class Imputers:
+    def __init__(self, config: DictConfig) -> None:
+        self.config = config
+        self.seed = config.analysis.run.seed
+        self.impute_method = self.config.merge.impute
 
-    def __init__(self) -> None:
-        pass
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Impute missing data"""
+        if self.__check_methods():
+            return getattr(self, self.impute_method)(data)
 
-    def drop_missing_data(self, data):
+    def __check_methods(self) -> bool:
+        """Check if the given method is valid"""
+        valid_methods = set([func for func in dir(self) if callable(getattr(self, func)) and not func.startswith('_')])
+        method = set([self.impute_method])  # brackets to avoid splitting string into characters
+        if not method.issubset(valid_methods):
+            raise ValueError(f'Unknown imputation method: {self.impute_method}')
+        return True
+
+    def drop_nan_impute(self, data: pd.DataFrame) -> pd.DataFrame:
         """Drop patients with any NaN values"""
-        logger.info(f'Number of patients before dropping NaN metadata: {len(data.index)}')
-        data = data.dropna(axis=0, how='any')
-        logger.info(f'Number of patients after dropping NaN metadata: {len(data.index)}')
+        imp_data = data.dropna(axis=0, how='any')
+        logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_data)}')
+        return imp_data
+
+    def no_impute(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Do not impute"""
+        logger.info('No imputation performed')
         return data
 
-    def iterative_imputer(self, data):
-        """Impute missing metadata"""
-        imputer = IterativeImputer(
+    @data_bubble
+    def iterative_impute(self) -> IterativeImputer:
+        """Iterative impute"""
+        return IterativeImputer(
             initial_strategy='median',
             max_iter=100,
             random_state=self.seed,
             keep_empty_features=True,
         )
-        if 'subject' in data.columns:
-            tmp = data['subject']
-            data = data.drop('subject', axis=1)
-            imputed_data = imputer.fit_transform(data)
-            imputed_data = pd.DataFrame(imputed_data, index=data.index, columns=data.columns)
-            data = pd.concat((tmp, imputed_data), axis=1)
 
-        return data
+    @data_bubble
+    def simple_impute(self) -> SimpleImputer:
+        """Simple impute"""
+        return SimpleImputer(
+            strategy='median',
+            keep_empty_features=True,
+        )
 
-    def simple_imputer(self):
-        """"""
-        pass
+    @data_bubble
+    def missing_indicator_impute(self) -> MissingIndicator:
+        """Missing indicator impute"""
+        return MissingIndicator(
+            missing_values=np.nan,
+            features='all',
+        )
 
-    def missing_indicator_imputer(self):
-        """"""
-        pass
-
-    def knn_imputer(self):
-        """"""
-        pass
-
-
+    @data_bubble
+    def knn_impute(self) -> KNNImputer:
+        """KNN impute"""
+        return KNNImputer(
+            n_neighbors=5,
+            keep_empty_features=True,
+        )
