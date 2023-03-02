@@ -3,15 +3,14 @@
 
 import os
 from copy import deepcopy
-
 import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
-
-from excel.analysis.utils.analyse_variables import AnalyseVariables, FeatureReduction
 from excel.analysis.utils.dim_reduction import DimensionReductions
 from excel.analysis.utils.helpers import variance_threshold
 from excel.analysis.utils.normalisers import Normaliser
+from excel.analysis.utils.analyse_variables import AnalyseVariables, FeatureReduction
+
 
 
 class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureReduction):
