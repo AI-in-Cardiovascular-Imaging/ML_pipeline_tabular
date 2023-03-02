@@ -1,7 +1,8 @@
-from loguru import logger
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
+from imblearn.over_sampling import RandomOverSampler
+from loguru import logger
 from sklearn.ensemble import (
     AdaBoostClassifier,
     ExtraTreesClassifier,
@@ -10,19 +11,25 @@ from sklearn.ensemble import (
     VotingClassifier,
 )
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, average_precision_score, mean_absolute_error, classification_report, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    mean_absolute_error,
+    r2_score,
+)
 from sklearn.model_selection import train_test_split
-from imblearn.over_sampling import RandomOverSampler
 
-from excel.analysis.utils.normalisers import Normaliser
 from excel.analysis.utils.cross_validation import CrossValidation
 from excel.analysis.utils.helpers import init_estimator
+from excel.analysis.utils.normalisers import Normaliser
 
 
 class VerifyFeatures(Normaliser):
     """Train random forest classifier to verify feature importance"""
 
-    def __init__(self, config, v_data, v_data_test=None, features=None, task: str='classification'):
+    def __init__(self, config, v_data, v_data_test=None, features=None, task: str = 'classification'):
         super().__init__()
         self.target_label = config.analysis.experiment.target_label
         self.seed = config.analysis.run.seed
@@ -55,7 +62,9 @@ class VerifyFeatures(Normaliser):
         """Train random forest classifier to verify feature importance"""
         for model in self.models:
             param_grid = self.param_grids[model]
-            estimator, cross_validator, scoring = init_estimator(model, self.task, self.seed, self.scoring, self.class_weight)
+            estimator, cross_validator, scoring = init_estimator(
+                model, self.task, self.seed, self.scoring, self.class_weight
+            )
 
             optimiser = CrossValidation(
                 self.x_train, self.y_train, estimator, cross_validator, param_grid, scoring, self.seed
@@ -63,19 +72,30 @@ class VerifyFeatures(Normaliser):
             best_estimator = optimiser()
             y_pred = best_estimator.predict(self.x_test)
 
-            print(f'Model was optimised using {self.scoring}.')
-            print('Accuracy', accuracy_score(self.y_test, y_pred, normalize=True))
-            print('Average precision', average_precision_score(self.y_test, y_pred))
-            print(classification_report(self.y_test, y_pred))
+            print(f'Model was optimised using {self.scoring[self.task]}.')
 
-            cm = confusion_matrix(self.y_test, y_pred)
-            print(cm)
-            plt.figure(figsize=(10, 7))
-            plt.title('Confusion matrix')
-            sns.heatmap(cm, annot=True, fmt='d')
-            plt.xlabel('Predicted')
-            plt.ylabel('Truth')
-            # plt.show()
+            if self.task == 'classification':
+                print('Accuracy', accuracy_score(self.y_test, y_pred, normalize=True))
+                print('Average precision', average_precision_score(self.y_test, y_pred))
+                print(classification_report(self.y_test, y_pred))
+
+                cm = confusion_matrix(self.y_test, y_pred)
+                print(cm)
+                plt.figure(figsize=(10, 7))
+                plt.title('Confusion matrix')
+                sns.heatmap(cm, annot=True, fmt='d')
+                plt.xlabel('Predicted')
+                plt.ylabel('Truth')
+                # plt.show()
+            else:  # regression
+                print('Mean absolute error', mean_absolute_error(self.y_test, y_pred))
+                print('R2 score', r2_score(self.y_test, y_pred))
+
+                plt.figure(figsize=(10, 7))
+                plt.title(f'Regression on {self.target_label}')
+                sns.scatterplot(x=self.y_test, annot=True, fmt='d')
+                plt.xlabel('Predicted')
+                plt.ylabel('Truth')
 
     def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None):
         y = data[self.target_label]
