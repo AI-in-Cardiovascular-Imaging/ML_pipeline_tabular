@@ -18,9 +18,8 @@ class CrossValidation:
             param_grid=self.param_grid,
             scoring=self.scoring,
             cv=self.cross_validator,
+            n_jobs=4,
         )
         selector.fit(self.x_train, self.y_train)
 
         return selector
-
-    # TODO: voting classifier cv

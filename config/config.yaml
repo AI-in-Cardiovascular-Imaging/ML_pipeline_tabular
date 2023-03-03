@@ -59,6 +59,7 @@ analysis:
           "extreme_forest": False,
           "adaboost": False,
           "xgboost": True,
+          "ensemble_voting": True,
         }
       param_grids:
         {
