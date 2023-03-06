@@ -1,6 +1,6 @@
 from pytest import fixture
 
-from excel.analysis.utils.normalisers import Normaliser
+from cardio_parsers.stations.normalisers import Normaliser
 
 
 @fixture(scope='function')

@@ -15,9 +15,9 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-from excel.analysis.utils.cross_validation import CrossValidation
-from excel.analysis.utils.helpers import init_estimator
-from excel.analysis.utils.normalisers import Normaliser
+from cardio_parsers.stations.normalisers import Normaliser
+from cardio_parsers.utils.cross_validation import CrossValidation
+from cardio_parsers.utils.helpers import init_estimator
 
 
 class VerifyFeatures(Normaliser):

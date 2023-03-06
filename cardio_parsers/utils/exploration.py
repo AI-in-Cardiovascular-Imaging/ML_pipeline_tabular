@@ -3,14 +3,15 @@
 
 import os
 from copy import deepcopy
+
 import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
-from excel.analysis.utils.dim_reduction import DimensionReductions
-from excel.analysis.utils.helpers import variance_threshold
-from excel.analysis.utils.normalisers import Normaliser
-from excel.analysis.utils.analyse_variables import AnalyseVariables, FeatureReduction
 
+from cardio_parsers.stations.dim_reductions import DimensionReductions
+from cardio_parsers.stations.normalisers import Normaliser
+from cardio_parsers.utils.analyse_variables import AnalyseVariables, FeatureReduction
+from cardio_parsers.utils.helpers import variance_threshold
 
 
 class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureReduction):
@@ -48,8 +49,8 @@ class ExploreData(Normaliser, DimensionReductions, AnalyseVariables, FeatureRedu
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
-        
-        if isinstance(data, tuple): # return features
+
+        if isinstance(data, tuple):  # return features
             return data[1]
         else:
             return data.columns

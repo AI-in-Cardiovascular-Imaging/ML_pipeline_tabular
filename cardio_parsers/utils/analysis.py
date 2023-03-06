@@ -11,10 +11,9 @@ from loguru import logger
 from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
 
-from excel.analysis.utils.exploration import ExploreData
-from excel.analysis.utils.merge_data import MergeData
-from excel.analysis.verifications import VerifyFeatures
-from excel.analysis.utils.helpers import target_statistics
+from cardio_parsers.stations.verifications import VerifyFeatures
+from cardio_parsers.utils.exploration import ExploreData
+from cardio_parsers.utils.helpers import target_statistics
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
@@ -38,13 +37,6 @@ class Analysis:
         new_name = f'{self.experiment_name}_imputed' if self.impute else self.experiment_name
         merged_path = os.path.join(self.src_dir, '5_merged', f'{new_name}.xlsx')
         self.config.analysis.experiment.name = new_name
-
-        # Data merging
-        if os.path.isfile(merged_path) and not self.overwrite:
-            logger.info('Merged data available, skipping merge step...')
-        else:
-            merger = MergeData(self.config)
-            merger()
 
         data = pd.read_excel(merged_path)  # Read in merged data
         data = data.set_index('subject')  # Use subject ID as index column
