@@ -846,6 +846,18 @@ python-gdcm = "*"
 scipy = "*"
 
 [[package]]
+name = "dictlib"
+version = "1.1.5"
+description = "Dictionary Library including good deep merge and dictionary as objects"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "dictlib-1.1.5-py3-none-any.whl", hash = "sha256:6d4ca929eb21f3de11b391691949e474801e468db16d5b2967f6357015eafb92"},
+    {file = "dictlib-1.1.5.tar.gz", hash = "sha256:6aec0b3f1eb742497c14a181f673a976a0981e67210ee955b3e417a4e7d3c22f"},
+]
+
+[[package]]
 name = "dill"
 version = "0.3.6"
 description = "serialize all of python"
@@ -5019,4 +5031,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9.13"
-content-hash = "2537997a4b1fe1d70f76d300d8b35641688e7c78e12809bf6dc4cbd8920db68a"
+content-hash = "43bbf640ce06dccfafd14eee685fc22a8c5f9cce661c99cec691472eb72c81ab"
