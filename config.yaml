@@ -1,22 +1,22 @@
 meta:
   output_dir: "/home/melandur/Downloads"
-  input_file: "/home/melandur/Data/Myocarditis/Final_Regional_Database_reduced.xlsx"
+  input_file: "/home/melandur/Data/Myocarditis/Final_Regional_Database_redox.xlsx"
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
-  target_label: ["a", "b", "c", "d"] # which column to use as label for exploration, feature reduction and analysis
+  target_label: ["mace"] # which column to use as label for exploration, feature reduction and analysis
   seed: [1, 2, 3] # random seed
   logging_level: "DEBUG" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 impute:
   active: True # whether to impute missing values
-  method: ["mean"] # "mean" # method to use for imputation, can be 'mean', 'median', 'most_frequent', 'constant'
+  method: ["drop_nan_impute"] #  drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
   constant: 0 # constant to use for imputation if method is 'constant'
 
 data_split:
-  active: True # whether to split data into training and testing sets
+  active: False # whether to split data into training and testing sets
   test_size: 0.2 # fraction of data to use for testing
 
 exploration:
-  active: True # whether to perform exploratory analysis
+  active: False # whether to perform exploratory analysis
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
@@ -41,7 +41,7 @@ exploration:
     ]
 
 verification:
-  active: True # whether to perform verification analysis
+  active: False # whether to perform verification analysis
   explore_frac: 0 # fraction of data to use for exploration, the rest is used for verification (set to 0 to use all training data for exploration and verification)
   oversample: False # whether to oversample minority class to balance training set
   models:

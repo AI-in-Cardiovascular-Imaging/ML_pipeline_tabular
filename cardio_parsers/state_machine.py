@@ -38,6 +38,7 @@ class StateMachine:
         self.state_names = [
             'meta.target_label',
             'meta.seed',
+            'impute.method',
         ]  # define state names to branch on
         self.state_data = [dig(self.config, x) for x in self.state_names]  # get data for each state name
         self.state_tree = list(itertools.product(*self.state_data))  # create tree of all possible states

@@ -5,6 +5,8 @@ from omegaconf import DictConfig
 from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
 from sklearn.impute import IterativeImputer, KNNImputer, MissingIndicator, SimpleImputer
 
+from cardio_parsers.data_handler import DataHandler
+
 
 def data_bubble(func):
     def wrapper(self, *args):
@@ -18,19 +20,19 @@ def data_bubble(func):
     return wrapper
 
 
-class Imputers:
-
+class Imputers(DataHandler):
     """Impute missing data"""
 
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config) -> None:
+        super().__init__()
         self.config = config
         self.seed = config.meta.seed
         self.impute_method = config.impute.method
 
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+    def __call__(self) -> None:
         """Impute missing data"""
         if self.__check_methods():
-            return getattr(self, self.impute_method)(data)
+            return getattr(self, self.impute_method)(self.get_ephemeral_data())
 
     def __check_methods(self) -> bool:
         """Check if the given method is valid"""
@@ -45,11 +47,6 @@ class Imputers:
         imp_data = data.dropna(axis=0, how='any')
         logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_data)}')
         return imp_data
-
-    def no_impute(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Do not impute, return data only"""
-        logger.info('No imputation performed')
-        return data
 
     @data_bubble
     def iterative_impute(self) -> IterativeImputer:

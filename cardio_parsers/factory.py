@@ -16,18 +16,17 @@ class Factory:
         self.data_handler = DataHandler()
 
     def __del__(self) -> None:
-        self.data_handler()
+        """Stop factory"""
         logger.info('Factory stopped')
 
     def __call__(self) -> None:
         """Run factory"""
         logger.info('Factory started')
         DataReader(self.config.meta.input_file)()
-        for state, config in self.state_machine:
+        for state, config in self.state_machine:  # TODO: multiprocessing here
             self.produce_pipeline(state, config)
 
-    @staticmethod
-    def produce_pipeline(state: str, config: DictConfig) -> None:
+    def produce_pipeline(self, state: str, config: DictConfig) -> None:
         """Pipeline producer"""
         pipeline = Pipeline(state, config)
         pipeline()

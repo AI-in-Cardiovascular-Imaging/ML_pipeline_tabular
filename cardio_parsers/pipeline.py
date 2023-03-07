@@ -21,11 +21,8 @@ def run_when_active(func):
     return wrapper
 
 
-class Pipeline(DataHandler):
-    def __init__(self, state: str, config: DictConfig) -> None:
-        super().__init__()
-        self.__dict__ = self._shared_state
-
+class Pipeline:
+    def __init__(self, state, config) -> None:
         self.state = state
         self.config = config
 
