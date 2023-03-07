@@ -1,13 +1,13 @@
 meta:
   output_dir: "/home/melandur/Downloads"
-  input_file: "/home/melandur/Data/Myocarditis/Final_Regional_Database_redox.xlsx"
+  input_file: "/home/melandur/Data/Myocarditis/new/5_merged/phenomapping.xlsx"
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
-  target_label: ["mace"] # which column to use as label for exploration, feature reduction and analysis
+  target_label: ["bmi"] # which column to use as label for exploration, feature reduction and analysis
   seed: [1, 2, 3] # random seed
-  logging_level: "TRACE" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "INFO" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 inspection:
-  active: False # whether to perform data inspection
+  active: True # whether to perform data inspection
   label_as_index: "subject" # column string name or None
   custom_clean_up: False # TODO: implement custom clean up
 

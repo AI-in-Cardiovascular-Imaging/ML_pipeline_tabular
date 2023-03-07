@@ -6,7 +6,9 @@ from omegaconf import OmegaConf
 
 if __name__ == '__main__':
 
-    config = OmegaConf.load('config.yaml')
+    with open('config.yaml') as file:
+        config = OmegaConf.load(file)
+
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
 

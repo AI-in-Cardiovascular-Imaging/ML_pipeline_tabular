@@ -1,15 +1,14 @@
 from loguru import logger
 
-from cardio_parsers.data_borg import DataBorg
+from cardio_parsers.data_borg.data_borg import DataBorg
 
 
 class TargetStatistics(DataBorg):
     def __init__(self, config):
         super().__init__()
-
         self.config = config
         self.target_label = config.meta.target_label
-        print(self.__original_data)
+        self.original_data = self.get_original_data()
 
     def __call__(self):
         target_data = self.original_data[self.target_label]

@@ -52,6 +52,11 @@ class DataBorg:
         else:
             raise ValueError(f'Invalid state name type, found -> {type(state_name)}, allowed -> tuple')
 
+    def set_ephemeral_data(self, frame: pd.DataFrame) -> None:
+        """Sets the ephemeral data"""
+        self.__ephemeral_data = frame
+        logger.trace(f'Ephemeral data set to -> {type(self.__ephemeral_data)}')
+
     def set_state_values(self, key: str, frame: pd.DataFrame) -> None:
         """Sets the state value"""
         self.__ephemeral_data = copy.deepcopy(frame)

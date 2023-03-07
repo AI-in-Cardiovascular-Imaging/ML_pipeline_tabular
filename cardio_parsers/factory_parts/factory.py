@@ -4,7 +4,7 @@ from factory_parts.state_machine import StateMachine
 from loguru import logger
 from omegaconf import DictConfig
 
-from cardio_parsers.data_borg import DataBorg
+from cardio_parsers.data_borg.data_borg import DataBorg
 
 
 class Factory:

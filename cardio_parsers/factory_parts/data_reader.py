@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from loguru import logger
 
-from cardio_parsers.data_borg import DataBorg
+from cardio_parsers.data_borg.data_borg import DataBorg
 
 
 class DataReader(DataBorg):

@@ -1,7 +1,7 @@
 from loguru import logger
 
 from cardio_parsers.crates.imputers import Imputers
-from cardio_parsers.crates.inspections import TargetStatistics
+from cardio_parsers.crates.inspections import CleanUp, TargetStatistics
 
 
 def run_when_active(func):
@@ -32,6 +32,7 @@ class Pipeline:
     def inspection(self) -> None:
         """Inspect data"""
         TargetStatistics(self.config)()
+        CleanUp(self.config)()
 
     @run_when_active
     def impute(self) -> None:
