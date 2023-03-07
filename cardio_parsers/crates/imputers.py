@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 from loguru import logger
-from omegaconf import DictConfig
 from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
 from sklearn.impute import IterativeImputer, KNNImputer, MissingIndicator, SimpleImputer
 
-from cardio_parsers.data_handler import DataHandler
+logger.trace(enable_iterative_imputer)  # to avoid auto import removal
+from data_borg.data_borg import DataBorg
 
 
 def data_bubble(func):
@@ -20,7 +20,7 @@ def data_bubble(func):
     return wrapper
 
 
-class Imputers(DataHandler):
+class Imputers(DataBorg):
     """Impute missing data"""
 
     def __init__(self, config) -> None:

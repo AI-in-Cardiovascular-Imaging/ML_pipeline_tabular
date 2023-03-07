@@ -16,7 +16,7 @@ class NestedDefaultDict(defaultdict):
         return repr(dict(self))
 
 
-class DataHandler:
+class DataBorg:
 
     shared_state = {
         '__data_store': NestedDefaultDict(),

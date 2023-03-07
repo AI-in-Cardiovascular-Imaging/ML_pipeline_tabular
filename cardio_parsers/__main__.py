@@ -1,4 +1,4 @@
-from cardio_parsers.factory import Factory
+from factory_parts.factory import Factory
 
 if __name__ == '__main__':
 

@@ -1,10 +1,9 @@
+from data_borg.data_borg import DataBorg
+from factory_parts.data_reader import DataReader
+from factory_parts.pipeline import Pipeline
+from factory_parts.state_machine import StateMachine
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
-
-from cardio_parsers.data_handler import DataHandler
-from cardio_parsers.data_reader import DataReader
-from cardio_parsers.pipeline import Pipeline
-from cardio_parsers.state_machine import StateMachine
 
 
 class Factory:
@@ -13,7 +12,7 @@ class Factory:
     def __init__(self) -> None:
         self.config = OmegaConf.load('config.yaml')
         self.state_machine = StateMachine(self.config)
-        self.data_handler = DataHandler()
+        self.data_handler = DataBorg()
 
     def __del__(self) -> None:
         """Stop factory"""
@@ -26,7 +25,8 @@ class Factory:
         for state, config in self.state_machine:  # TODO: multiprocessing here
             self.produce_pipeline(state, config)
 
-    def produce_pipeline(self, state: str, config: DictConfig) -> None:
+    @staticmethod
+    def produce_pipeline(state: str, config: DictConfig) -> None:
         """Pipeline producer"""
         pipeline = Pipeline(state, config)
         pipeline()

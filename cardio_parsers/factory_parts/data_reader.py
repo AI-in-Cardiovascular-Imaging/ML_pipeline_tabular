@@ -1,12 +1,11 @@
 import os
 
 import pandas as pd
+from data_borg.data_borg import DataBorg
 from loguru import logger
 
-from cardio_parsers.data_handler import DataHandler
 
-
-class DataReader(DataHandler):
+class DataReader(DataBorg):
     """Reads excel, csv, or pd dataframe and returns a pd dataframe"""
 
     def __init__(self, path) -> None:
