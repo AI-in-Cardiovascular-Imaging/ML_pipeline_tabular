@@ -15,8 +15,7 @@ def run_when_active(func):
 
 
 class Pipeline:
-    def __init__(self, state, config) -> None:
-        self.state = state
+    def __init__(self, config) -> None:
         self.config = config
 
     def __call__(self) -> None:

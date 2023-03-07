@@ -27,11 +27,11 @@ class StateMachine:
         """Return the iterator object"""
         return self
 
-    def __next__(self) -> tuple:
+    def __next__(self) -> DictConfig:
         """Return the next item"""
         self.update_state()
         logger.info(f'State -> {self.state}')
-        return self.state, self.get_state_config()
+        return self.get_state_config()
 
     def create_state_tree(self) -> None:
         """Create a tree of all possible states for the pipeline to run in"""
@@ -49,6 +49,7 @@ class StateMachine:
         config = deepcopy(self.config)
         for state_name, state_value in zip(self.state_names, self.state):
             dug(config, state_name, state_value)  # set state value in config
+        config.meta['state_name'] = '_'.join(map(str, self.state))  # add state to config
         return config
 
     def update_state(self) -> None:

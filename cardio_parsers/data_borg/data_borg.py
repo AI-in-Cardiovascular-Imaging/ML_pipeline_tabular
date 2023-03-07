@@ -1,5 +1,3 @@
-import copy
-import json
 from collections import defaultdict
 
 import pandas as pd
@@ -17,65 +15,84 @@ class NestedDefaultDict(defaultdict):
 
 
 class DataBorg:
-    """Shares data between classes"""
+    """Borg pattern, which is used to share data between classes"""
 
     shared_state = {
-        '__data_store': None,
-        '__feature_store': None,
-        '__original_data': None,
-        '__ephemeral_data': None,
-        '__selection_data': None,
-        '__verification_data': None,
-        '__state_name': None,
+        '_data_store': NestedDefaultDict(),
+        '_feature_store': NestedDefaultDict(),
+        '_original_data': None,
     }
 
     def __init__(self) -> None:
-        self.__data_store = NestedDefaultDict()
-        self.__feature_store = NestedDefaultDict()
-        self.__original_data = None
-        self.__ephemeral_data = None
-        self.__selection_data = None
-        self.__verification_data = None
-        self.__state_name = None
         self.__dict__ = self.shared_state  # borg design pattern
 
-    def show(self) -> None:
-        """Prints the data store"""
-        print(json.dumps(self.__data_store, indent=4, sort_keys=True))
-
-    def set_state_name(self, state_name: str) -> None:
+    def add_state_name(self, state_name: str) -> None:
         """Sets the state name"""
-        if isinstance(state_name, tuple):
-            self.__state_name = '_'.join(state_name)
-            self.__data_store[self.__state_name] = NestedDefaultDict()
-            logger.info(f'State name set to -> {self.__state_name}')
-        else:
-            raise ValueError(f'Invalid state name type, found -> {type(state_name)}, allowed -> tuple')
+        self._data_store[state_name] = NestedDefaultDict()
+        logger.info(f'State name set -> {state_name}')
 
-    def set_ephemeral_data(self, frame: pd.DataFrame) -> None:
+    def set_ephemeral_data(self, state_name: str, frame: pd.DataFrame) -> None:
         """Sets the ephemeral data"""
-        self.__ephemeral_data = frame
-        logger.trace(f'Ephemeral data set to -> {type(self.__ephemeral_data)}')
+        if state_name in self._data_store:
+            self._data_store[state_name]['ephemeral'] = frame
+            logger.trace(f'Ephemeral data set -> {type(frame)}')
+        else:
+            raise ValueError(f'Invalid state name -> {state_name}')
 
-    def set_state_values(self, key: str, frame: pd.DataFrame) -> None:
+    def set_store_data(self, state_name: str, step_name: str, frame: pd.DataFrame) -> None:
         """Sets the state value"""
-        self.__ephemeral_data = copy.deepcopy(frame)
-        self.__data_store[self.__state_name] = {key: frame}
-        logger.info(f'State value set to -> {type(key)}')
+        if state_name in self._data_store:
+            self._data_store[state_name][step_name] = frame
+            logger.trace(f'Store data set -> {type(frame)}')
+        else:
+            raise ValueError(f'Invalid state name -> {state_name}')
 
-    def get_ephemeral_data(self) -> pd.DataFrame:
+    def set_feature_store(self, state_name: str, frame: pd.DataFrame) -> None:
+        """Sets the feature store"""
+        if state_name in self._feature_store:
+            self._feature_store[state_name] = frame
+            logger.trace(f'Feature store set -> {type(frame)}')
+        else:
+            raise ValueError(f'Invalid state name -> {state_name}')
+
+    def get_ephemeral_data(self, state_name: str) -> pd.DataFrame:
         """Returns the ephemeral data"""
-        logger.trace(f'Returning ephemeral data -> {type(self.__ephemeral_data)}')
-        return self.__ephemeral_data
+        if state_name in self._data_store:
+            logger.trace(f'Returning ephemeral data -> {type(self._data_store[state_name]["ephemeral"])}')
+            return self._data_store[state_name]['ephemeral']
+        else:
+            raise ValueError(f'Invalid state name -> {state_name}')
+
+    def get_store_data(self, state_name: str, step_name: str) -> pd.DataFrame:
+        """Returns the state value"""
+        if state_name in self._data_store:
+            logger.trace(f'Returning store data -> {type(self._data_store[state_name][step_name])}')
+            return self._data_store[state_name][step_name]
+        else:
+            raise ValueError(f'Invalid state name -> {state_name}')
+
+    def get_feature_store(self, state_name: str) -> pd.DataFrame:
+        """Returns the feature store"""
+        if state_name in self._feature_store:
+            logger.trace(f'Returning feature store -> {type(self._feature_store[state_name])}')
+            return self._feature_store[state_name]
+        else:
+            raise ValueError(f'Invalid state name -> {state_name}')
 
     def set_original_data(self, frame: pd.DataFrame) -> None:
         """Sets the original data"""
-        self.__original_data = frame
-        self.__ephemeral_data = copy.deepcopy(frame)
-        logger.trace(f'Original data set to -> {type(self.__original_data)}')
-        logger.trace(f'Ephemeral data set to -> {type(self.__ephemeral_data)}')
+        self._original_data = frame
+        logger.trace(f'Original data set to -> {type(self._original_data)}')
 
     def get_original_data(self) -> pd.DataFrame:
         """Returns the original data"""
-        logger.trace(f'Returning original data -> {type(self.__original_data)}')
-        return self.__original_data
+        logger.trace(f'Returning original data -> {type(self._original_data)}')
+        return self._original_data
+
+    def remove_state_data(self, state_name: str) -> None:
+        """Removes the state, prevent memory overflows"""
+        if state_name in self._data_store:
+            del self._data_store[state_name]
+            logger.trace(f'State removed -> {state_name}')
+        else:
+            raise ValueError(f'Invalid state name -> {state_name}')
