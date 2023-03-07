@@ -9,7 +9,7 @@ from sklearn.feature_selection import RFECV
 from cardio_parsers.utils.helpers import init_estimator
 
 
-class FeatureReduction:
+class FeatureReductions:
     def __init__(self) -> None:
         self.job_dir = None
         self.metadata = None

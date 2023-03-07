@@ -19,10 +19,13 @@ def data_bubble(func):
 
 
 class Imputers:
+
+    """Impute missing data"""
+
     def __init__(self, config: DictConfig) -> None:
         self.config = config
-        self.seed = config.analysis.run.seed
-        self.impute_method = self.config.merge.impute
+        self.seed = config.meta.seed
+        self.impute_method = config.impute.method
 
     def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
         """Impute missing data"""
@@ -44,7 +47,7 @@ class Imputers:
         return imp_data
 
     def no_impute(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Do not impute"""
+        """Do not impute, return data only"""
         logger.info('No imputation performed')
         return data
 

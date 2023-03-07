@@ -21,7 +21,7 @@ def data_bubble(func):
     return wrapper
 
 
-class Normaliser:
+class Normalisers:
     def __init__(self, target_label=None) -> None:
         self.target_label = target_label
         self.auto_norm_method = None

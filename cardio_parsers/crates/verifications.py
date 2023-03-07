@@ -15,12 +15,12 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-from cardio_parsers.stations.normalisers import Normaliser
+from cardio_parsers.crates.normalisers import Normalisers
 from cardio_parsers.utils.cross_validation import CrossValidation
 from cardio_parsers.utils.helpers import init_estimator
 
 
-class VerifyFeatures(Normaliser):
+class Verifications(Normalisers):
     """Train random forest classifier to verify feature importance"""
 
     def __init__(self, config, v_data, v_data_test=None, features=None, task: str = 'classification'):
