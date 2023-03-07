@@ -17,17 +17,20 @@ class NestedDefaultDict(defaultdict):
 
 
 class DataBorg:
+    """Shares data between classes"""
 
     shared_state = {
         '__data_store': NestedDefaultDict(),
         '__original_data': None,
         '__ephemeral_data': None,
+        '__selection_data': None,
+        '__verification_data': None,
         '__feature_store': NestedDefaultDict(),
         '__state_name': None,
     }
 
     def __init__(self) -> None:
-        self.__dict__ = self.shared_state
+        self.__dict__ = self.shared_state  # borg design pattern
 
     def show(self) -> None:
         """Prints the data store"""
@@ -50,12 +53,17 @@ class DataBorg:
 
     def get_ephemeral_data(self) -> pd.DataFrame:
         """Returns the ephemeral data"""
-        logger.info(f'Returning ephemeral data -> {type(self.__ephemeral_data)}')
+        logger.trace(f'Returning ephemeral data -> {type(self.__ephemeral_data)}')
         return self.__ephemeral_data
 
     def set_original_data(self, frame: pd.DataFrame) -> None:
         """Sets the original data"""
         self.__original_data = frame
         self.__ephemeral_data = copy.deepcopy(frame)
-        logger.info(f'Original data set to -> {type(self.__original_data)}')
-        logger.info(f'Ephemeral data set to -> {type(self.__ephemeral_data)}')
+        logger.trace(f'Original data set to -> {type(self.__original_data)}')
+        logger.trace(f'Ephemeral data set to -> {type(self.__ephemeral_data)}')
+
+    def get_original_data(self) -> pd.DataFrame:
+        """Returns the original data"""
+        logger.trace(f'Returning original data -> {type(self.__original_data)}')
+        return self.__original_data

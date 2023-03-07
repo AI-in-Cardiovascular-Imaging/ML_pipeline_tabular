@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from crates.helpers import init_estimator
 from imblearn.over_sampling import RandomOverSampler
 from loguru import logger
 from sklearn.ensemble import VotingClassifier, VotingRegressor
@@ -17,7 +18,6 @@ from sklearn.preprocessing import LabelEncoder
 
 from cardio_parsers.crates.normalisers import Normalisers
 from cardio_parsers.utils.cross_validation import CrossValidation
-from cardio_parsers.utils.helpers import init_estimator
 
 
 class Verifications(Normalisers):

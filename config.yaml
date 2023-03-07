@@ -12,11 +12,11 @@ impute:
   constant: 0 # constant to use for imputation if method is 'constant'
 
 data_split:
-  active: False # whether to split data into training and testing sets
+  active: True # whether to split data into training and testing sets
   test_size: 0.2 # fraction of data to use for testing
 
-exploration:
-  active: False # whether to perform exploratory analysis
+selection:
+  active: False # whether to perform feature selection
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
@@ -33,10 +33,8 @@ exploration:
     object: "z_score_norm"
     datatime: "z_score_norm"
 
-
   jobs: [
-      # ['variance_threshold', 'z_score_norm', 'correlation', 'fr_all', 'pca', 'tsne', 'umap'],
-      # ['variance_threshold', 'z_score_norm', 'fr_all', 'pca', 'tsne', 'umap'],
+
       ["variance_threshold", "z_score_norm", "fr_forest"],
     ]
 

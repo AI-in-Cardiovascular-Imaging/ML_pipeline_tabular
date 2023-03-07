@@ -4,12 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from crates.helpers import split_data
 from loguru import logger
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import RFECV
 from sklearn.inspection import permutation_importance
-
-from cardio_parsers.utils.helpers import init_estimator, split_data
 
 
 class AnalyseVariables:

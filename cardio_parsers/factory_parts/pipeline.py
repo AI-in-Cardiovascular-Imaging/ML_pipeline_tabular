@@ -1,6 +1,6 @@
 from loguru import logger
 
-from cardio_parsers.crates import Imputers
+from cardio_parsers.crates.imputers import Imputers
 
 
 def run_when_active(func):
@@ -37,7 +37,7 @@ class Pipeline:
         """Split data"""
 
     @run_when_active
-    def exploration(self) -> None:
+    def selection(self) -> None:
         """Explore data"""
 
     @run_when_active

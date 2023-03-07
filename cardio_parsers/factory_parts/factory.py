@@ -22,7 +22,7 @@ class Factory:
         """Run factory"""
         logger.info('Factory started')
         DataReader(self.config.meta.input_file)()
-        for state, config in self.state_machine:  # TODO: multiprocessing here
+        for state, config in self.state_machine:  # TODO: multiprocessing
             self.produce_pipeline(state, config)
 
     @staticmethod

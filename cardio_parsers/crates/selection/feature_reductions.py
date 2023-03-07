@@ -3,10 +3,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from crates.helpers import init_estimator
 from loguru import logger
-from sklearn.feature_selection import RFECV
-
-from cardio_parsers.utils.helpers import init_estimator
+from sklearn.feature_selection import RFECV, VarianceThreshold
 
 
 class FeatureReductions:
@@ -174,3 +173,21 @@ class FeatureReductions:
         features_to_keep = list(feature_scores["feature"]) + list(self.target_label)
         data = data.drop(columns=[c for c in data.columns if c not in features_to_keep], axis=1)
         return data, feature_scores['feature'].tolist()[::-1]
+
+
+def variance_threshold(data: pd.DataFrame, label: str, thresh: float) -> pd.DataFrame:
+    """Remove features with variance below threshold"""
+    tmp = data[label]  # save label col
+    selector = VarianceThreshold(threshold=thresh * (1 - thresh))
+    selector.fit(data)
+    data = data.loc[:, selector.get_support()]
+    logger.info(
+        f'Removed {len(selector.get_support()) - len(data.columns)} features with same value in more than {int(thresh*100)}% of subjects, '
+        f'number of remaining features: {len(data.columns)}'
+    )
+
+    if label not in data.columns:  # ensure label col is kept
+        logger.warning(f'Target label {label} has variance below threshold {thresh}.')
+        data = pd.concat((data, tmp), axis=1)
+
+    return data
