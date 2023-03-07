@@ -4,11 +4,16 @@ meta:
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
   target_label: ["mace"] # which column to use as label for exploration, feature reduction and analysis
   seed: [1, 2, 3] # random seed
-  logging_level: "DEBUG" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "TRACE" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+inspection:
+  active: False # whether to perform data inspection
+  label_as_index: "subject" # column string name or None
+  custom_clean_up: False # TODO: implement custom clean up
 
 impute:
   active: True # whether to impute missing values
-  method: ["drop_nan_impute"] #  drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
+  method: ["drop_nan_impute", "simple_impute"] #  drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
   constant: 0 # constant to use for imputation if method is 'constant'
 
 data_split:

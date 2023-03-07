@@ -16,7 +16,7 @@ from sklearn.ensemble import (
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import KFold, StratifiedKFold
 
-from cardio_parsers.data_borg.data_borg import DataBorg
+from cardio_parsers.data_borg import DataBorg
 
 
 class TargetStatistics(DataBorg):

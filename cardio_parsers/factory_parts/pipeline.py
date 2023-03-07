@@ -1,6 +1,7 @@
 from loguru import logger
 
 from cardio_parsers.crates.imputers import Imputers
+from cardio_parsers.crates.inspections import TargetStatistics
 
 
 def run_when_active(func):
@@ -26,6 +27,11 @@ class Pipeline:
     @staticmethod
     def meta() -> None:
         """Maybe add some experiment info"""
+
+    @run_when_active
+    def inspection(self) -> None:
+        """Inspect data"""
+        TargetStatistics(self.config)()
 
     @run_when_active
     def impute(self) -> None:

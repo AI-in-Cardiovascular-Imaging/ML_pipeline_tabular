@@ -20,16 +20,23 @@ class DataBorg:
     """Shares data between classes"""
 
     shared_state = {
-        '__data_store': NestedDefaultDict(),
+        '__data_store': None,
+        '__feature_store': None,
         '__original_data': None,
         '__ephemeral_data': None,
         '__selection_data': None,
         '__verification_data': None,
-        '__feature_store': NestedDefaultDict(),
         '__state_name': None,
     }
 
     def __init__(self) -> None:
+        self.__data_store = NestedDefaultDict()
+        self.__feature_store = NestedDefaultDict()
+        self.__original_data = None
+        self.__ephemeral_data = None
+        self.__selection_data = None
+        self.__verification_data = None
+        self.__state_name = None
         self.__dict__ = self.shared_state  # borg design pattern
 
     def show(self) -> None:
