@@ -1,6 +1,16 @@
+import pandas as pd
 from loguru import logger
 
 from cardio_parsers.data_borg.data_borg import DataBorg
+
+
+def check_learning_task(target_data: pd.DataFrame) -> str:
+    """Check if the target variable is binary, multiclass or continuous."""
+    if target_data.nunique() == 2:
+        return 'binary-classification'
+    if 2 < target_data.nunique() <= 10:
+        return 'multi-classification'
+    return 'regression'
 
 
 class TargetStatistics(DataBorg):
@@ -14,7 +24,7 @@ class TargetStatistics(DataBorg):
         """Show target statistics"""
         for target_label in self.target_label:
             target_data = self.original_data[target_label]
-            task = self._check_learning_task(target_data)
+            task = check_learning_task(target_data)
             self._plot_stats(target_label, target_data, task)
 
     @staticmethod
@@ -38,20 +48,6 @@ class TargetStatistics(DataBorg):
             )
         else:
             raise ValueError(f'Unknown learning task: {task}')
-
-    @staticmethod
-    def _check_learning_task(target_data) -> str:
-        """Check if the target variable is binary, multiclass or continuous."""
-        if target_data.nunique() == 2:
-            return 'binary-classification'
-        if 2 < target_data.nunique() <= 10:
-            return 'multi-classification'
-        return 'regression'
-
-    def get_learning_task(self, target_label) -> str:
-        """Get learning task"""
-        target_data = self.original_data[target_label]
-        return self._check_learning_task(target_data)
 
 
 # len(target_data.nunique())
