@@ -3,8 +3,8 @@ import sys
 from loguru import logger
 from omegaconf import OmegaConf
 
-from cardio_parsers.factory_parts.factory import Factory
 from cardio_parsers.factory_parts.data_reader import DataReader
+from cardio_parsers.factory_parts.factory import Factory
 
 with open('config.yaml') as file:
     config = OmegaConf.load(file)

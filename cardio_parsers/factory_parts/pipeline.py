@@ -6,6 +6,7 @@ from cardio_parsers.data_borg.data_borg import DataBorg
 
 def run_when_active(func):
     """Decorator to run pipeline step when active"""
+
     def wrapper(self, *args, **kwargs):
         func_name = func.__name__
         if self.config[func_name]['active']:
@@ -16,7 +17,6 @@ def run_when_active(func):
 
 
 class Pipeline(DataBorg):
-
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
