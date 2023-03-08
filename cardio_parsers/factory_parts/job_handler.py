@@ -70,7 +70,7 @@ class ExploreData(Normalisers, DimensionReductions, FeatureReductions):
         return data, False
 
     def variance_threshold(self, data):
-        """Perform variance threshold based feature selection on the data"""
+        """Perform variance threshold based feature selections on the data"""
         data = variance_threshold(
             data=data,
             label=self.target_label,

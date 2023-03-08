@@ -24,7 +24,11 @@ class FeatureReductions:
 
     def __reduction(self, data: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
         estimator, cross_validator, scoring = init_estimator(
-            rfe_estimator, self.task, self.seed, self.scoring, self.class_weight
+            rfe_estimator,
+            self.task,
+            self.seed,
+            self.scoring,
+            self.class_weight,
         )
 
         number_of_top_features = 30

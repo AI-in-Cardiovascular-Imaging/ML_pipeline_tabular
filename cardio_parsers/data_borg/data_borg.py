@@ -33,7 +33,7 @@ class DataBorg:
     def add_state_name(self, state_name: str) -> None:
         """Sets the state name"""
         self._data_store[state_name] = NestedDefaultDict()
-        logger.info(f'State name set -> {state_name}')
+        logger.trace(f'State name set -> {state_name}')
 
     def set_ephemeral_data(self, state_name: str, frame: pd.DataFrame) -> None:
         """Sets the ephemeral data"""

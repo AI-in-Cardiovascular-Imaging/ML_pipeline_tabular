@@ -15,7 +15,7 @@ def data_bubble(func):
         imp_data = impute.fit_transform(data)
         imp_data = pd.DataFrame(imp_data, index=data.index, columns=data.columns)
         logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_data)}')
-        return imp_data
+        self.set_ephemeral_data(self.state_name, imp_data)
 
     return wrapper
 
@@ -27,12 +27,13 @@ class Imputers(DataBorg):
         super().__init__()
         self.config = config
         self.seed = config.meta.seed
+        self.state_name = config.meta.state_name
         self.impute_method = config.impute.method
 
     def __call__(self) -> None:
         """Impute missing data"""
         if self.__check_methods():
-            return getattr(self, self.impute_method)(self.get_ephemeral_data())
+            return getattr(self, self.impute_method)(self.get_ephemeral_data(self.state_name))
 
     def __check_methods(self) -> bool:
         """Check if the given method is valid"""
@@ -42,11 +43,11 @@ class Imputers(DataBorg):
             raise ValueError(f'Unknown imputation method: {self.impute_method}')
         return True
 
-    def drop_nan_impute(self, data: pd.DataFrame) -> pd.DataFrame:
+    def drop_nan_impute(self, data: pd.DataFrame) -> None:
         """Drop patients with any NaN values"""
         imp_data = data.dropna(axis=0, how='any')
         logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_data)}')
-        return imp_data
+        self.set_ephemeral_data(self.state_name, imp_data)
 
     @data_bubble
     def iterative_impute(self) -> IterativeImputer:

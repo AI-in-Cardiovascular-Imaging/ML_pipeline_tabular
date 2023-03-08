@@ -21,7 +21,7 @@ data_split:
   test_size: 0.2 # fraction of data to use for testing
 
 selection:
-  active: False # whether to perform feature selection
+  active: False # whether to perform feature selections
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed

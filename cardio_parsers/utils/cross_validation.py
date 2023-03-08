@@ -1,4 +1,3 @@
-from loguru import logger
 from sklearn.model_selection import GridSearchCV
 
 
