@@ -6,12 +6,19 @@ from omegaconf import OmegaConf
 from cardio_parsers.factory_parts.data_reader import DataReader
 from cardio_parsers.factory_parts.factory import Factory
 
-with open('config.yaml') as file:
-    config = OmegaConf.load(file)
 
-logger.remove()
-logger.add(sys.stderr, level=config.meta.logging_level)
+def main():
 
-DataReader(config)()
-fa = Factory(config)
-fa()
+    with open('config.yaml') as file:
+        config = OmegaConf.load(file)
+
+    logger.remove()
+    logger.add(sys.stderr, level=config.meta.logging_level)
+
+    DataReader(config)()
+    factory = Factory(config)
+    factory()
+
+
+if __name__ == '__main__':
+    main()
