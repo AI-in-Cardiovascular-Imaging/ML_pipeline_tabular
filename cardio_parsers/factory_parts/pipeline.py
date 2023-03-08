@@ -1,10 +1,11 @@
 from loguru import logger
 
 from cardio_parsers.crates.imputers import Imputers
-from cardio_parsers.crates.inspections import CleanUp, TargetStatistics
+from cardio_parsers.data_borg.data_borg import DataBorg
 
 
 def run_when_active(func):
+    """Decorator to run pipeline step when active"""
     def wrapper(self, *args, **kwargs):
         func_name = func.__name__
         if self.config[func_name]['active']:
@@ -14,24 +15,31 @@ def run_when_active(func):
     return wrapper
 
 
-class Pipeline:
+class Pipeline(DataBorg):
+
     def __init__(self, config) -> None:
+        super().__init__()
         self.config = config
+        self.state_name = config.meta.state_name
+        self.add_state_name(self.state_name)
+        self.copy_original_to_ephemeral(self.state_name)
 
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
         for step in self.config.keys():
             getattr(self, step)()
 
+    def __del__(self):
+        """Delete assigned state data"""
+        self.remove_state_data(self.state_name)
+
     @staticmethod
     def meta() -> None:
-        """Maybe add some experiment info"""
+        """Skip meta step"""
 
-    @run_when_active
-    def inspection(self) -> None:
-        """Inspect data"""
-        TargetStatistics(self.config)()
-        CleanUp(self.config)()
+    @staticmethod
+    def inspection() -> None:
+        """Skip inspection step"""
 
     @run_when_active
     def impute(self) -> None:

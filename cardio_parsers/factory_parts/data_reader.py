@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from loguru import logger
 
-from cardio_parsers.data_borg.data_borg import DataBorg
+from cardio_parsers.data_borg import DataBorg
 
 
 class DataReader(DataBorg):
@@ -19,6 +19,13 @@ class DataReader(DataBorg):
                 raise FileNotFoundError(f'Invalid file path, check -> {self.file}')
 
     def __call__(self) -> None:
+        self.add_state_name(self.state_name)
+        if self._original_data is not None:
+            self.copy_original_to_ephemeral(self.state_name)
+        else:
+            self.read_file()
+
+    def read_file(self):
         """Reads excel, csv, or pd dataframe and returns a pd dataframe"""
         if self.file.endswith('.csv'):
             logger.info(f'Reading csv file -> {self.file}')
@@ -36,5 +43,6 @@ class DataReader(DataBorg):
             logger.info(f'Reading dataframe -> {self.file}')
             self.set_original_data(self.file)
             self.set_ephemeral_data(self.state_name, self.file)
+
         else:
             raise ValueError(f'Found invalid file type, allowed is (.csv, .xlsx, dataframe), check -> {self.file}')

@@ -1,4 +1,5 @@
 from collections import defaultdict
+import copy
 
 import pandas as pd
 from loguru import logger
@@ -24,6 +25,9 @@ class DataBorg:
     }
 
     def __init__(self) -> None:
+        self._data_store = NestedDefaultDict()
+        self._feature_store = NestedDefaultDict()
+        self._original_data = None
         self.__dict__ = self.shared_state  # borg design pattern
 
     def add_state_name(self, state_name: str) -> None:
@@ -88,6 +92,11 @@ class DataBorg:
         """Returns the original data"""
         logger.trace(f'Returning original data -> {type(self._original_data)}')
         return self._original_data
+
+    def copy_original_to_ephemeral(self, state_name: str) -> None:
+        """Copies the original data to ephemeral"""
+        self._data_store[state_name]['ephemeral'] = copy.deepcopy(self._original_data)
+        logger.trace(f'Original data copied to ephemeral -> {type(self._data_store[state_name]["ephemeral"])}')
 
     def remove_state_data(self, state_name: str) -> None:
         """Removes the state, prevent memory overflows"""
