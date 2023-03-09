@@ -18,7 +18,8 @@ class TargetStatistics(DataBorg):
         super().__init__()
         self.config = config
         self.target_label = config.meta.target_label
-        self.original_data = self.get_original_data()
+        self.original_data = self.get_data('original')
+        logger.info(f'Running -> {self.__class__.__name__}')
 
     def show_target_statistics(self) -> None:
         """Show target statistics"""

@@ -22,7 +22,7 @@ class Pipeline(DataBorg):
         self.config = config
         self.state_name = config.meta.state_name
         self.add_state_name(self.state_name)
-        self.copy_original_to_ephemeral(self.state_name)
+        self.sync_ephemeral_data_to_data_store(self.state_name, 'ephemeral')
 
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
@@ -31,7 +31,7 @@ class Pipeline(DataBorg):
 
     def __del__(self):
         """Delete assigned state data"""
-        self.remove_state_data(self.state_name)
+        self.remove_state_data_store(self.state_name)
 
     @staticmethod
     def meta() -> None:

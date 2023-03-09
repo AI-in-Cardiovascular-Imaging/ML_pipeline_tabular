@@ -3,9 +3,11 @@ from sklearn.model_selection import train_test_split
 from cardio_parsers.data_borg import DataBorg
 
 
-class TrainTestSplit(DataBorg):
-    def __init__(self):
+class SelectionSplit(DataBorg):
+    def __init__(self, config) -> None:
         super().__init__()
+        self.config = config
+        self.selection_fracture = self.config.data_split.selection_fracture
 
     def __call__(self):
 
