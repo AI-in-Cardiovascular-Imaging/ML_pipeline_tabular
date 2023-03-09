@@ -2,7 +2,7 @@ meta:
   output_dir: "/home/melandur/Downloads"
   input_file: "/home/melandur/Data/Myocarditis/new/5_merged/phenomapping.xlsx"
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
-  target_label: ["mace", "bmi"] # which column to use as label for exploration, feature reduction and analysis
+  target_label: ["mace"] # which column to use as label for exploration, feature reduction and analysis
   seed: [42] # random seed
   logging_level: "INFO" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   state_name: "" # don't change this, will be set automatically by the pipeline
@@ -20,8 +20,14 @@ impute:
 data_split:
   selection_frac: 0.2  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing
-  oversample_selection: False # oversample minority class to balance feature selection set
-  oversample_verification: False # oversample minority class to balance verification set
+  over_sample_selection: False # oversample minority class to balance feature selection set
+  over_sample_verification: False # oversample minority class to balance verification set
+  over_sample_method:
+    {
+      "binary_classification": "RandomOverSampler",
+      "multi_classification": "RandomOverSampler",
+      "regression": "RandomOverSampler",
+    }
 
 selection:
   active: False # whether to perform feature selections
@@ -32,8 +38,8 @@ selection:
   keep_top_features: 20 # keep n top features
   scoring:
     {
-      "binary-classification": "average_precision",
-      "multi-classification": "average_precision",
+      "binary_classification": "average_precision",
+      "multi_classification": "average_precision",
       "regression": "neg_mean_absolute_error",
     }
   class_weight: "balanced"

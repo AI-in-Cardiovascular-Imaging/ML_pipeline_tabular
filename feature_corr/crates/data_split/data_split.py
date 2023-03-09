@@ -25,7 +25,11 @@ class DataSplit(DataBorg):
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
         self.selection_frac = config.data_split.selection_frac
+        self.over_sample_method = config.data_split.over_sample_method
+        self.over_sample_selection = config.data_split.over_sample_selection
         self.verification_test_frac = config.data_split.verification_test_frac
+        self.over_sample_verification = config.data_split.over_sample_verification
+
         self.stratify = None
         self.frame = self.get_store('frame', self.state_name, 'ephemeral')
 
@@ -36,10 +40,10 @@ class DataSplit(DataBorg):
 
     def set_stratification(self):
         """Set stratification"""
-        if self.learn_task == 'binary-classification':
+        if self.learn_task == 'binary_classification':
             target_frame = self.frame[self.config.meta.target_label]
             self.stratify = target_frame
-        elif self.learn_task == 'multi-classification':
+        elif self.learn_task == 'multi_classification':
             raise NotImplementedError('Multi-classification not implemented')
         elif self.learn_task == 'regression':
             self.stratify = None
@@ -55,7 +59,7 @@ class DataSplit(DataBorg):
                 test_size=1.0 - self.selection_frac,
                 random_state=self.seed,
             )
-            self.oversampling(self.frame, self.frame[self.target_label])
+            self.over_sampling(selection_train, selection_train[self.target_label])
             self.set_store('frame', self.state_name, 'selection_train', selection_train)
             self.set_store('frame', self.state_name, 'verification_train', verification_train)
             self.set_store('frame', self.state_name, 'verification_test', None)
@@ -69,7 +73,7 @@ class DataSplit(DataBorg):
         elif (
             self.selection_frac == 0.0
         ):  # special mode in which entire train data is used for selection and verification
-            self.oversampling(self.frame, self.frame[self.target_label])
+            self.over_sampling(self.frame, self.frame[self.target_label])
             verification_train, verification_test = train_test_split(
                 self.frame,
                 stratify=self.stratify,
@@ -88,11 +92,36 @@ class DataSplit(DataBorg):
         else:
             raise ValueError(f'Value {self.selection_frac} is invalid, must be float between (0.0, 1.0)')
 
-    def oversampling(self, x_frame, y_frame) -> tuple:
+    def over_sampling(
+        self,
+        x_frame,
+        y_frame,
+    ):
         """Oversample data"""
-        oversampler = RandomOverSampler(random_state=self.seed)
-        x_frame, y_frame = oversampler.fit_resample(x_frame, y_frame)
-        logger.warning(f'asdasd -> {type(x_frame)}')
+        method = self.over_sample_method[self.learn_task]
+        over_sampler_name = f'{self.learn_task}_{method}'
+        print(over_sampler_name)
+        over_sampler_dict = {
+            'ADASYN': ADASYN(random_state=self.seed),
+            'SMOTE': SMOTE(random_state=self.seed),
+            'SMOTEN': SMOTEN(random_state=self.seed),
+            'SMOTENC': SMOTENC(categorical_features=2, random_state=self.seed),
+            'SVMSMOTE': SVMSMOTE(random_state=self.seed),
+            'BorderlineSMOTE': BorderlineSMOTE(random_state=self.seed),
+            'KMeansSMOTE': KMeansSMOTE(random_state=self.seed),
+            'regression_RandomOverSampler': RandomOverSampler(random_state=self.seed),
+            'binary_classification_RandomOverSampler': RandomOverSampler(random_state=self.seed),
+        }
+
+        if over_sampler_name not in over_sampler_dict:
+            raise ValueError(f'Unknown over sampler: {over_sampler_name}')
+
+        over_sampler = over_sampler_dict[over_sampler_name]
+
+        print(f'Over sampling with {over_sampler_name} ...')
+
+        over_sampler = RandomOverSampler(random_state=self.seed)
+        x_frame, y_frame = over_sampler.fit_resample(x_frame, y_frame)
         # return self.x_train, self.y_train
 
     # def create_verification_split(self):

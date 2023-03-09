@@ -121,7 +121,7 @@ class Verifications(DataBorg, Normalisers):
 
     def performance_statistics(self, y_pred):
         """Print performance statistics"""
-        if self.learn_task == 'binary-classification':
+        if self.learn_task == 'binary_classification':
             print('Accuracy', accuracy_score(self.y_test, y_pred, normalize=True))
             print('Average precision', average_precision_score(self.y_test, y_pred))
             print(classification_report(self.y_test, y_pred))
@@ -133,7 +133,7 @@ class Verifications(DataBorg, Normalisers):
             plt.xlabel('Predicted')
             plt.ylabel('Truth')
             # plt.show()
-        elif self.learn_task == 'multi-classification':
+        elif self.learn_task == 'multi_classification':
             raise NotImplementedError('Multi-classification has not yet been implemented.')
         elif self.learn_task == 'regression':
             print('Mean absolute error', mean_absolute_error(self.y_test, y_pred))

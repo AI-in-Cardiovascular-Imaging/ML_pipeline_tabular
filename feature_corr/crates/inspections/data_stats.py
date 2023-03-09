@@ -7,9 +7,9 @@ from feature_corr.data_borg import DataBorg
 def check_learn_task(target_data: pd.DataFrame) -> str:
     """Check if the target variable is binary, multiclass or continuous."""
     if target_data.nunique() == 2:
-        return 'binary-classification'
+        return 'binary_classification'
     if 2 < target_data.nunique() <= 10:
-        return 'multi-classification'
+        return 'multi_classification'
     return 'regression'
 
 
@@ -39,14 +39,14 @@ class TargetStatistics(DataBorg):
     @staticmethod
     def _plot_stats(target_label, target_data, task) -> None:
         """Show target statistics"""
-        if task == 'binary-classification':
+        if task == 'binary_classification':
             ratio = (target_data.sum() / len(target_data.index)).round(2)
             logger.info(
                 f'\nSummary statistics for binary target variable {target_label}:\n'
                 f'Positive cases -> {(ratio * 100).round(2)}% or {target_data.sum()}/{len(target_data.index)} samples.'
             )
 
-        elif task == 'multi-classification':
+        elif task == 'multi_classification':
             raise NotImplementedError('Multi-classification is not implemented yet')
 
         elif task == 'regression':
