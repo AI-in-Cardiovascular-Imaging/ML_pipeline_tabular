@@ -1,6 +1,6 @@
 from loguru import logger
 
-from cardio_parsers.data_borg import DataBorg
+from feature_corr.data_borg import DataBorg
 
 
 class CleanUp(DataBorg):

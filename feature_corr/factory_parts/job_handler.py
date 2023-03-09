@@ -5,7 +5,7 @@ import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
 
-from cardio_parsers.crates import DimensionReductions, FeatureReductions, Normalisers
+from feature_corr.crates import DimensionReductions, FeatureReductions, Normalisers
 
 
 class ExploreData(Normalisers, DimensionReductions, FeatureReductions):
@@ -69,11 +69,11 @@ class ExploreData(Normalisers, DimensionReductions, FeatureReductions):
         data = getattr(self, step)(data)
         return data, False
 
-    def variance_threshold(self, data):
-        """Perform variance threshold based feature selections on the data"""
-        data = variance_threshold(
-            data=data,
-            label=self.target_label,
-            thresh=self.variance_thresh,
-        )
-        return data
+    # def variance_threshold(self, data):
+    #     """Perform variance threshold based feature selections on the data"""
+    #     data = variance_threshold(
+    #         data=data,
+    #         label=self.target_label,
+    #         thresh=self.variance_thresh,
+    #     )
+    #     return data

@@ -1,7 +1,7 @@
 import pandas as pd
 from loguru import logger
 
-from cardio_parsers.data_borg import DataBorg
+from feature_corr.data_borg import DataBorg
 
 
 def check_learning_task(target_data: pd.DataFrame) -> str:

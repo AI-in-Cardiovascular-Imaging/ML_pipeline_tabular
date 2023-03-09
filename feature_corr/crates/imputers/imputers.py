@@ -5,7 +5,7 @@ from sklearn.experimental import enable_iterative_imputer  # because of bug in s
 from sklearn.impute import IterativeImputer, KNNImputer, MissingIndicator, SimpleImputer
 
 logger.trace(enable_iterative_imputer)  # to avoid auto import removal
-from cardio_parsers.data_borg import DataBorg
+from feature_corr.data_borg import DataBorg
 
 
 def data_bubble(func):
@@ -33,7 +33,8 @@ class Imputers(DataBorg):
     def __call__(self) -> None:
         """Impute missing data"""
         if self.__check_methods():
-            return getattr(self, self.impute_method)(self.get_store('frame', self.state_name, 'ephemeral'))
+            ephemeral_frame = self.get_store('frame', self.state_name, 'ephemeral')
+            return getattr(self, self.impute_method)(ephemeral_frame)
 
     def __check_methods(self) -> bool:
         """Check if the given method is valid"""

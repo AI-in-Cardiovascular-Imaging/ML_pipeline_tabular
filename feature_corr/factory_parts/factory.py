@@ -1,9 +1,9 @@
 from loguru import logger
 from omegaconf import DictConfig
 
-from cardio_parsers.crates.inspections import CleanUp, TargetStatistics
-from cardio_parsers.factory_parts.pipeline import Pipeline
-from cardio_parsers.factory_parts.state_machine import StateMachine
+from feature_corr.crates.inspections import CleanUp, TargetStatistics
+from feature_corr.factory_parts.pipeline import Pipeline
+from feature_corr.factory_parts.state_machine import StateMachine
 
 
 class Factory:

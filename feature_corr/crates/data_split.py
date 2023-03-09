@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 
-from cardio_parsers.data_borg import DataBorg
+from feature_corr.data_borg import DataBorg
 
 
 class SelectionSplit(DataBorg):

@@ -16,8 +16,8 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-from cardio_parsers.crates.normalisers import Normalisers
-from cardio_parsers.utils.cross_validation import CrossValidation
+from feature_corr.crates.normalisers import Normalisers
+from feature_corr.utils.cross_validation import CrossValidation
 
 
 class Verifications(Normalisers):

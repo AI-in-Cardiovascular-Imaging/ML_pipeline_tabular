@@ -7,13 +7,13 @@ import sys
 import hydra
 import numpy as np
 import pandas as pd
-from cardio_parsers.stations.verifications import VerifyFeatures
 from crates.helpers import target_statistics
+from feature_corr.stations.verifications import VerifyFeatures
 from loguru import logger
 from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
 
-from cardio_parsers.utils.exploration import ExploreData
+from feature_corr.utils.exploration import ExploreData
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
