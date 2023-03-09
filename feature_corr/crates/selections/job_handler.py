@@ -1,22 +1,28 @@
 import os
 
+from crates.normalisers import Normalisers
 from loguru import logger
 from omegaconf import DictConfig
 
-from feature_corr.crates.normalisers import Normalisers
-from feature_corr.crates.selections import DimensionReductions, FeatureReductions
+from feature_corr.crates.selections.dim_reductions import DimensionReductions
+from feature_corr.crates.selections.feature_reductions import FeatureReductions
+from feature_corr.crates.selections.recursive_feature_elimination import (
+    RecursiveFeatureElimination,
+)
 from feature_corr.data_borg import DataBorg
 
 
-class JobHandler(DataBorg, Normalisers, DimensionReductions, FeatureReductions):
+class JobHandler(DataBorg, Normalisers, DimensionReductions, FeatureReductions, RecursiveFeatureElimination):
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
+
         self.seed = config.meta.seed
         self.jobs = config.selection.jobs
         self.task = config.meta.learn_task
         self.out_dir = config.meta.output_dir
         self.scoring = config.selection.scoring
+        self.experiment_name = config.meta.name
         self.state_name = config.meta.state_name
         self.target_label = config.meta.target_label
         self.corr_method = config.selection.corr_method
@@ -36,7 +42,7 @@ class JobHandler(DataBorg, Normalisers, DimensionReductions, FeatureReductions):
         for job in self.jobs:
             logger.info(f'Running {job}')
             self.job_name = '_'.join(job)  # name of current job
-            self.job_dir = os.path.join(self.out_dir, self.job_name)
+            self.job_dir = os.path.join(self.out_dir, self.experiment_name, self.state_name, self.job_name)
             os.makedirs(self.job_dir, exist_ok=True)
             data = self.get_store('frame', self.state_name, 'selection_train')
             for step in job:

@@ -22,3 +22,7 @@ class CleanUp(DataBorg):
             data = self.get_frame('ephemeral')
             data = data.set_index(str(self.config.inspection.label_as_index))
             self.set_frame('ephemeral', data)
+
+    def column_based_clean_up(self):
+        """Clean up columns"""
+        # TODO: Make me nice, always expect the unexpected

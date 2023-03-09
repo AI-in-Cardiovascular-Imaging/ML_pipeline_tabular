@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from crates.helpers import init_estimator
+from crates.normalisers import Normalisers
 from imblearn.over_sampling import RandomOverSampler
 from loguru import logger
 from sklearn.ensemble import VotingClassifier, VotingRegressor
@@ -13,18 +14,44 @@ from sklearn.metrics import (
     mean_absolute_error,
     r2_score,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-from feature_corr.crates.normalisers import Normalisers
-from feature_corr.utils.cross_validation import CrossValidation
+from feature_corr.data_borg import DataBorg
 
 
-class Verifications(Normalisers):
+class CrossValidation:
+    def __init__(self, x_train, y_train, estimator, cross_validator, param_grid: dict, scoring: str, seed: int) -> None:
+        self.x_train = x_train
+        self.y_train = y_train
+        self.estimator = estimator
+        self.cross_validator = cross_validator
+        self.param_grid = dict(param_grid)
+        self.scoring = scoring
+        self.seed = seed
+
+    def __call__(self):
+        selector = GridSearchCV(
+            estimator=self.estimator,
+            param_grid=self.param_grid,
+            scoring=self.scoring,
+            cv=self.cross_validator,
+            n_jobs=4,
+        )
+        selector.fit(self.x_train, self.y_train)
+
+        return selector
+
+
+class Verifications(DataBorg, Normalisers):
     """Train random forest classifier to verify feature importance"""
 
     def __init__(self, config, v_data, v_data_test=None, features=None, task: str = 'classification'):
         super().__init__()
+        self.state_name = config.meta.state_name
+        self.learn_task = config.meta.learn_task
+        # features = self.get_data('features', self.state_name, self.learn_task)$
+
         self.target_label = config.analysis.experiment.target_label
         self.seed = config.analysis.run.seed
         self.scoring = config.analysis.run.scoring

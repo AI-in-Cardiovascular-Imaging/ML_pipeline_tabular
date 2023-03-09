@@ -1,7 +1,3 @@
-import os
-from copy import deepcopy
-
-import pandas as pd
 from loguru import logger
 from sklearn.ensemble import (
     AdaBoostClassifier,
@@ -17,25 +13,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import KFold, StratifiedKFold
 
 
-def save_tables(out_dir, experiment_name, tables) -> None:
-    """Save tables to excel file"""
-    file_path = os.path.join(out_dir, f'{experiment_name}.xlsx')
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    tables.to_excel(file_path, index=False)
-
-
-def split_data(data: pd.DataFrame, metadata: list, hue: str, remove_mdata: bool = True):
-    """Split data into data to analyse and hue data"""
-    to_analyse = deepcopy(data)
-    hue_df = to_analyse[hue]
-    if remove_mdata:
-        to_analyse = to_analyse.drop(metadata, axis=1, errors='ignore')
-    suffix = 'no_mdata' if remove_mdata else 'with_mdata'
-    return to_analyse, hue_df, suffix
-
-
-def init_estimator(estimator_name: str, task: str, seed, scoring, class_weight):
-    if task == 'binary-classification':
+def init_estimator(estimator_name: str, learn_task: str, seed, scoring, class_weight):
+    if learn_task == 'binary-classification':
         if estimator_name == 'forest':
             estimator = RandomForestClassifier(random_state=seed, class_weight=class_weight)
         elif estimator_name == 'extreme_forest':
@@ -51,7 +30,10 @@ def init_estimator(estimator_name: str, task: str, seed, scoring, class_weight):
             raise NotImplementedError
         cv = StratifiedKFold(shuffle=True, random_state=seed)
 
-    else:  # regression
+    elif learn_task == 'multi-classification':
+        raise NotImplementedError('Multi-classification is not yet implemented.')
+
+    elif learn_task == 'regression':
         if estimator_name == 'forest':
             estimator = RandomForestRegressor(random_state=seed)
         elif estimator_name == 'extreme_forest':
@@ -67,6 +49,8 @@ def init_estimator(estimator_name: str, task: str, seed, scoring, class_weight):
             raise NotImplementedError
         cv = KFold(shuffle=True, random_state=seed)
 
-    scoring = scoring[task]
+    else:
+        raise ValueError(f'The learn task you requested ({learn_task}) is not supported.')
 
+    scoring = scoring[learn_task]
     return estimator, cv, scoring

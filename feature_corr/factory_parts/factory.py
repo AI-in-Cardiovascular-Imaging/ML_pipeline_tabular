@@ -1,3 +1,5 @@
+import os
+
 from loguru import logger
 from omegaconf import DictConfig
 
@@ -22,6 +24,10 @@ class Factory:
 
         for config in self.state_machine:
             self.produce_pipeline(config)
+
+    def __del__(self):
+        logger.info('Factory finished')
+        logger.info(f'Check results in -> {os.path.join(self.config.meta.output_dir, self.config.meta.name)}')
 
     @staticmethod
     def produce_pipeline(config: DictConfig) -> None:

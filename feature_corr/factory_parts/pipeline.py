@@ -1,7 +1,7 @@
+from crates.data_split.data_split import DataSplit
 from loguru import logger
 from omegaconf import OmegaConf
 
-from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.imputers import Imputers
 from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.selections import JobHandler
@@ -63,3 +63,4 @@ class Pipeline(DataBorg):
     @run_when_active
     def verification(self) -> None:
         """Verify data"""
+        Verification(self.config)()

@@ -1,3 +1,1 @@
-from feature_corr.crates.selections.dim_reductions import DimensionReductions
-from feature_corr.crates.selections.feature_reductions import FeatureReductions
 from feature_corr.crates.selections.job_handler import JobHandler
