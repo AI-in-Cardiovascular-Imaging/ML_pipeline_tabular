@@ -31,8 +31,9 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
         self.corr_thresh = config.selection.corr_thresh
         self.class_weight = config.selection.class_weight
         self.variance_thresh = config.selection.variance_thresh
-        self.corr_drop_features = config.selection.corr_drop_features
         self.auto_norm_method = config.selection.auto_norm_method
+        self.keep_top_features = config.selection.keep_top_features
+        self.corr_drop_features = config.selection.corr_drop_features
         self.job_name = ''
         self.job_dir = None
 
@@ -54,8 +55,8 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
                     break
             if isinstance(data, tuple):
                 top_features = data[0]
-                logger.info(f'Features selected for {self.job_name}: {top_features}')
-                self.set_store('feature', self.state_name, f'{self.state_name}_{self.job_name}', top_features)
+                logger.info(f'Found features')
+                self.set_store('feature', self.state_name, self.job_name, top_features)
             else:
                 logger.warning(
                     f'No features selected for {self.job_name}, add feature reduction or recursive '
@@ -76,7 +77,7 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
         if not selected_methods.issubset(valid_methods):
             raise ValueError(f'Invalid auto norm method, check -> {str(selected_methods - valid_methods)}')
 
-    def process_job(self, step, data):
+    def process_job(self, step: str, data: dict) -> tuple:
         """Process data according to the given step"""
         if data is None:
             logger.warning(

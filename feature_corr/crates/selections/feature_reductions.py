@@ -24,10 +24,9 @@ class FeatureReductions:
         self.scoring = None
         np.random.seed(self.seed)
 
-    def univariate_analysis(self, data: pd.DataFrame):
-        """
-        Perform univariate analysis (box plots and distributions)
-        """
+    def univariate_analysis(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Perform univariate analysis (box plots and distributions)"""
+        raise NotImplementedError('Test me first and integrate params')
         data_long = data.melt(id_vars=[self.target_label])
         sns.boxplot(
             data=data_long,
@@ -59,15 +58,28 @@ class FeatureReductions:
         plt.clf()
         return data
 
-    def bivariate_analysis(self, data):
-        """
-        Perform bivariate analysis
-        """
+    @staticmethod
+    def highlight(df: pd.DataFrame, lower_limit: np.array, upper_limit: np.array) -> pd.DataFrame:
+        """Highlight outliers in a dataframe"""
+        raise NotImplementedError('Test me first and integrate params')
+        style_df = pd.DataFrame('', index=df.index, columns=df.columns)
+        mask = pd.concat(
+            [
+                ~df.iloc[:, i].between(lower_limit[i], upper_limit[i], inclusive='neither')
+                for i in range(lower_limit.size)
+            ],
+            axis=1,
+        )
+        style_df = style_df.mask(mask, 'background-color: red')
+        style_df.iloc[:, lower_limit.size :] = ''  # uncolor metadata
+        return style_df
 
-    def correlation(self, data: pd.DataFrame):
-        """
-        Compute correlation between features and optionally drop highly correlated ones
-        """
+    def bivariate_analysis(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Perform bivariate analysis"""
+
+    def correlation(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Compute correlation between features and optionally drop highly correlated ones"""
+        raise NotImplementedError('Test me first and integrate params')
         to_analyse = data.drop(self.target_label, axis=1)
         target = data[self.target_label]
         matrix = to_analyse.corr(method=self.corr_method).round(2)
@@ -101,21 +113,13 @@ class FeatureReductions:
         plt.xticks(rotation=90)
         plt.savefig(os.path.join(self.job_dir, 'corr_plot.pdf'))
         plt.close(fig)
-
         data = pd.concat((to_analyse, data[self.target_label]), axis=1)
-
         return data
 
-    def drop_outliers(self, data: pd.DataFrame):
-        """Detect outliers in the data, optionally removing or further investigating them
-
-        Args:
-            data (pd.DataFrame): data
-            whiskers (float, optional): determines reach of the whiskers. Defaults to 1.5 (matplotlib default)
-            remove (bool, optional): whether to remove outliers. Defaults to True.
-            investigate (bool, optional): whether to investigate outliers. Defaults to False.
-        """
+    def drop_outliers(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Detect outliers in the data, optionally removing or further investigating them"""
         # Split data and metadata
+        raise NotImplementedError('Test me first and integrate params')
         mdata = data[self.metadata]
         whiskers = 1.5
         to_analyse = data.drop(self.metadata, axis=1, errors='ignore')
@@ -136,16 +140,10 @@ class FeatureReductions:
         # TODO: deal with removed outliers (e.g. remove patient)
         return data
 
-    def detect_outliers(self, data: pd.DataFrame):
-        """Detect outliers in the data, optionally removing or further investigating them
-
-        Args:
-            data (pd.DataFrame): data
-            whiskers (float, optional): determines reach of the whiskers. Defaults to 1.5 (matplotlib default)
-            remove (bool, optional): whether to remove outliers. Defaults to True.
-            investigate (bool, optional): whether to investigate outliers. Defaults to False.
-        """
+    def detect_outliers(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Detect outliers in the data, optionally removing or further investigating them"""
         # Split data and metadata
+        raise NotImplementedError('Test me first and integrate params')
         mdata = data[self.metadata]
         whiskers = 1.5
         to_analyse = data.drop(self.metadata, axis=1, errors='ignore')
@@ -165,7 +163,7 @@ class FeatureReductions:
 
         # Highlight outliers in table
         high_data.style.apply(
-            lambda _: highlight(df=high_data, lower_limit=lower_limit, upper_limit=upper_limit), axis=None
+            lambda _: self.highlight(df=high_data, lower_limit=lower_limit, upper_limit=upper_limit), axis=None
         ).to_excel(os.path.join(self.job_dir, 'investigate_outliers.xlsx'), index=True)
         return data
 
@@ -203,15 +201,3 @@ class FeatureReductions:
             logger.warning(f'Target label {self.target_label} has variance below threshold {self.corr_thresh}.')
             data = pd.concat((data, tmp), axis=1)
         return data
-
-
-def highlight(df: pd.DataFrame, lower_limit: np.array, upper_limit: np.array):
-    """Highlight outliers in a dataframe"""
-    style_df = pd.DataFrame('', index=df.index, columns=df.columns)
-    mask = pd.concat(
-        [~df.iloc[:, i].between(lower_limit[i], upper_limit[i], inclusive='neither') for i in range(lower_limit.size)],
-        axis=1,
-    )
-    style_df = style_df.mask(mask, 'background-color: red')
-    style_df.iloc[:, lower_limit.size :] = ''  # uncolor metadata
-    return style_df

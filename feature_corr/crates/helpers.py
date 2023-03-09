@@ -12,43 +12,33 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import KFold, StratifiedKFold
 
 
-def init_estimator(estimator_name: str, learn_task: str, seed, scoring, class_weight):
+def init_estimator(estimator_name: str, learn_task: str, seed: int, scoring: dict, class_weight: str = None):
     """Initialise the estimator and cross-validation method"""
+    estimator_name = f'{estimator_name}_{learn_task}'
+    estimator_dict = {
+        'forest_binary-classification': RandomForestClassifier(random_state=seed, class_weight=class_weight),
+        'extreme_forest_binary-classification': ExtraTreesClassifier(random_state=seed, class_weight=class_weight),
+        'adaboost_binary-classification': AdaBoostClassifier(random_state=seed),
+        'logistic_regression_binary-classification': LogisticRegression(random_state=seed, class_weight=class_weight),
+        'xgboost_binary-classification': GradientBoostingClassifier(random_state=seed),
+        'forest_regression': RandomForestRegressor(random_state=seed),
+        'extreme_forest_regression': ExtraTreesRegressor(random_state=seed),
+        'adaboost_regression': AdaBoostRegressor(random_state=seed),
+        'xgboost_regression': GradientBoostingRegressor(random_state=seed),
+    }
+
     if learn_task == 'binary-classification':
-        if estimator_name == 'forest':
-            estimator = RandomForestClassifier(random_state=seed, class_weight=class_weight)
-        elif estimator_name == 'extreme_forest':
-            estimator = ExtraTreesClassifier(random_state=seed, class_weight=class_weight)
-        elif estimator_name == 'adaboost':
-            estimator = AdaBoostClassifier(random_state=seed)
-        elif estimator_name == 'logistic_regression':
-            estimator = LogisticRegression(random_state=seed, class_weight=class_weight)
-        elif estimator_name == 'xgboost':
-            estimator = GradientBoostingClassifier(random_state=seed)
-        else:
-            raise NotImplementedError(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
         cross_fold = StratifiedKFold(shuffle=True, random_state=seed)
-
     elif learn_task == 'multi-classification':
-        raise NotImplementedError('Multi-classification is not yet implemented.')
-
+        raise NotImplementedError('Multi-classification not implemented')
     elif learn_task == 'regression':
-        if estimator_name == 'forest':
-            estimator = RandomForestRegressor(random_state=seed)
-        elif estimator_name == 'extreme_forest':
-            estimator = ExtraTreesRegressor(random_state=seed)
-        elif estimator_name == 'adaboost':
-            estimator = AdaBoostRegressor(random_state=seed)
-        elif estimator_name == 'logistic_regression':
-            raise ValueError('Logistic regression can only be used for classification.')
-        elif estimator_name == 'xgboost':
-            estimator = GradientBoostingRegressor(random_state=seed)
-        else:
-            raise NotImplementedError(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
         cross_fold = KFold(shuffle=True, random_state=seed)
-
     else:
-        raise ValueError(f'The learn task you requested ({learn_task}) is not supported.')
+        raise ValueError(f'Unknown learn task: {learn_task}')
 
+    if estimator_name not in estimator_dict:
+        raise ValueError(f'Unknown estimator: {estimator_name}')
+
+    estimator = estimator_dict[estimator_name]
     scoring = scoring[learn_task]
     return estimator, cross_fold, scoring

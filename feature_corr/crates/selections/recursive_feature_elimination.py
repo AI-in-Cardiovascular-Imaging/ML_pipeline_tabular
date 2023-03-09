@@ -21,23 +21,22 @@ class RecursiveFeatureElimination:
         self.corr_drop_features = None
         self.scoring = None
         self.class_weight = None
-        self.task = None
+        self.learn_task = None
+        self.keep_top_features = None
         np.random.seed(self.seed)
 
     def __reduction(self, data: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
         """Reduce the number of features using recursive feature elimination"""
         estimator, cross_validator, scoring = init_estimator(
             rfe_estimator,
-            self.task,
+            self.learn_task,
             self.seed,
             self.scoring,
             self.class_weight,
         )
 
-        number_of_top_features = 30
-        X = data.drop(self.target_label, axis=1)
+        x = data.drop(self.target_label, axis=1)
         y = data[self.target_label]
-
         min_features = 1
 
         selector = RFECV(
@@ -47,7 +46,7 @@ class RecursiveFeatureElimination:
             scoring=scoring,
             n_jobs=4,
         )
-        selector.fit(X, y)
+        selector.fit(x, y)
 
         # Plot performance for increasing number of features
         n_scores = len(selector.cv_results_['mean_test_score'])
@@ -65,7 +64,7 @@ class RecursiveFeatureElimination:
         plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.pdf'))
         plt.close(fig)
 
-        data = pd.concat((X.loc[:, selector.support_], data[self.target_label]), axis=1)  # concat with target label
+        data = pd.concat((x.loc[:, selector.support_], data[self.target_label]), axis=1)  # concat with target label
 
         try:  # some estimators return feature_importances_ attribute, others coef_
             importances = selector.estimator_.feature_importances_
@@ -73,22 +72,19 @@ class RecursiveFeatureElimination:
             logger.warning('Note that absolute coefficient values do not necessarily represent feature importances.')
             importances = np.abs(np.squeeze(selector.estimator_.coef_))
 
-        importances = pd.DataFrame(importances, index=X.columns[selector.support_], columns=['importance'])
+        importances = pd.DataFrame(importances, index=x.columns[selector.support_], columns=['importance'])
         importances = importances.sort_values(by='importance', ascending=True)
-        importances = importances.iloc[
-            -number_of_top_features:, :
-        ]  # keep only the top 20 features with the highest importance
+        importances = importances.iloc[-self.keep_top_features :, :]  # keep only the top features
 
         logger.info(
-            f'Removed {len(X.columns) + 1 - len(data.columns)} features with RFE and {rfe_estimator} estimator, '
+            f'Removed {len(x.columns) + 1 - len(data.columns)} features with RFE and {rfe_estimator} estimator, '
             f'number of remaining features: {len(data.columns) - 1}'
         )
 
-        # plot importances as bar chart
         ax = importances.plot.barh()
         fig = ax.get_figure()
         plt.title(
-            f'Feature importance (top {number_of_top_features})'
+            f'Feature importance (top {self.keep_top_features})'
             f'\n{rfe_estimator} estimator for target: {self.target_label}'
         )
         plt.tight_layout()

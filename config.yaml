@@ -3,7 +3,7 @@ meta:
   input_file: "/home/melandur/Data/Myocarditis/new/5_merged/phenomapping.xlsx"
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
   target_label: ["mace", "bmi"] # which column to use as label for exploration, feature reduction and analysis
-  seed: [1] # random seed
+  seed: [42] # random seed
   logging_level: "INFO" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
@@ -20,14 +20,16 @@ impute:
 data_split:
   selection_frac: 0.2  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing
-  oversample: False # whether to oversample minority class to balance training set
+  oversample_selection: False # oversample minority class to balance feature selection set
+  oversample_verification: False # oversample minority class to balance verification set
 
 selection:
-  active: True # whether to perform feature selections
+  active: False # whether to perform feature selections
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
   corr_drop_features: True # whether to drop highly correlated features
+  keep_top_features: 20 # keep n top features
   scoring:
     {
       "binary-classification": "average_precision",
@@ -42,7 +44,7 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-      ["variance_threshold", "z_score_norm"],
+      ["variance_threshold", "z_score_norm", 'fr_adaboost'],
     ]
 
 verification:
