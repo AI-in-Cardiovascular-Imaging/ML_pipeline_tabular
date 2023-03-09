@@ -15,9 +15,13 @@ impute:
   method: ["drop_nan_impute", "simple_impute"] #  drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
   constant: 0 # constant to use for imputation if method is 'constant'
 
+data_split:
+  selection_frac: 0.2  # fraction of data to use for feature selection
+  verification_test_frac: 0.2 # fraction of data to use for testing
+  oversample: False # whether to oversample minority class to balance training set
+
 selection:
   active: False # whether to perform feature selections
-  selection_frac: 0.2  # fraction of data to use for feature selection
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
@@ -41,8 +45,6 @@ selection:
 
 verification:
   active: False # whether to perform verification analysis
-  test_frac: 0.2 # fraction of data to use for testing
-  oversample: False # whether to oversample minority class to balance training set
   models:
     {
       "logistic_regression": True,

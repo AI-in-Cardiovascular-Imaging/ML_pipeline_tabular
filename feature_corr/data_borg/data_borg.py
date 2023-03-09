@@ -67,7 +67,7 @@ class DataBorg:
             self._feature_store[state_name][step_name] = frame
             logger.trace(f'Feature data set -> {type(frame)}')
         else:
-            raise ValueError(f'Invalid data name to set store data -> {data_name}, allowed -> data, feature')
+            raise ValueError(f'Invalid data name to set store data -> {data_name}, allowed -> frame, feature')
 
     def get_store(self, data_name: str, state_name: str, step_name: str) -> pd.DataFrame:
         """Returns the store value"""
@@ -77,7 +77,7 @@ class DataBorg:
         if 'feature' in data_name:
             logger.trace(f'Returning feature -> {type(self._feature_store[state_name][step_name])}')
             return self._feature_store[state_name][step_name]
-        raise ValueError(f'Invalid data name to get store data -> {data_name}, allowed -> data, feature')
+        raise ValueError(f'Invalid data name to get store data -> {data_name}, allowed -> frame, feature')
 
     def sync_ephemeral_data_to_data_store(self, state_name: str, step_name: str) -> None:
         """Syncs the ephemeral data with the data store"""

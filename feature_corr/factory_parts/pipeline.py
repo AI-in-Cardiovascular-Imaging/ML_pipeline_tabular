@@ -1,6 +1,7 @@
 from loguru import logger
 from omegaconf import OmegaConf
 
+from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.imputers import Imputers
 from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.data_borg import DataBorg
@@ -49,9 +50,9 @@ class Pipeline(DataBorg):
         """Impute data"""
         Imputers(self.config)()
 
-    @run_when_active
     def data_split(self) -> None:
         """Split data"""
+        DataSplit(self.config)()
 
     @run_when_active
     def selection(self) -> None:
