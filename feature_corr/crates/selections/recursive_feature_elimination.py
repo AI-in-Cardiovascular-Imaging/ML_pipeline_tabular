@@ -9,6 +9,8 @@ from sklearn.feature_selection import RFECV
 
 
 class RecursiveFeatureElimination:
+    """Recursive feature elimination"""
+
     def __init__(self) -> None:
         self.job_dir = None
         self.metadata = None
@@ -96,32 +98,32 @@ class RecursiveFeatureElimination:
 
         return data, importances.index.tolist()[::-1]
 
-    def fr_logistic_regression(self, data: pd.DataFrame) -> pd.DataFrame:
+    def fr_logistic_regression(self, data: pd.DataFrame) -> tuple:
         """Feature reduction using logistic regression estimator"""
         data, features = self.__reduction(data, 'logistic_regression')
         return data, features
 
-    def fr_forest(self, data: pd.DataFrame) -> pd.DataFrame:
+    def fr_forest(self, data: pd.DataFrame) -> tuple:
         """Feature reduction using random forest estimator"""
         data, features = self.__reduction(data, 'forest')
         return data, features
 
-    def fr_extreme_forest(self, data: pd.DataFrame) -> pd.DataFrame:
+    def fr_extreme_forest(self, data: pd.DataFrame) -> tuple:
         """Feature reduction using extreme forest estimator"""
         data, features = self.__reduction(data, 'extreme_forest')
         return data, features
 
-    def fr_adaboost(self, data: pd.DataFrame) -> pd.DataFrame:
+    def fr_adaboost(self, data: pd.DataFrame) -> tuple:
         """Feature reduction using adaboost estimator"""
         data, features = self.__reduction(data, 'adaboost')
         return data, features
 
-    def fr_xgboost(self, data: pd.DataFrame) -> pd.DataFrame:
+    def fr_xgboost(self, data: pd.DataFrame) -> tuple:
         """Feature reduction using xgboost estimator"""
         data, features = self.__reduction(data, 'xgboost')
         return data, features
 
-    def fr_all(self, data: pd.DataFrame) -> pd.DataFrame:
+    def fr_all(self, data: pd.DataFrame) -> tuple:
         """Feature reduction using all estimators in an ensemble manner"""
         number_of_estimators = 4
         _, f_features = self.__reduction(data, 'forest')

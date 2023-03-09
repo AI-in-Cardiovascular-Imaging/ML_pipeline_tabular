@@ -42,10 +42,7 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-      ["variance_threshold", "z_score_norm", "umap"],
-      ["variance_threshold", "z_score_norm", "tsne"],
-      ["variance_threshold", "pca"],
-      ['l1_norm', "pca"]
+      ["variance_threshold", "z_score_norm"],
     ]
 
 verification:

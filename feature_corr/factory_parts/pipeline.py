@@ -4,8 +4,10 @@ from omegaconf import OmegaConf
 
 from feature_corr.crates.imputers import Imputers
 from feature_corr.crates.inspections import TargetStatistics
-from feature_corr.crates.selections import JobHandler
+from feature_corr.crates.selections import Selection
 from feature_corr.data_borg import DataBorg
+
+# from feature_corr.crates.verifications import Verifications
 
 
 def run_when_active(func):
@@ -36,7 +38,7 @@ class Pipeline(DataBorg):
             getattr(self, step)()
 
     def __del__(self):
-        """Delete assigned state data"""
+        """Delete assigned state data store"""
         self.remove_state_data_store(self.state_name)
 
     @staticmethod
@@ -60,7 +62,7 @@ class Pipeline(DataBorg):
     @run_when_active
     def selection(self) -> None:
         """Explore data"""
-        JobHandler(self.config)()
+        Selection(self.config)()
 
     @run_when_active
     def verification(self) -> None:

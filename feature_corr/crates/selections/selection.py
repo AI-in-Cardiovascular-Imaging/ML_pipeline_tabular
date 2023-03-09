@@ -12,7 +12,7 @@ from feature_corr.crates.selections.recursive_feature_elimination import (
 from feature_corr.data_borg import DataBorg
 
 
-class JobHandler(DataBorg, Normalisers, DimensionReductions, FeatureReductions, RecursiveFeatureElimination):
+class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, RecursiveFeatureElimination):
     """Execute jobs"""
 
     def __init__(self, config: DictConfig) -> None:
@@ -38,7 +38,6 @@ class JobHandler(DataBorg, Normalisers, DimensionReductions, FeatureReductions, 
 
     def __call__(self) -> None:
         """Run all jobs"""
-
         self.__check_jobs()
         self.__check_auto_norm_methods()
 
@@ -53,6 +52,15 @@ class JobHandler(DataBorg, Normalisers, DimensionReductions, FeatureReductions, 
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
+            if isinstance(data, tuple):
+                top_features = data[0]
+                logger.info(f'Features selected for {self.job_name}: {top_features}')
+                self.set_store('feature', self.state_name, f'{self.state_name}_{self.job_name}', top_features)
+            else:
+                logger.warning(
+                    f'No features selected for {self.job_name}, add feature reduction or recursive '
+                    f'feature elimination to your job definition'
+                )
 
     def __check_jobs(self) -> None:
         """Check if the given jobs are valid"""

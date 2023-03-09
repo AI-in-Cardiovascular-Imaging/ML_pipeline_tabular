@@ -6,6 +6,8 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from umap import UMAP
 
+from feature_corr.data_borg import DataBorg
+
 
 def plot_bubble(func):
     """Creates 2D and 3D scatter plots of the data"""

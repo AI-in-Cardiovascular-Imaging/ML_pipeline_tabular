@@ -1,1 +1,1 @@
-from feature_corr.crates.selections.job_handler import JobHandler
+from feature_corr.crates.selections.selection import Selection
