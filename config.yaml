@@ -5,7 +5,6 @@ meta:
   target_label: ["bmi"] # which column to use as label for exploration, feature reduction and analysis
   seed: [1, 2, 3] # random seed
   logging_level: "INFO" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
-  state_name: ""  # reserved for pipeline internal use
 
 inspection:
   label_as_index: "subject" # column string name or None

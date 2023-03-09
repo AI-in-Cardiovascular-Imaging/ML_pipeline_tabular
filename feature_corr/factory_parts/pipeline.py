@@ -1,6 +1,8 @@
 from loguru import logger
+from omegaconf import OmegaConf
 
 from feature_corr.crates.imputers import Imputers
+from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.data_borg import DataBorg
 
 
@@ -37,9 +39,10 @@ class Pipeline(DataBorg):
     def meta() -> None:
         """Skip meta step"""
 
-    @staticmethod
-    def inspection() -> None:
+    def inspection(self) -> None:
         """Skip inspection step"""
+        learning_task = TargetStatistics(self.config).set_target_task()
+        OmegaConf.update(self.config.selection, 'learn_task', learning_task)
 
     @run_when_active
     def impute(self) -> None:

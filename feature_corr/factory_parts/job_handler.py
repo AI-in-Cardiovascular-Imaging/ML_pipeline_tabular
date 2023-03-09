@@ -1,14 +1,14 @@
 import os
-from copy import deepcopy
 
 import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
 
-from feature_corr.crates import DimensionReductions, FeatureReductions, Normalisers
+from feature_corr.crates.normalisers import Normalisers
+from feature_corr.crates.selections import DimensionReductions, FeatureReductions
 
 
-class ExploreData(Normalisers, DimensionReductions, FeatureReductions):
+class JobHandler(Normalisers, DimensionReductions, FeatureReductions):
     def __init__(self, config: DictConfig, data: pd.DataFrame, task: str) -> None:
         super().__init__()
         self.original_data = data
@@ -36,8 +36,8 @@ class ExploreData(Normalisers, DimensionReductions, FeatureReductions):
             logger.info(f'Running {job}')
             self.job_name = '_'.join(job)  # name of current job
             self.job_dir = os.path.join(self.out_dir, self.job_name)
-            os.makedirs(self.job_dir, exist_ok=True)
-            data = deepcopy(self.original_data)
+            # os.makedirs(self.job_dir, exist_ok=True)
+            # data = deepcopy(self.original_data)
             for step in job:
                 data, error = self.process_job(step, data)
                 if error:

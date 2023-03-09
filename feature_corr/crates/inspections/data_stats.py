@@ -28,6 +28,12 @@ class TargetStatistics(DataBorg):
             task = check_learning_task(target_data)
             self._plot_stats(target_label, target_data, task)
 
+    def set_target_task(self) -> str:
+        """Set the learning task"""
+        target_data = self.original_data[self.target_label]
+        task = check_learning_task(target_data)
+        return task
+
     @staticmethod
     def _plot_stats(target_label, target_data, task) -> None:
         """Show target statistics"""

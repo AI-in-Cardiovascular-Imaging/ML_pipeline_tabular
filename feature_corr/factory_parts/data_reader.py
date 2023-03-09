@@ -12,7 +12,6 @@ class DataReader(DataBorg):
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
-        self.state_name = config.meta.state_name
         self.file = config.meta.input_file
         if isinstance(self.file, str):
             if not os.path.isfile(self.file):

@@ -7,7 +7,6 @@ class CleanUp(DataBorg):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.state_name = self.config.meta.state_name
         self.label_as_index = self.config.inspection.label_as_index
         logger.info(f'Running -> {self.__class__.__name__}')
 

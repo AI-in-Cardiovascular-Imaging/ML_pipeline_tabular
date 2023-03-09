@@ -54,7 +54,7 @@ class StateMachine:
         config = deepcopy(self.config)
         for state_name, state_value in zip(self.state_names, self.state):
             dug(config, state_name, state_value)  # set state value in config
-        config.meta['state_name'] = '_'.join(map(str, self.state))  # add state to config
+        OmegaConf.update(config.meta, 'state_name', '_'.join(map(str, self.state)))
         return config
 
     def update_state(self) -> None:
