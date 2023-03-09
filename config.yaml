@@ -17,7 +17,7 @@ impute:
 
 selection:
   active: False # whether to perform feature selections
-  selection_fraction: 0.2  # fraction of data to use for feature selection
+  selection_frac: 0.2  # fraction of data to use for feature selection
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
@@ -41,7 +41,7 @@ selection:
 
 verification:
   active: False # whether to perform verification analysis
-  test_fraction: 0.2 # fraction of data to use for testing
+  test_frac: 0.2 # fraction of data to use for testing
   oversample: False # whether to oversample minority class to balance training set
   models:
     {

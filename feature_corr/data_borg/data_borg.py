@@ -58,7 +58,7 @@ class DataBorg:
             return self._ephemeral_frame
         raise ValueError(f'Invalid name -> {data_name}, allowed -> original, ephemeral')
 
-    def set_store(self, data_name: str, state_name: str, step_name: str, frame: pd.DataFrame) -> None:
+    def set_store(self, data_name: str, state_name: str, step_name: str, frame: pd.DataFrame = None) -> None:
         """Sets the store data"""
         if 'frame' in data_name:
             self._frame_store[state_name][step_name] = frame
