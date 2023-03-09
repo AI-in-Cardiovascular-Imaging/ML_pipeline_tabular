@@ -26,7 +26,7 @@ class StateMachine:
 
         self.check_state_names()
         self.create_state_tree()
-        self.update_state()
+        self.init_first_state()
 
     def __iter__(self) -> object:
         """Return the iterator object"""
@@ -34,9 +34,10 @@ class StateMachine:
 
     def __next__(self) -> DictConfig:
         """Return the next item"""
+        config = self.get_state_config()
         self.update_state()
         logger.info(f'State -> {self.state}')
-        return self.get_state_config()
+        return config
 
     def check_state_names(self) -> None:
         """Check if all state names have valid types"""
@@ -56,6 +57,10 @@ class StateMachine:
             dug(config, state_name, state_value)  # set state value in config
         OmegaConf.update(config.meta, 'state_name', '_'.join(map(str, self.state)))
         return config
+
+    def init_first_state(self) -> None:
+        """Return config for first state"""
+        self.state = self.state_tree[self.count]
 
     def update_state(self) -> None:
         """Update the current state to the next state"""

@@ -10,7 +10,7 @@ class DataSplit(DataBorg):
         self.config = config
         self.seed = config.meta.seed
         self.state_name = config.meta.state_name
-        self.learn_task = config.selection.learn_task
+        self.learn_task = config.meta.learn_task
         self.selection_frac = config.data_split.selection_frac
         self.verification_test_frac = config.data_split.verification_test_frac
         self.stratify = None
@@ -30,6 +30,8 @@ class DataSplit(DataBorg):
             raise NotImplementedError('Multi-classification not implemented')
         elif self.learn_task == 'regression':
             self.stratify = None
+        else:
+            raise ValueError(f'Unknown learn task: {self.learn_task}')
 
     def split_data(self):
         if 0.0 < self.selection_frac < 1.0:

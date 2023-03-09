@@ -35,7 +35,7 @@ def split_data(data: pd.DataFrame, metadata: list, hue: str, remove_mdata: bool 
 
 
 def init_estimator(estimator_name: str, task: str, seed, scoring, class_weight):
-    if task == 'classification':
+    if task == 'binary-classification':
         if estimator_name == 'forest':
             estimator = RandomForestClassifier(random_state=seed, class_weight=class_weight)
         elif estimator_name == 'extreme_forest':

@@ -1,3 +1,4 @@
+import os
 import sys
 
 from loguru import logger
@@ -9,6 +10,7 @@ from feature_corr.factory_parts.factory import Factory
 
 def main():
 
+    logger.info(f'Loading config file -> {os.path.join(os.getcwd(), "config.yaml")}')
     with open('config.yaml') as file:
         config = OmegaConf.load(file)
 

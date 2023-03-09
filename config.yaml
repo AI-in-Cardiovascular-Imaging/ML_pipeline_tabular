@@ -2,9 +2,11 @@ meta:
   output_dir: "/home/melandur/Downloads"
   input_file: "/home/melandur/Data/Myocarditis/new/5_merged/phenomapping.xlsx"
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
-  target_label: ["bmi"] # which column to use as label for exploration, feature reduction and analysis
-  seed: [1, 2, 3] # random seed
+  target_label: ["mace", "bmi"] # which column to use as label for exploration, feature reduction and analysis
+  seed: [1] # random seed
   logging_level: "INFO" # TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  state_name: "" # don't change this, will be set automatically by the pipeline
+  learn_task: "" # don't change this, will be set automatically by the pipeline
 
 inspection:
   label_as_index: "subject" # column string name or None
@@ -12,7 +14,7 @@ inspection:
 
 impute:
   active: True # whether to impute missing values
-  method: ["drop_nan_impute", "simple_impute"] #  drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
+  method: ["drop_nan_impute"] #  drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
   constant: 0 # constant to use for imputation if method is 'constant'
 
 data_split:
@@ -21,14 +23,15 @@ data_split:
   oversample: False # whether to oversample minority class to balance training set
 
 selection:
-  active: False # whether to perform feature selections
+  active: True # whether to perform feature selections
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
   corr_drop_features: True # whether to drop highly correlated features
   scoring:
     {
-      "classification": "average_precision",
+      "binary-classification": "average_precision",
+      "multi-classification": "average_precision",
       "regression": "neg_mean_absolute_error",
     }
   class_weight: "balanced"
@@ -39,8 +42,8 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-
       ["variance_threshold", "z_score_norm", "fr_forest"],
+      ["variance_threshold", "z_score_norm", "umap"],
     ]
 
 verification:

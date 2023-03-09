@@ -4,6 +4,7 @@ from omegaconf import OmegaConf
 from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.imputers import Imputers
 from feature_corr.crates.inspections import TargetStatistics
+from feature_corr.crates.selections import JobHandler
 from feature_corr.data_borg import DataBorg
 
 
@@ -42,8 +43,8 @@ class Pipeline(DataBorg):
 
     def inspection(self) -> None:
         """Skip inspection step"""
-        learning_task = TargetStatistics(self.config).set_target_task()
-        OmegaConf.update(self.config.selection, 'learn_task', learning_task)
+        learn_task = TargetStatistics(self.config).set_target_task()
+        OmegaConf.update(self.config.meta, 'learn_task', learn_task)
 
     @run_when_active
     def impute(self) -> None:
@@ -57,6 +58,7 @@ class Pipeline(DataBorg):
     @run_when_active
     def selection(self) -> None:
         """Explore data"""
+        JobHandler(self.config)()
 
     @run_when_active
     def verification(self) -> None:
