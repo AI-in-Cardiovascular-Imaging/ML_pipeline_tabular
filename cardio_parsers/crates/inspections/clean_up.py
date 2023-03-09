@@ -18,8 +18,8 @@ class CleanUp(DataBorg):
         """Set index by label"""
         logger.info(f'Reindex table by name -> {self.label_as_index}')
         if isinstance(self.label_as_index, str):
-            if self.label_as_index not in self.get_data('ephemeral').columns:
+            if self.label_as_index not in self.get_frame('ephemeral').columns:
                 raise ValueError(f'Label {self.label_as_index} not in data')
-            data = self.get_data('ephemeral')
+            data = self.get_frame('ephemeral')
             data = data.set_index(str(self.config.inspection.label_as_index))
-            self.set_data(data, 'ephemeral')
+            self.set_frame('ephemeral', data)

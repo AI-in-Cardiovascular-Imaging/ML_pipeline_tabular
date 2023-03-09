@@ -15,7 +15,7 @@ def data_bubble(func):
         imp_data = impute.fit_transform(data)
         imp_data = pd.DataFrame(imp_data, index=data.index, columns=data.columns)
         logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_data)}')
-        self.set_store_data('data', self.state_name, 'ephemeral', imp_data)
+        self.set_store('frame', self.state_name, 'ephemeral', imp_data)
 
     return wrapper
 
@@ -33,7 +33,7 @@ class Imputers(DataBorg):
     def __call__(self) -> None:
         """Impute missing data"""
         if self.__check_methods():
-            return getattr(self, self.impute_method)(self.get_store_data('data', self.state_name, 'ephemeral'))
+            return getattr(self, self.impute_method)(self.get_store('frame', self.state_name, 'ephemeral'))
 
     def __check_methods(self) -> bool:
         """Check if the given method is valid"""
@@ -47,7 +47,7 @@ class Imputers(DataBorg):
         """Drop patients with any NaN values"""
         imp_frame = frame.dropna(axis=0, how='any')
         logger.info(f'{self.impute_method} reduced features from {len(frame)} -> {len(imp_frame)}')
-        self.set_store_data('data', self.state_name, 'ephemeral', imp_frame)
+        self.set_store('frame', self.state_name, 'ephemeral', imp_frame)
 
     @data_bubble
     def iterative_impute(self) -> IterativeImputer:

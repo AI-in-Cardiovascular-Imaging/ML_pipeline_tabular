@@ -26,19 +26,19 @@ class DataReader(DataBorg):
         if self.file.endswith('.csv'):
             logger.info(f'Reading csv file -> {self.file}')
             data = pd.read_csv(self.file)
-            self.set_data(data, 'original')
-            self.set_data(data, 'ephemeral')
+            self.set_frame('original', data)
+            self.set_frame('ephemeral', data)
 
         elif self.file.endswith('.xlsx'):
             logger.info(f'Reading excel file -> {self.file}')
             data = pd.read_excel(self.file)
-            self.set_data(data, 'original')
-            self.set_data(data, 'ephemeral')
+            self.set_frame('original', data)
+            self.set_frame('ephemeral', data)
 
         elif isinstance(self.file, pd.DataFrame):
             logger.info(f'Reading dataframe -> {self.file}')
-            self.set_data(self.file, 'original')
-            self.set_data(self.file, 'ephemeral')
+            self.set_frame('original', self.file)
+            self.set_frame('ephemeral', self.file)
 
         else:
             raise ValueError(f'Found invalid file type, allowed is (.csv, .xlsx, dataframe), check -> {self.file}')
