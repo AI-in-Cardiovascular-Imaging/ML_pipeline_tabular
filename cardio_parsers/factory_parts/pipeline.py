@@ -1,7 +1,7 @@
 from loguru import logger
 
 from cardio_parsers.crates.imputers import Imputers
-from cardio_parsers.data_borg.data_borg import DataBorg
+from cardio_parsers.data_borg import DataBorg
 
 
 def run_when_active(func):

@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from dictlib import dig, dug
 from loguru import logger
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 
 class StateMachine:
@@ -18,8 +18,13 @@ class StateMachine:
         self.state_tree = None
         self.max_count = None
         self.state_data = None
-        self.state_names = None
+        self.state_names = [
+            'meta.target_label',
+            'meta.seed',
+            'impute.method',
+        ]  # define state names to branch on
 
+        self.check_state_names()
         self.create_state_tree()
         self.update_state()
 
@@ -33,13 +38,13 @@ class StateMachine:
         logger.info(f'State -> {self.state}')
         return self.get_state_config()
 
+    def check_state_names(self) -> None:
+        """Check if all state names have valid types"""
+        for state_name in self.state_names:
+            assert OmegaConf.is_list(dig(self.config, state_name)) is True, f'Expected list in config -> {state_name}'
+
     def create_state_tree(self) -> None:
         """Create a tree of all possible states for the pipeline to run in"""
-        self.state_names = [
-            'meta.target_label',
-            'meta.seed',
-            'impute.method',
-        ]  # define state names to branch on
         self.state_data = [dig(self.config, x) for x in self.state_names]  # get data for each state name
         self.state_tree = list(itertools.product(*self.state_data))  # create tree of all possible states
         self.max_count = len(self.state_tree)

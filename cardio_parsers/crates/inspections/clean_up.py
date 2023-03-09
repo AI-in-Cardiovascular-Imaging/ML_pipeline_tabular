@@ -1,4 +1,4 @@
-from cardio_parsers.data_borg.data_borg import DataBorg
+from cardio_parsers.data_borg import DataBorg
 
 
 class CleanUp(DataBorg):
