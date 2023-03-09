@@ -21,6 +21,8 @@ from feature_corr.data_borg import DataBorg
 
 
 class CrossValidation:
+    """Cross validation for feature selection"""
+
     def __init__(self, x_train, y_train, estimator, cross_validator, param_grid: dict, scoring: str, seed: int) -> None:
         self.x_train = x_train
         self.y_train = y_train
@@ -39,7 +41,6 @@ class CrossValidation:
             n_jobs=4,
         )
         selector.fit(self.x_train, self.y_train)
-
         return selector
 
 
@@ -125,6 +126,7 @@ class Verifications(DataBorg, Normalisers):
             self.performance_statistics(y_pred)
 
     def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None):
+        """Prepare data for verification"""
         y = data[self.target_label]
         data = self.z_score_norm(data)
         x = data.drop(
@@ -136,6 +138,7 @@ class Verifications(DataBorg, Normalisers):
         return x, y
 
     def performance_statistics(self, y_pred):
+        """Print performance statistics"""
         if self.task == 'classification':
             print('Accuracy', accuracy_score(self.y_test, y_pred, normalize=True))
             print('Average precision', average_precision_score(self.y_test, y_pred))

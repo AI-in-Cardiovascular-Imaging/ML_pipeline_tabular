@@ -21,6 +21,8 @@ def run_when_active(func):
 
 
 class Pipeline(DataBorg):
+    """Pipeline definition"""
+
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
@@ -63,4 +65,4 @@ class Pipeline(DataBorg):
     @run_when_active
     def verification(self) -> None:
         """Verify data"""
-        Verification(self.config)()
+        # Verification(self.config)()

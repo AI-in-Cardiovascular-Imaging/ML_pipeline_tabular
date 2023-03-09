@@ -1,4 +1,3 @@
-from loguru import logger
 from sklearn.ensemble import (
     AdaBoostClassifier,
     AdaBoostRegressor,
@@ -14,6 +13,7 @@ from sklearn.model_selection import KFold, StratifiedKFold
 
 
 def init_estimator(estimator_name: str, learn_task: str, seed, scoring, class_weight):
+    """Initialise the estimator and cross-validation method"""
     if learn_task == 'binary-classification':
         if estimator_name == 'forest':
             estimator = RandomForestClassifier(random_state=seed, class_weight=class_weight)
@@ -26,9 +26,8 @@ def init_estimator(estimator_name: str, learn_task: str, seed, scoring, class_we
         elif estimator_name == 'xgboost':
             estimator = GradientBoostingClassifier(random_state=seed)
         else:
-            logger.error(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
-            raise NotImplementedError
-        cv = StratifiedKFold(shuffle=True, random_state=seed)
+            raise NotImplementedError(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
+        cross_fold = StratifiedKFold(shuffle=True, random_state=seed)
 
     elif learn_task == 'multi-classification':
         raise NotImplementedError('Multi-classification is not yet implemented.')
@@ -45,12 +44,11 @@ def init_estimator(estimator_name: str, learn_task: str, seed, scoring, class_we
         elif estimator_name == 'xgboost':
             estimator = GradientBoostingRegressor(random_state=seed)
         else:
-            logger.error(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
-            raise NotImplementedError
-        cv = KFold(shuffle=True, random_state=seed)
+            raise NotImplementedError(f'The estimator you requested ({estimator_name}) has not yet been implemented.')
+        cross_fold = KFold(shuffle=True, random_state=seed)
 
     else:
         raise ValueError(f'The learn task you requested ({learn_task}) is not supported.')
 
     scoring = scoring[learn_task]
-    return estimator, cv, scoring
+    return estimator, cross_fold, scoring

@@ -68,7 +68,7 @@ class RecursiveFeatureElimination:
         try:  # some estimators return feature_importances_ attribute, others coef_
             importances = selector.estimator_.feature_importances_
         except AttributeError:
-            logger.warning(f'Note that absolute coefficient values do not necessarily represent feature importances.')
+            logger.warning('Note that absolute coefficient values do not necessarily represent feature importances.')
             importances = np.abs(np.squeeze(selector.estimator_.coef_))
 
         importances = pd.DataFrame(importances, index=X.columns[selector.support_], columns=['importance'])

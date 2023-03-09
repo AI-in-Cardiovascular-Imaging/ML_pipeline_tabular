@@ -1,6 +1,3 @@
-"""Dimensionality reduction module
-"""
-
 import os
 
 import pandas as pd
@@ -11,6 +8,8 @@ from umap import UMAP
 
 
 def plot_bubble(func):
+    """Creates 2D and 3D scatter plots of the data"""
+
     def wrapper(self, *args):
         data = args[0]
         y_train = data[self.target_label]
@@ -47,6 +46,8 @@ def plot_bubble(func):
 
 
 class DimensionReductions:
+    """Dimensionality reduction and visualisation"""
+
     def __init__(self) -> None:
         self.job_dir = None
         self.metadata = None

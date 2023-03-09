@@ -5,6 +5,8 @@ from feature_corr.data_borg import DataBorg
 
 
 class DataSplit(DataBorg):
+    """Split data in selection and verification"""
+
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
@@ -34,6 +36,7 @@ class DataSplit(DataBorg):
             raise ValueError(f'Unknown learn task: {self.learn_task}')
 
     def split_data(self):
+        """Split data"""
         if 0.0 < self.selection_frac < 1.0:
             selection_train, verification_train = train_test_split(
                 self.frame,
@@ -70,4 +73,4 @@ class DataSplit(DataBorg):
                 f'\nverification_test -> {len(verification_test)}'
             )
         else:
-            raise ValueError(f'Value {self.selection_frac} is invalid, must be float in (0, 1)')
+            raise ValueError(f'Value {self.selection_frac} is invalid, must be float between (0.0, 1.0)')

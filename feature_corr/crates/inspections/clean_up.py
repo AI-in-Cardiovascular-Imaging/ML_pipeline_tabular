@@ -4,6 +4,8 @@ from feature_corr.data_borg import DataBorg
 
 
 class CleanUp(DataBorg):
+    """ "Clean up data"""
+
     def __init__(self, config):
         super().__init__()
         self.config = config

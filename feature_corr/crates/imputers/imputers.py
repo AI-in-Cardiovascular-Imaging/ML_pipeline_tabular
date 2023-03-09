@@ -4,11 +4,14 @@ from loguru import logger
 from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
 from sklearn.impute import IterativeImputer, KNNImputer, MissingIndicator, SimpleImputer
 
-logger.trace(enable_iterative_imputer)  # to avoid auto import removal
 from feature_corr.data_borg import DataBorg
+
+logger.trace(enable_iterative_imputer)  # to avoid auto import removal
 
 
 def data_bubble(func):
+    """Apply imputation method to data"""
+
     def wrapper(self, *args):
         data = args[0]
         impute = func(self)

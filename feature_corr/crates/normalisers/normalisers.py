@@ -6,6 +6,8 @@ from sklearn import preprocessing
 
 
 def data_bubble(func):
+    """Pre and post processing for normalisation methods"""
+
     @wraps(func)
     def wrapper(self, *args):
         data = args[0]
@@ -22,6 +24,8 @@ def data_bubble(func):
 
 
 class Normalisers:
+    """Normalise data"""
+
     def __init__(self, target_label=None) -> None:
         self.target_label = target_label
         self.auto_norm_method = None
@@ -73,7 +77,7 @@ class Normalisers:
         tmp_label = data[self.target_label]  # keep label col as i
         for col_name in data.columns:  # iterate over columns
             col_type = str(data[col_name].dtype)
-            col_unique_vals = data[col_name].unique()
+            col_unique_vals = data[col_name].nunique()
             data = self.__binary_norm(data, col_name, col_type, col_unique_vals)
             data = self.__continuous_norm(data, col_name, col_type, col_unique_vals)
             data = self.__object_norm(data, col_name, col_type)
@@ -81,7 +85,8 @@ class Normalisers:
         data[self.target_label] = tmp_label
         return data
 
-    def __normalise_accordingly(self, data, col_name, data_type_name) -> pd.DataFrame:
+    def __normalise_accordingly(self, data: pd.DataFrame, col_name: str, data_type_name: str) -> pd.DataFrame:
+        """Normalise data according to data type"""
         logger.trace(f'{data_type_name.capitalize()} data detected in {col_name}')
         col_data = data[col_name]
         col_values = col_data.values.reshape(-1, 1)
@@ -92,50 +97,29 @@ class Normalisers:
         data[col_name] = col_data
         return data
 
-    def __binary_norm(self, data, col_name, col_type, col_unique_vals) -> pd.DataFrame:
+    def __binary_norm(self, data: pd.DataFrame, col_name: str, col_type: str, col_unique_vals: int) -> pd.DataFrame:
         """Normalise binary data if present"""
-        if ('int' in col_type or 'float' in col_type) and col_unique_vals.size == 2:
+        if ('int' in col_type or 'float' in col_type) and col_unique_vals == 2:
             data = self.__normalise_accordingly(data, col_name, data_type_name='binary')
         return data
 
-    def __continuous_norm(self, data, col_name, col_type, col_unique_vals) -> pd.DataFrame:
+    def __continuous_norm(self, data: pd.DataFrame, col_name: str, col_type: str, col_unique_vals: int) -> pd.DataFrame:
         """Normalise continuous data if present"""
-        if ('int' in col_type or 'float' in col_type) and col_unique_vals.size > 2:
+        if ('int' in col_type or 'float' in col_type) and col_unique_vals > 2:
             data = self.__normalise_accordingly(data, col_name, data_type_name='continuous')
         return data
 
-    def __object_norm(self, data, col_name, col_type) -> pd.DataFrame:
+    def __object_norm(self, data: pd.DataFrame, col_name: str, col_type: str) -> pd.DataFrame:
         """Normalise object data if present"""
         if 'object' in col_type:
             # data = self.__normalise_accordingly(data, col_name, data_type_name='object')
             logger.warning('Object normalisation is not implemented yet')
+            raise NotImplementedError('Object normalisation is not implemented yet')
         return data
 
-    def __datatime_norm(self, data, col_name, col_type) -> pd.DataFrame:
+    def __datatime_norm(self, data: pd.DataFrame, col_name: str, col_type: str) -> pd.DataFrame:
         """Normalise datetime data if present"""
         if 'datetime' in col_type:
             # data = self.__normalise_accordingly(data, col_name, data_type_name='datetime')
-            logger.warning('Datetime normalisation is not implemented yet')
+            raise NotImplementedError('Datetime normalisation is not implemented yet')
         return data
-
-
-if __name__ == '__main__':
-    import datetime
-
-    df = pd.DataFrame(
-        {
-            'A': [-1.12, -1.23, 2.32],
-            'B': [1, 0, 1],
-            'C': [1.0, 0.0, 1.0],
-            'D': [1, None, 9],
-            'E': [None, None, None],
-            'F': ['A', 2, 3],
-            'G': ['0', '1', '2'],
-            'H': [pd.Timestamp('20180310'), '2009-01-06 15:08:24.789150', datetime.datetime.now()],
-            'Z': ['A', 'V', 'C'],
-        }
-    )
-
-    n = Normaliser('Z')
-    a = n.auto_norm(df)
-    print(a)

@@ -11,6 +11,8 @@ from sklearn.inspection import permutation_importance
 
 
 class FeatureReductions:
+    """Simple feature reduction methods"""
+
     def __init__(self) -> None:
         self.job_dir = None
         self.metadata = None
@@ -61,7 +63,6 @@ class FeatureReductions:
         """
         Perform bivariate analysis
         """
-        pass
 
     def correlation(self, data: pd.DataFrame):
         """

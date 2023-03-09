@@ -13,6 +13,8 @@ from feature_corr.data_borg import DataBorg
 
 
 class JobHandler(DataBorg, Normalisers, DimensionReductions, FeatureReductions, RecursiveFeatureElimination):
+    """Execute jobs"""
+
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
@@ -32,6 +34,7 @@ class JobHandler(DataBorg, Normalisers, DimensionReductions, FeatureReductions, 
         self.corr_drop_features = config.selection.corr_drop_features
         self.auto_norm_method = config.selection.auto_norm_method
         self.job_name = ''
+        self.job_dir = None
 
     def __call__(self) -> None:
         """Run all jobs"""
