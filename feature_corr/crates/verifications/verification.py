@@ -22,7 +22,16 @@ from feature_corr.data_borg import DataBorg
 class CrossValidation:
     """Cross validation for feature selection"""
 
-    def __init__(self, x_train, y_train, estimator, cross_validator, param_grid: dict, scoring: str, seed: int) -> None:
+    def __init__(
+        self,
+        x_train: pd.DataFrame,
+        y_train: pd.DataFrame,
+        estimator: str,
+        cross_validator: str,
+        param_grid: dict,
+        scoring: str,
+        seed: int,
+    ) -> None:
         self.x_train = x_train
         self.y_train = y_train
         self.estimator = estimator
@@ -134,11 +143,11 @@ class Verification(DataBorg, Normalisers):
             print('Accuracy', accuracy_score(self.y_test, y_pred, normalize=True))
             print('Average precision', average_precision_score(self.y_test, y_pred))
             print(classification_report(self.y_test, y_pred))
-            cm = confusion_matrix(self.y_test, y_pred)
-            print(cm)
+            conf_m = confusion_matrix(self.y_test, y_pred)
+            print(conf_m)
             plt.figure(figsize=(10, 7))
             plt.title('Confusion matrix')
-            sns.heatmap(cm, annot=True, fmt='d')
+            sns.heatmap(conf_m, annot=True, fmt='d')
             plt.xlabel('Predicted')
             plt.ylabel('Truth')
             # plt.show()
@@ -158,7 +167,7 @@ class Verification(DataBorg, Normalisers):
 
     def prepare_data(self, frame: pd.DataFrame) -> tuple:
         """Prepare data for verification"""
-        y = frame[self.target_label]
-        x = frame[self.top_feature_names]  # only keep top features
-        x = x.drop(self.target_label, axis=1)
-        return x, y
+        y_frame = frame[self.target_label]
+        x_frame = frame[self.top_feature_names]  # only keep top features
+        x_frame = x_frame.drop(self.target_label, axis=1)
+        return x_frame, y_frame

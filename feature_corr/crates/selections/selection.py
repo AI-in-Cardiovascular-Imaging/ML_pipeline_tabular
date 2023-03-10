@@ -74,7 +74,7 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
         if isinstance(data, tuple):
             top_features = data[0]
             top_feature_names = top_features.columns.tolist()
-            logger.info(f'Found top features')
+            logger.info('Found top features')
             self.set_store('feature', self.state_name, self.job_name, top_feature_names)
         else:
             logger.warning(

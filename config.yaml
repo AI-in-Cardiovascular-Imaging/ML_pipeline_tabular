@@ -8,11 +8,24 @@ meta:
 
 inspection:
   label_as_index: "ID_Imaging" # column string name or None
-  custom_clean_up: False # TODO: implement custom clean up
+  clean_up_strategy:
+    nan_data_type_outliers: True # mask data type outliers as nan, for example string in a numeric column
+    column_wise:
+      replace:
+        Gender:
+          999: 1
+          1: 0
+          2: 1
+          else: null
+      allow_only:
+        Age:
+          allowed: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+          else: null
+
 
 impute:
-  active: True # whether to impute missing values
-  method: ["drop_nan_impute"] #: drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
+  active: False # whether to impute missing values
+  method: ["iterative_impute"] #: drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
   constant: 0 # constant to use for imputation if method is 'constant'
 
 data_split:

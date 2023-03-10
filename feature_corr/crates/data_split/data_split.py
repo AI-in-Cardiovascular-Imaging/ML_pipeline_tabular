@@ -40,7 +40,7 @@ class DataSplit(DataBorg):
         s_frame, v_frame = self.create_selection_verification_set()
 
         if self.verification_test_frac <= 0.0 or self.verification_test_frac >= 1.0:
-            raise ValueError(f'"verification_test_frac" is invalid, must be float between (0.0, 1.0)')
+            raise ValueError('"verification_test_frac" is invalid, must be float between (0.0, 1.0)')
 
         if self.selection_frac > 0.0:
             v_train, v_test = self.create_verification_split(v_frame)
@@ -92,7 +92,7 @@ class DataSplit(DataBorg):
         elif self.selection_frac == 0.0:  # entire train data is used for selection and verification
             test_size = self.verification_test_frac
         else:
-            raise ValueError(f'"selection_frac" is invalid, must be float between (0.0, 1.0)')
+            raise ValueError('"selection_frac" is invalid, must be float between (0.0, 1.0)')
 
         s_frame, v_frame = train_test_split(
             self.frame,

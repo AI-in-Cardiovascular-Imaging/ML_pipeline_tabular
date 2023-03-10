@@ -90,7 +90,8 @@ class Normalisers:
         logger.trace(f'{data_type_name.capitalize()} data detected in {col_name}')
         col_data = data[col_name]
         col_values = col_data.values.reshape(-1, 1)
-        norm = getattr(self, self.auto_norm_method[data_type_name])
+        norm_method = self.auto_norm_method[data_type_name]
+        norm = getattr(self, norm_method)
         ori_norm = norm.__wrapped__  # get original unwrapped function
         norm_col_values = ori_norm(self, col_values)
         col_data = pd.Series(norm_col_values.reshape(-1), index=col_data.index)

@@ -40,6 +40,7 @@ class Imputer(DataBorg):
         if self.__check_methods():
             ephemeral_frame = self.get_store('frame', self.state_name, 'ephemeral')
             return getattr(self, self.impute_method)(ephemeral_frame)
+        raise ValueError('No imputation method selected')
 
     def __check_methods(self) -> bool:
         """Check if the given method is valid"""
