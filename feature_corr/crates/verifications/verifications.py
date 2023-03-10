@@ -60,10 +60,12 @@ class Verifications(DataBorg, Normalisers):
         self.param_grids = config.verification.param_grids
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
-        self.ensemble = [
-            model for model in self.models if 'ensemble' in model
-        ]  # separate ensemble model from other models
+        self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]
+        self.x_train = None
+        self.y_train = None
+        self.x_test = None
+        self.y_test = None
 
     def __call__(self):
         """Train random forest classifier to verify feature importance"""
@@ -146,3 +148,14 @@ class Verifications(DataBorg, Normalisers):
             plt.show()
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
+
+    # def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None) -> tuple:
+    #     """Prepare data for verification"""
+    #     y = data[self.target_label]
+    #     data = self.z_score_norm(data)
+    #     x = data.drop(
+    #         columns=[c for c in data.columns if c not in features_to_keep], axis=1
+    #     )  # Keep only selected features
+    #     if self.target_label in x.columns:  # ensure that target column is dropped
+    #         x = x.drop(self.target_label, axis=1)
+    #     return x, y

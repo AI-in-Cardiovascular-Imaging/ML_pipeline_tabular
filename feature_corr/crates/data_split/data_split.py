@@ -43,7 +43,7 @@ class DataSplit(DataBorg):
             raise ValueError(f'"verification_test_frac" is invalid, must be float between (0.0, 1.0)')
 
         if self.selection_frac > 0.0:
-            v_train, v_test = self.maybe_create_verification_split(v_frame)
+            v_train, v_test = self.create_verification_split(v_frame)
             s_train = s_frame
         else:
             s_train, v_train, v_test = s_frame, s_frame, v_frame
@@ -59,9 +59,9 @@ class DataSplit(DataBorg):
         if self.over_sample_selection or self.over_sample_verification:
             self.show_stats(s_train, v_train, v_test, 'Data split stats after over sampling')
 
-        self.set_store('frame', self.state_name, 'ephemeral', s_train)
-        self.set_store('frame', self.state_name, 'ephemeral', v_train)
-        self.set_store('frame', self.state_name, 'ephemeral', v_test)
+        self.set_store('frame', self.state_name, 'selection_train', s_train)
+        self.set_store('frame', self.state_name, 'verification_train', v_train)
+        self.set_store('frame', self.state_name, 'verification_test', v_test)
 
     def show_stats(self, s_train: pd.DataFrame, v_train: pd.DataFrame, v_test: pd.DataFrame, head: str) -> None:
         """Show data split stats"""
@@ -102,7 +102,7 @@ class DataSplit(DataBorg):
         )
         return s_frame, v_frame
 
-    def maybe_create_verification_split(self, v_frame: pd.DataFrame) -> tuple:
+    def create_verification_split(self, v_frame: pd.DataFrame) -> tuple:
         """Create verification split if needed"""
         self.set_stratification(v_frame)
         v_train, v_test = train_test_split(
@@ -136,25 +136,3 @@ class DataSplit(DataBorg):
         y_frame = x_frame[self.target_label]
         new_x_frame, _ = over_sampler.fit_resample(x_frame, y_frame)
         return new_x_frame
-
-    # def create_verification_split(self):
-    #     """Split verification data in train and test set"""
-    #     x, y = self.prepare_data(v_data, features_to_keep=features)
-    #     self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
-    #         x,
-    #         y,
-    #         stratify=y,
-    #         test_size=0.20,
-    #         random_state=self.seed,
-    #     )
-
-    # def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None) -> tuple:
-    #     """Prepare data for verification"""
-    #     y = data[self.target_label]
-    #     data = self.z_score_norm(data)
-    #     x = data.drop(
-    #         columns=[c for c in data.columns if c not in features_to_keep], axis=1
-    #     )  # Keep only selected features
-    #     if self.target_label in x.columns:  # ensure that target column is dropped
-    #         x = x.drop(self.target_label, axis=1)
-    #     return x, y

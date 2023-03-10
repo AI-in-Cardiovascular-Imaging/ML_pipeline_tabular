@@ -14,6 +14,11 @@ def main():
     with open('config.yaml') as file:
         config = OmegaConf.load(file)
 
+    with open('paths.yaml') as file:  # will be removed
+        path = OmegaConf.load(file)
+
+    config = OmegaConf.merge(config, path)
+
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
 

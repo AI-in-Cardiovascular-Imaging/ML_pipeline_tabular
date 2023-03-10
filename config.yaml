@@ -1,6 +1,4 @@
 meta:
-  output_dir: "/home/melandur/Downloads"
-  input_file: "/home/melandur/Data/Myocarditis/new/5_merged/phenomapping.xlsx"
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
   target_label: ["mace"] # which column to use as label for exploration, feature reduction and analysis
   seed: [42] # random seed
