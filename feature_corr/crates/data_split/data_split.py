@@ -38,11 +38,17 @@ class DataSplit(DataBorg):
         """Split data"""
         self.set_stratification(self.frame)
         s_frame, v_frame = self.create_selection_verification_set()
+
+        if self.verification_test_frac <= 0.0 or self.verification_test_frac >= 1.0:
+            raise ValueError(f'"verification_test_frac" is invalid, must be float between (0.0, 1.0)')
+
         if self.selection_frac > 0.0:
             v_train, v_test = self.maybe_create_verification_split(v_frame)
             s_train = s_frame
         else:
             s_train, v_train, v_test = s_frame, s_frame, v_frame
+
+        self.show_stats(s_train, v_train, v_test, 'Data split stats')
 
         if self.over_sample_selection:
             s_train = self.over_sampling(s_train)
@@ -50,16 +56,21 @@ class DataSplit(DataBorg):
             v_train = self.over_sampling(v_train)
             v_test = self.over_sampling(v_test)
 
+        if self.over_sample_selection or self.over_sample_verification:
+            self.show_stats(s_train, v_train, v_test, 'Data split stats after over sampling')
+
         self.set_store('frame', self.state_name, 'ephemeral', s_train)
         self.set_store('frame', self.state_name, 'ephemeral', v_train)
         self.set_store('frame', self.state_name, 'ephemeral', v_test)
 
+    def show_stats(self, s_train: pd.DataFrame, v_train: pd.DataFrame, v_test: pd.DataFrame, head: str) -> None:
+        """Show data split stats"""
         logger.info(
-            f'\nData split overview:\n'
-            f'Original data set -> {len(self.frame)} rows\n'
-            f'Selection train set -> {len(s_train)} rows\n'
-            f'Verification train set -> {len(v_train)} rows\n'
-            f'Verification test set -> {len(v_test)} rows'
+            f'\n{head}\n'
+            f'{"Original data:":<24}{len(self.frame)} rows\n'
+            f'{"Selection train:":<24}{len(s_train)} rows\n'
+            f'{"Verification train:":<24}{len(v_train)} rows\n'
+            f'{"Verification test:":<24}{len(v_test)} rows'
         )
 
     def set_stratification(self, frame: pd.DataFrame = None) -> None:
@@ -74,14 +85,14 @@ class DataSplit(DataBorg):
         else:
             raise ValueError(f'Unknown learn task: {self.learn_task}')
 
-    def create_selection_verification_set(self):
+    def create_selection_verification_set(self) -> tuple:
         """Split in selection and verification set"""
         if 0.0 < self.selection_frac < 1.0:
             test_size = 1.0 - self.selection_frac
         elif self.selection_frac == 0.0:  # entire train data is used for selection and verification
             test_size = self.verification_test_frac
         else:
-            raise ValueError(f'Value {self.selection_frac} is invalid, must be float between (0.0, 1.0)')
+            raise ValueError(f'"selection_frac" is invalid, must be float between (0.0, 1.0)')
 
         s_frame, v_frame = train_test_split(
             self.frame,
@@ -91,10 +102,8 @@ class DataSplit(DataBorg):
         )
         return s_frame, v_frame
 
-    def maybe_create_verification_split(self, v_frame):
+    def maybe_create_verification_split(self, v_frame: pd.DataFrame) -> tuple:
         """Create verification split if needed"""
-        if 0.0 > self.verification_test_frac > 1.0:
-            raise ValueError(f'Value {self.verification_test_frac} is invalid, must be float between (0.0, 1.0)')
         self.set_stratification(v_frame)
         v_train, v_test = train_test_split(
             v_frame,
@@ -104,7 +113,7 @@ class DataSplit(DataBorg):
         )
         return v_train, v_test
 
-    def over_sampling(self, x_frame):
+    def over_sampling(self, x_frame: pd.DataFrame) -> pd.DataFrame:
         """Over sample data"""
         method = self.over_sample_method[self.learn_task]
         over_sampler_name = f'{self.learn_task}_{method}'

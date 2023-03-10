@@ -20,8 +20,8 @@ impute:
 data_split:
   selection_frac: 0.2  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing
-  over_sample_selection: False # oversample minority class to balance feature selection set
-  over_sample_verification: False # oversample minority class to balance verification set
+  over_sample_selection: True # oversample minority class to balance feature selection set
+  over_sample_verification: True # oversample minority class to balance verification set
   over_sample_method:
     {
       "binary_classification": "RandomOverSampler",
