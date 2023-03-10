@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 from loguru import logger
 
@@ -25,7 +26,7 @@ class CleanUp(DataBorg):
         self.maybe_get_label_index_frame()
 
         if self.auto_clean:
-            self.get_consistent_frame()
+            self.get_consistent_data_types()
 
         if self.manual_clean:
             pass
@@ -60,15 +61,13 @@ class CleanUp(DataBorg):
             self.clean_frame = pd.concat([self.clean_frame, tmp_frame])
             self.clean_frame = self.clean_frame.set_index(self.label_as_index)
 
-    def get_consistent_frame(self) -> None:
-        """Get consistent frame"""
+    def get_consistent_data_types(self) -> None:
+        """Get all columns with consistent data types"""
+        frame = self.frame.replace(r'^\s*$', np.nan, regex=True)  # Replace empty strings with NaN
+
         for x_type in ['int64', 'float64']:
-            pure_cols = self.frame.select_dtypes(include=x_type).columns
-            self.clean_frame = pd.concat([self.clean_frame, self.frame[pure_cols]])
+            pure_cols = frame.select_dtypes(include=x_type).columns
+            self.clean_frame = pd.concat([self.clean_frame, frame[pure_cols]])
+
         self.clean_frame.dropna(how='all', axis=1, inplace=True)  # Drop columns with all NaN
         logger.info(f'Found data type consistent columns -> {len(self.clean_frame.columns)}/{len(self.frame.columns)}')
-
-    def deal(self) -> None:
-        """Set data type for columns"""
-        logger.info(f'Column based data type')
-        frame = self.get_frame('ephemeral')

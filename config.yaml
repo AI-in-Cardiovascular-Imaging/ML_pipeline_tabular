@@ -25,11 +25,11 @@ inspection:
           else: null
 
 impute:
-  active: True # impute missing values
+  active: False # impute missing values
   method: ["iterative_impute"] #: drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
 
 data_split:
-  active: True # needs to be set to True for feature selection and verification
+  active: False # needs to be set to True for feature selection and verification
   selection_frac: 0.2  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing verification models
   over_sample_selection: True # oversample minority class to balance feature selection set
@@ -42,7 +42,7 @@ data_split:
     }
 
 selection:
-  active: True # whether to perform feature selections
+  active: False # whether to perform feature selections
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
@@ -67,7 +67,7 @@ selection:
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 verification:
-  active: True # whether to perform verification analysis
+  active: False # whether to perform verification analysis
   models:
     {
       "logistic_regression": False,
