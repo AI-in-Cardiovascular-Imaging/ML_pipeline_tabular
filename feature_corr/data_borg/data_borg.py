@@ -15,7 +15,7 @@ class NestedDefaultDict(defaultdict):
 
 
 class DataBorg:
-    """Borg pattern, which is used to share data between classes"""
+    """Borg pattern, which is used to share frame between classes"""
 
     shared_state = {
         '_frame_store': NestedDefaultDict(),
@@ -37,47 +37,47 @@ class DataBorg:
         self._feature_store[state_name] = NestedDefaultDict()
         logger.trace(f'State name set -> {state_name}')
 
-    def set_frame(self, data_name: str, frame: pd.DataFrame) -> None:
-        """Sets the data"""
-        if 'original' in data_name:
+    def set_frame(self, name: str, frame: pd.DataFrame) -> None:
+        """Sets the frame"""
+        if 'original' in name:
             self._original_frame = frame
-            logger.trace(f'Original data set -> {type(frame)}')
-        elif 'ephemeral' in data_name:
+            logger.trace(f'Original frame set -> {type(frame)}')
+        elif 'ephemeral' in name:
             self._ephemeral_frame = frame
-            logger.trace(f'Ephemeral data set -> {type(frame)}')
+            logger.trace(f'Ephemeral frame set -> {type(frame)}')
         else:
-            raise ValueError(f'Invalid name -> {data_name}, allowed -> original, ephemeral')
+            raise ValueError(f'Invalid name -> {name}, allowed -> original, ephemeral')
 
-    def get_frame(self, data_name: str) -> pd.DataFrame:
-        """Returns the data"""
-        if 'original' in data_name:
-            logger.trace(f'Returning original data -> {type(self._original_frame)}')
+    def get_frame(self, name: str) -> pd.DataFrame:
+        """Returns the frame"""
+        if 'original' in name:
+            logger.trace(f'Returning original frame -> {type(self._original_frame)}')
             return self._original_frame
-        if 'ephemeral' in data_name:
-            logger.trace(f'Returning ephemeral data -> {type(self._ephemeral_frame)}')
+        if 'ephemeral' in name:
+            logger.trace(f'Returning ephemeral frame -> {type(self._ephemeral_frame)}')
             return self._ephemeral_frame
-        raise ValueError(f'Invalid name -> {data_name}, allowed -> original, ephemeral')
+        raise ValueError(f'Invalid name -> {name}, allowed -> original, ephemeral')
 
-    def set_store(self, data_name: str, state_name: str, step_name: str, frame: pd.DataFrame = None) -> None:
-        """Sets the store data"""
-        if 'frame' in data_name:
-            self._frame_store[state_name][step_name] = frame
-            logger.trace(f'Store data set -> {type(frame)}')
-        elif 'feature' in data_name:
-            self._feature_store[state_name][step_name] = frame
-            logger.trace(f'Feature data set -> {type(frame)}')
+    def set_store(self, name: str, state_name: str, step_name: str, data: pd.DataFrame) -> None:
+        """Sets the store frame"""
+        if 'frame' in name:
+            self._frame_store[state_name][step_name] = data
+            logger.trace(f'Store data set -> {type(data)}')
+        elif 'feature' in name:
+            self._feature_store[state_name][step_name] = data
+            logger.trace(f'Feature data set -> {type(data)}')
         else:
-            raise ValueError(f'Invalid data name to set store data -> {data_name}, allowed -> frame, feature')
+            raise ValueError(f'Invalid data name to set store data -> {name}, allowed -> frame, feature')
 
-    def get_store(self, data_name: str, state_name: str, step_name: str) -> pd.DataFrame:
+    def get_store(self, name: str, state_name: str, step_name: str) -> pd.DataFrame:
         """Returns the store value"""
-        if 'frame' in data_name:
-            logger.trace(f'Returning data -> {type(self._frame_store[state_name][step_name])}')
+        if 'frame' in name:
+            logger.trace(f'Returning frame -> {type(self._frame_store[state_name][step_name])}')
             return self._frame_store[state_name][step_name]
-        if 'feature' in data_name:
+        if 'feature' in name:
             logger.trace(f'Returning feature -> {type(self._feature_store[state_name][step_name])}')
             return self._feature_store[state_name][step_name]
-        raise ValueError(f'Invalid data name to get store data -> {data_name}, allowed -> frame, feature')
+        raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature')
 
     def get_feature_job_names(self, state_name: str) -> list:
         """Returns the store value"""
@@ -87,9 +87,9 @@ class DataBorg:
         return list(self._feature_store[state_name].keys())
 
     def sync_ephemeral_data_to_data_store(self, state_name: str, step_name: str) -> None:
-        """Syncs the ephemeral data with the data store"""
+        """Syncs the ephemeral frame with the data store"""
         self._frame_store[state_name][step_name] = self._ephemeral_frame
-        logger.trace(f'Ephemeral data synced -> {type(self._ephemeral_frame)} to data store')
+        logger.trace(f'Ephemeral frame synced -> {type(self._ephemeral_frame)} to data store')
 
     def remove_state_data_store(self, state_name: str) -> None:
         """Removes the state, prevent memory overflows"""

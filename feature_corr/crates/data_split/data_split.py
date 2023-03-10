@@ -16,7 +16,7 @@ from feature_corr.data_borg import DataBorg
 
 
 class DataSplit(DataBorg):
-    """Split data in selection and verification"""
+    """Split frame in selection and verification"""
 
     def __init__(self, config) -> None:
         super().__init__()
@@ -36,6 +36,9 @@ class DataSplit(DataBorg):
 
     def __call__(self):
         """Split data"""
+        if self.frame.isnull().values.any():
+            raise ValueError('Data contains NaN values, clean up or impute data first')
+
         self.set_stratification(self.frame)
         s_frame, v_frame = self.create_selection_verification_set()
 

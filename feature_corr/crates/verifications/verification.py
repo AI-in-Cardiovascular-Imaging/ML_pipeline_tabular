@@ -82,8 +82,8 @@ class Verification(DataBorg, Normalisers):
             v_train = self.get_store('frame', self.state_name, 'verification_train')
             v_test = self.get_store('frame', self.state_name, 'verification_test')
             self.top_feature_names = self.get_store('feature', self.state_name, job)
-            self.x_train, self.y_train = self.prepare_data(v_train)
-            self.x_test, self.y_test = self.prepare_data(v_test)
+            self.x_train, self.y_train = self.prepare_frame(v_train)
+            self.x_test, self.y_test = self.prepare_frame(v_test)
             self.train_models()
 
     def train_models(self):
@@ -165,8 +165,8 @@ class Verification(DataBorg, Normalisers):
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
 
-    def prepare_data(self, frame: pd.DataFrame) -> tuple:
-        """Prepare data for verification"""
+    def prepare_frame(self, frame: pd.DataFrame) -> tuple:
+        """Prepare frame for verification"""
         y_frame = frame[self.target_label]
         x_frame = frame[self.top_feature_names]  # only keep top features
         x_frame = x_frame.drop(self.target_label, axis=1)

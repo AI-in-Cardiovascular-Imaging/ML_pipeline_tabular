@@ -1,15 +1,18 @@
 meta:
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
   target_label: ["LA_GLS_11.4"] # which column to use as label for exploration, feature reduction and analysis
-  seed: [42, 50, 90] # random seed
+  seed: [42] # random seed
   logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
 
 inspection:
   label_as_index: "ID_Imaging" # column string name or None
+  export_cleaned_frame: True # for visual inspection of the cleaned data
   clean_up_strategy:
     nan_data_type_outliers: True # mask data type outliers as nan, for example string in a numeric column
+    nan_date_times: True
+    nan_strings: True
     column_wise:
       replace:
         Gender:
@@ -29,6 +32,7 @@ impute:
   constant: 0 # constant to use for imputation if method is 'constant'
 
 data_split:
+  active: False # needs to be set to True for feature selection and verification
   selection_frac: 0.2  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing
   over_sample_selection: True # oversample minority class to balance feature selection set

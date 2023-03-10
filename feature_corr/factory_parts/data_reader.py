@@ -7,7 +7,7 @@ from feature_corr.data_borg import DataBorg
 
 
 class DataReader(DataBorg):
-    """Reads excel, csv, or pd dataframe and returns a pd dataframe"""
+    """Reads excel, csv, or dataframe and returns a dataframe"""
 
     def __init__(self, config) -> None:
         super().__init__()
@@ -24,8 +24,8 @@ class DataReader(DataBorg):
         """Reads excel, csv, or pd dataframe and returns a pd dataframe"""
         if self.file.endswith('.csv'):
             logger.info(f'Reading csv file -> {self.file}')
-            data = pd.read_csv(self.file)
-            self.set_frame('original', data)
+            frame = pd.read_csv(self.file)
+            self.set_frame('original', frame)
             self.set_frame('ephemeral', data)
 
         elif self.file.endswith('.xlsx'):

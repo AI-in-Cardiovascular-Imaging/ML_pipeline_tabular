@@ -8,12 +8,12 @@ from umap import UMAP
 
 
 def plot_bubble(func):
-    """Creates 2D and 3D scatter plots of the data"""
+    """Creates 2D and 3D scatter plots of the frame"""
 
     def wrapper(self, *args):
-        data = args[0]
-        y_train = data[self.target_label]
-        x_train = data.drop(self.target_label, axis=1)
+        frame = args[0]
+        y_train = frame[self.target_label]
+        x_train = frame.drop(self.target_label, axis=1)
 
         proj_2d, proj_3d, name = func(self, x_train)  # call the wrapped function
 

@@ -10,43 +10,43 @@ def data_bubble(func):
 
     @wraps(func)
     def wrapper(self, *args):
-        data = args[0]
-        if data.isna().any(axis=None):
+        frame = args[0]
+        if frame.isna().any(axis=None):
             raise ValueError('Data contains NaN values, consider imputing data')
-        tmp_label = data[self.target_label]  # keep label col as is
-        arr_data = data.values  # returns a numpy array
-        norm_data = func(self, arr_data)
-        norm_data = pd.DataFrame(norm_data, index=data.index, columns=data.columns)
-        norm_data[self.target_label] = tmp_label
-        return norm_data
+        tmp_label = frame[self.target_label]  # keep label col as is
+        arr_frame = frame.values  # returns a numpy array
+        norm_frame = func(self, arr_frame)
+        norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns)
+        norm_frame[self.target_label] = tmp_label
+        return norm_frame
 
     return wrapper
 
 
 class Normalisers:
-    """Normalise data"""
+    """Normalise frame"""
 
     def __init__(self, target_label=None) -> None:
         self.target_label = target_label
         self.auto_norm_method = None
 
     @data_bubble
-    def l1_norm(self, data: pd.DataFrame) -> pd.DataFrame:
-        """L1 normalise data"""
-        return preprocessing.Normalizer(norm='l1').fit_transform(data.T).T  # l1 normalisation with transposed data
+    def l1_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
+        """L1 normalise frame"""
+        return preprocessing.Normalizer(norm='l1').fit_transform(frame.T).T  # l1 normalisation with transposed frame
 
     @data_bubble
-    def l2_norm(self, data: pd.DataFrame) -> pd.DataFrame:
-        """L2 normalise data"""
-        return preprocessing.Normalizer(norm='l2').fit_transform(data.T).T  # l2 normalisation with transposed data
+    def l2_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
+        """L2 normalise frame"""
+        return preprocessing.Normalizer(norm='l2').fit_transform(frame.T).T  # l2 normalisation with transposed frame
 
     @data_bubble
-    def z_score_norm(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Z score data"""
-        return preprocessing.StandardScaler().fit_transform(data)
+    def z_score_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
+        """Z score frame"""
+        return preprocessing.StandardScaler().fit_transform(frame)
 
     @data_bubble
-    def min_max_norm(self, data: pd.DataFrame) -> pd.DataFrame:
+    def min_max_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Min max scale data"""
         return preprocessing.MinMaxScaler().fit_transform(data)  # default is 0-1
 

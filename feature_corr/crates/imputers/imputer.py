@@ -10,14 +10,14 @@ logger.trace(enable_iterative_imputer)  # to avoid auto import removal
 
 
 def data_bubble(func):
-    """Apply imputation method to data"""
+    """Apply imputation method to frame"""
 
     def wrapper(self, *args):
-        data = args[0]
+        frame = args[0]
         impute = func(self)
-        imp_frame = impute.fit_transform(data)
-        imp_frame = pd.DataFrame(imp_frame, index=data.index, columns=data.columns)
-        logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_frame)}')
+        imp_frame = impute.fit_transform(frame)
+        imp_frame = pd.DataFrame(imp_frame, index=frame.index, columns=frame.columns)
+        logger.info(f'{self.impute_method} reduced features from {len(frame)} -> {len(imp_frame)}')
         self.set_store('frame', self.state_name, 'ephemeral', imp_frame)
         if len(imp_frame) == 0:
             raise ValueError('No cases left after dropping NaN values, use another imputation method or clean data')
@@ -40,7 +40,6 @@ class Imputer(DataBorg):
         if self.__check_methods():
             ephemeral_frame = self.get_store('frame', self.state_name, 'ephemeral')
             return getattr(self, self.impute_method)(ephemeral_frame)
-        raise ValueError('No imputation method selected')
 
     def __check_methods(self) -> bool:
         """Check if the given method is valid"""

@@ -54,6 +54,7 @@ class Pipeline(DataBorg):
         """Impute data"""
         Imputer(self.config)()
 
+    @run_when_active
     def data_split(self) -> None:
         """Split data"""
         DataSplit(self.config)()

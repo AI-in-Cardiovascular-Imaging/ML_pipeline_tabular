@@ -24,7 +24,7 @@ class FeatureReductions:
         self.scoring = None
         np.random.seed(self.seed)
 
-    def univariate_analysis(self, data: pd.DataFrame) -> pd.DataFrame:
+    def univariate_analysis(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Perform univariate analysis (box plots and distributions)"""
         raise NotImplementedError('Test me first and integrate params')
         data_long = data.melt(id_vars=[self.target_label])
