@@ -56,8 +56,8 @@ verification:
   active: True # whether to perform verification analysis
   models:
     {
-      "logistic_regression": True,
-      "forest": False,
+      "logistic_regression": False,
+      "forest": True,
       "extreme_forest": False,
     }
   param_grids:

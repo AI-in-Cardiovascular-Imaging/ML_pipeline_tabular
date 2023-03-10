@@ -64,6 +64,7 @@ class Verification(DataBorg, Normalisers):
         self.y_train = None
         self.x_test = None
         self.y_test = None
+        self.top_feature_names = None
 
     def __call__(self):
         """Train random forest classifier to verify feature importance"""
@@ -71,9 +72,9 @@ class Verification(DataBorg, Normalisers):
         for job in jobs:
             v_train = self.get_store('frame', self.state_name, 'verification_train')
             v_test = self.get_store('frame', self.state_name, 'verification_test')
-            top_feature_names = [self.get_store('feature', self.state_name, job)]
-            self.x_train, self.y_train = self.prepare_data(v_train, top_feature_names)
-            self.x_test, self.y_test = self.prepare_data(v_test, top_feature_names)
+            self.top_feature_names = self.get_store('feature', self.state_name, job)
+            self.x_train, self.y_train = self.prepare_data(v_train)
+            self.x_test, self.y_test = self.prepare_data(v_test)
             self.train_models()
 
     def train_models(self):
@@ -155,11 +156,9 @@ class Verification(DataBorg, Normalisers):
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
 
-    def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None) -> tuple:
+    def prepare_data(self, frame: pd.DataFrame) -> tuple:
         """Prepare data for verification"""
-        y = data[self.target_label]
-        # data = self.z_score_norm(data)  # TODO: check this
-        x = data.drop(columns=[c for c in data.columns if c not in features_to_keep], axis=1)  # only selected features
-        if self.target_label in x.columns:  # ensure that target column is dropped
-            x = x.drop(self.target_label, axis=1)
+        y = frame[self.target_label]
+        x = frame[self.top_feature_names]  # only keep top features
+        x = x.drop(self.target_label, axis=1)
         return x, y
