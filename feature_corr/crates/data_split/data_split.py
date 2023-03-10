@@ -119,17 +119,17 @@ class DataSplit(DataBorg):
     def over_sampling(self, x_frame: pd.DataFrame) -> pd.DataFrame:
         """Over sample data"""
         method = self.over_sample_method[self.learn_task]
-        over_sampler_name = f'{self.learn_task}_{method}'
+        over_sampler_name = f'{self.learn_task}_{method}'.lower()
         over_sampler_dict = {
-            'regression_ADASYN': ADASYN(random_state=self.seed),
-            'regression_SMOTE': SMOTE(random_state=self.seed),
-            'binary_classification_SMOTEN': SMOTEN(random_state=self.seed),
-            'binary_classification_SMOTENC': SMOTENC(categorical_features=2, random_state=self.seed),
-            'binary_classification_SVMSMOTE': SVMSMOTE(random_state=self.seed),
-            'binary_classification_BorderlineSMOTE': BorderlineSMOTE(random_state=self.seed),
-            'regression_KMeansSMOTE': KMeansSMOTE(random_state=self.seed),
-            'regression_RandomOverSampler': RandomOverSampler(random_state=self.seed),
-            'binary_classification_RandomOverSampler': RandomOverSampler(random_state=self.seed),
+            'binary_classification_smoten': SMOTEN(random_state=self.seed),
+            'binary_classification_smotenc': SMOTENC(categorical_features=2, random_state=self.seed),
+            'binary_classification_svmmote': SVMSMOTE(random_state=self.seed),
+            'binary_classification_borderlinesmote': BorderlineSMOTE(random_state=self.seed),
+            'binary_classification_randomoversampler': RandomOverSampler(random_state=self.seed),
+            'regression_adasyn': ADASYN(random_state=self.seed),
+            'regression_smote': SMOTE(random_state=self.seed),
+            'regression_kmeanssmote': KMeansSMOTE(random_state=self.seed),
+            'regression_randomoversampler': RandomOverSampler(random_state=self.seed),
         }
 
         if over_sampler_name not in over_sampler_dict:
