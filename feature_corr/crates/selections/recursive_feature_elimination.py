@@ -25,7 +25,7 @@ class RecursiveFeatureElimination:
         self.keep_top_features = None
         np.random.seed(self.seed)
 
-    def __reduction(self, data: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
+    def __reduction(self, frame: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
         """Reduce the number of features using recursive feature elimination"""
         estimator, cross_validator, scoring = init_estimator(
             rfe_estimator,
@@ -35,8 +35,8 @@ class RecursiveFeatureElimination:
             self.class_weight,
         )
 
-        x = data.drop(self.target_label, axis=1)
-        y = data[self.target_label]
+        x = frame.drop(self.target_label, axis=1)
+        y = frame[self.target_label]
         min_features = 1
 
         selector = RFECV(
@@ -44,7 +44,7 @@ class RecursiveFeatureElimination:
             min_features_to_select=min_features,
             cv=cross_validator,
             scoring=scoring,
-            n_jobs=4,
+            n_jobs=self.config.meta.workers,
         )
         selector.fit(x, y)
 
@@ -64,7 +64,7 @@ class RecursiveFeatureElimination:
         plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.pdf'))
         plt.close(fig)
 
-        data = pd.concat((x.loc[:, selector.support_], data[self.target_label]), axis=1)  # concat with target label
+        frame = pd.concat((x.loc[:, selector.support_], frame[self.target_label]), axis=1)  # concat with target label
 
         try:  # some estimators return feature_importances_ attribute, others coef_
             importances = selector.estimator_.feature_importances_
@@ -77,8 +77,8 @@ class RecursiveFeatureElimination:
         importances = importances.iloc[-self.keep_top_features :, :]  # keep only the top features
 
         logger.info(
-            f'Removed {len(x.columns) + 1 - len(data.columns)} features with RFE and {rfe_estimator} estimator, '
-            f'number of remaining features: {len(data.columns) - 1}'
+            f'Removed {len(x.columns) + 1 - len(frame.columns)} features with RFE and {rfe_estimator} estimator, '
+            f'number of remaining features: {len(frame.columns) - 1}'
         )
 
         ax = importances.plot.barh()
@@ -92,40 +92,40 @@ class RecursiveFeatureElimination:
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'), dpi=fig.dpi)
         plt.close(fig)
 
-        return data, importances.index.tolist()[::-1]
+        return frame, importances.index.tolist()[::-1]
 
-    def fr_logistic_regression(self, data: pd.DataFrame) -> tuple:
+    def fr_logistic_regression(self, frame: pd.DataFrame) -> tuple:
         """Feature reduction using logistic regression estimator"""
-        data, features = self.__reduction(data, 'logistic_regression')
-        return data, features
+        frame, features = self.__reduction(frame, 'logistic_regression')
+        return frame, features
 
-    def fr_forest(self, data: pd.DataFrame) -> tuple:
+    def fr_forest(self, frame: pd.DataFrame) -> tuple:
         """Feature reduction using random forest estimator"""
-        data, features = self.__reduction(data, 'forest')
-        return data, features
+        frame, features = self.__reduction(frame, 'forest')
+        return frame, features
 
-    def fr_extreme_forest(self, data: pd.DataFrame) -> tuple:
+    def fr_extreme_forest(self, frame: pd.DataFrame) -> tuple:
         """Feature reduction using extreme forest estimator"""
-        data, features = self.__reduction(data, 'extreme_forest')
-        return data, features
+        frame, features = self.__reduction(frame, 'extreme_forest')
+        return frame, features
 
-    def fr_adaboost(self, data: pd.DataFrame) -> tuple:
+    def fr_adaboost(self, frame: pd.DataFrame) -> tuple:
         """Feature reduction using adaboost estimator"""
-        data, features = self.__reduction(data, 'adaboost')
-        return data, features
+        frame, features = self.__reduction(frame, 'adaboost')
+        return frame, features
 
-    def fr_xgboost(self, data: pd.DataFrame) -> tuple:
+    def fr_xgboost(self, frame: pd.DataFrame) -> tuple:
         """Feature reduction using xgboost estimator"""
-        data, features = self.__reduction(data, 'xgboost')
-        return data, features
+        frame, features = self.__reduction(frame, 'xgboost')
+        return frame, features
 
-    def fr_all(self, data: pd.DataFrame) -> tuple:
+    def fr_all(self, frame: pd.DataFrame) -> tuple:
         """Feature reduction using all estimators in an ensemble manner"""
         number_of_estimators = 4
-        _, f_features = self.__reduction(data, 'forest')
-        _, xg_features = self.__reduction(data, 'xgboost')
-        _, ada_features = self.__reduction(data, 'adaboost')
-        _, ef_features = self.__reduction(data, 'extreme_forest')
+        _, f_features = self.__reduction(frame, 'forest')
+        _, xg_features = self.__reduction(frame, 'xgboost')
+        _, ada_features = self.__reduction(frame, 'adaboost')
+        _, ef_features = self.__reduction(frame, 'extreme_forest')
 
         min_len = min(
             len(f_features),
@@ -174,5 +174,5 @@ class RecursiveFeatureElimination:
 
         logger.info(f'Top features: {list(feature_scores["feature"])}')
         features_to_keep = list(feature_scores["feature"]) + list(self.target_label)
-        data = data.drop(columns=[c for c in data.columns if c not in features_to_keep], axis=1)
-        return data, feature_scores['feature'].tolist()[::-1]
+        frame = frame.drop(columns=[c for c in frame.columns if c not in features_to_keep], axis=1)
+        return frame, feature_scores['feature'].tolist()[::-1]

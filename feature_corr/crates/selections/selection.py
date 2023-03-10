@@ -43,12 +43,13 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
         self.__check_auto_norm_methods()
 
         for job in self.jobs:
-            logger.info(f'Running {job}')
+            logger.info(f'Running -> {job}')
             self.job_name = '_'.join(job)  # name of current job
             self.job_dir = os.path.join(self.out_dir, self.experiment_name, self.state_name, self.job_name)
             os.makedirs(self.job_dir, exist_ok=True)
             data = self.get_store('frame', self.state_name, 'selection_train')
             for step in job:
+                logger.trace(f'Running -> {step}')
                 data, error = self.process_job(step, data)
                 if error:
                     logger.error(f'Step {step} is invalid')

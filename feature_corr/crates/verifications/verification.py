@@ -31,6 +31,7 @@ class CrossValidation:
         param_grid: dict,
         scoring: str,
         seed: int,
+        workers: int,
     ) -> None:
         self.x_train = x_train
         self.y_train = y_train
@@ -39,6 +40,7 @@ class CrossValidation:
         self.param_grid = dict(param_grid)
         self.scoring = scoring
         self.seed = seed
+        self.workers = workers
 
     def __call__(self):
         selector = GridSearchCV(
@@ -46,7 +48,7 @@ class CrossValidation:
             param_grid=self.param_grid,
             scoring=self.scoring,
             cv=self.cross_validator,
-            n_jobs=4,
+            n_jobs=self.workers,
         )
         selector.fit(self.x_train, self.y_train)
         return selector
@@ -59,6 +61,7 @@ class Verification(DataBorg, Normalisers):
         super().__init__()
         self.config = config
         self.seed = config.meta.seed
+        self.workers = config.meta.workers
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
@@ -101,13 +104,7 @@ class Verification(DataBorg, Normalisers):
             )
 
             optimiser = CrossValidation(
-                self.x_train,
-                self.y_train,
-                estimator,
-                cross_validator,
-                param_grid,
-                scoring,
-                self.seed,
+                self.x_train, self.y_train, estimator, cross_validator, param_grid, scoring, self.seed, self.workers
             )
             best_estimator = optimiser()
             best_estimators.append((model, best_estimator))

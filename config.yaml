@@ -1,9 +1,10 @@
 meta:
   name: "phenomapping" # experiment name
-  target_label: ["LA_GLS_11.4"] # which column to use as label for exploration, feature reduction and analysis
+  target_label: ["LA_GLS_11.4", "LV_GLS_14.89"] # which column to use as label for exploration, feature reduction and analysis
 #  target_label: ["mace"]
-  seed: [42] # random seeds
-  logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  seed: [12, 42, 34, 123, 234] # random seeds
+  logging_level: "TRACE" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  workers: 8 # number of workers for parallel processing
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
 
@@ -25,11 +26,11 @@ inspection:
           else: null
 
 impute:
-  active: False # impute missing values
+  active: True # impute missing values
   method: ["iterative_impute"] #: drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
 
 data_split:
-  active: False # needs to be set to True for feature selection and verification
+  active: True # needs to be set to True for feature selection and verification
   selection_frac: 0.2  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing verification models
   over_sample_selection: True # oversample minority class to balance feature selection set
@@ -42,7 +43,7 @@ data_split:
     }
 
 selection:
-  active: False # whether to perform feature selections
+  active: True # whether to perform feature selections
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
@@ -57,17 +58,21 @@ selection:
     }
 
   auto_norm_method: # method for data type dependent normalization
-    binary: "z_score_norm"
-    continuous: "min_max_norm"
+    binary: "min_max_norm"
+    continuous: "z_score_norm"
     object: "z_score_norm"
     datatime: "z_score_norm"
 
   jobs: [
-      ["variance_threshold", "z_score_norm", 'fr_adaboost'],
+      ["variance_threshold", "z_score_norm", "fr_forest", "pca", "umap"],
+#      ["variance_threshold", "l1_norm", "fr_all", "pca", "umap"],
+#      ["variance_threshold", "l2_norm", "fr_all", "pca", "umap"],
+#      ["variance_threshold", "auto_norm", "fr_all", "pca", "umap"],
+
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 verification:
-  active: False # whether to perform verification analysis
+  active: True # whether to perform verification analysis
   models:
     {
       "logistic_regression": False,
