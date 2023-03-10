@@ -1,5 +1,5 @@
 meta:
-  name: "phenomapping" # experiment name
+  name: "strain_test" # experiment name
   target_label: ["LA_GLS_11.4", "LV_GLS_14.89"] # which column to use as label for exploration, feature reduction and analysis
 #  target_label: ["mace"]
   seed: [12, 42, 34, 123, 234] # random seeds
@@ -44,7 +44,7 @@ data_split:
 
 selection:
   active: True # whether to perform feature selections
-  variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
+  variance_thresh: 0.1 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
   corr_drop_features: True # whether to drop highly correlated features
@@ -65,9 +65,9 @@ selection:
 
   jobs: [
       ["variance_threshold", "z_score_norm", "fr_forest", "pca", "umap"],
-#      ["variance_threshold", "l1_norm", "fr_all", "pca", "umap"],
-#      ["variance_threshold", "l2_norm", "fr_all", "pca", "umap"],
-#      ["variance_threshold", "auto_norm", "fr_all", "pca", "umap"],
+      ["variance_threshold", "l1_norm", "fr_all", "pca", "umap"],
+      ["variance_threshold", "l2_norm", "fr_all", "pca", "umap"],
+      ["variance_threshold", "auto_norm", "fr_all", "pca", "umap"],
 
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 

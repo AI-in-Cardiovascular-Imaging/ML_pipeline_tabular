@@ -13,7 +13,7 @@ def plot_bubble(func):
 
     def wrapper(self, *args):
         frame = args[0]
-        if len(frame.columns) < 2:
+        if len(frame.columns) > 2:
             y_train = frame[self.target_label]
             x_train = frame.drop(self.target_label, axis=1)
 
