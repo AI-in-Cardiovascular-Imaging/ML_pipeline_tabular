@@ -70,10 +70,11 @@ class DataSplit(DataBorg):
         """Show data split stats"""
         logger.info(
             f'\n{head}\n'
-            f'{"Original data:":<24}{len(self.frame)} rows\n'
-            f'{"Selection train:":<24}{len(s_train)} rows\n'
-            f'{"Verification train:":<24}{len(v_train)} rows\n'
-            f'{"Verification test:":<24}{len(v_test)} rows'
+            f'{"Set":<24}{"rows":<7}{"cols"}\n'
+            f'{"Original data:":<24}{len(self.frame):<7}{len(self.frame.columns)}\n'
+            f'{"Selection train:":<24}{len(s_train):<7}{len(s_train.columns)}\n'
+            f'{"Verification train:":<24}{len(v_train):<7}{len(v_train.columns)}\n'
+            f'{"Verification test:":<24}{len(v_test):<7}{len(v_test.columns)}'
         )
 
     def set_stratification(self, frame: pd.DataFrame = None) -> None:

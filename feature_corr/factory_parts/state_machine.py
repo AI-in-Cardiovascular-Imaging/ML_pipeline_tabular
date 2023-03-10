@@ -40,7 +40,8 @@ class StateMachine:
     def check_state_names(self) -> None:
         """Check if all state names have valid types"""
         for state_name in self.state_names:
-            assert OmegaConf.is_list(dig(self.config, state_name)) is True, f'Expected list in config -> {state_name}'
+            if not OmegaConf.is_list(dig(self.config, state_name)):
+                raise ValueError(f'Expected variable as list in config -> {state_name}')
 
     def create_state_tree(self) -> None:
         """Create a tree of all possible states for the pipeline to run in"""

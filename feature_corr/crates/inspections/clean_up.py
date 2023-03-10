@@ -14,14 +14,27 @@ class CleanUp(DataBorg):
         self.config = config
         self.label_as_index = self.config.inspection.label_as_index
         logger.info(f'Running -> {self.__class__.__name__}')
+        self.auto_clean = self.config.inspection.auto_clean
+        self.manual_clean = self.config.inspection.manual_clean
         self.clean_frame = pd.DataFrame()
         self.frame = self.get_frame('ephemeral')
         self.label_index_frame = None
 
     def __call__(self) -> None:
+        """Autoclean, manual clean or do nothing"""
         self.maybe_get_label_index_frame()
-        self.get_consistent_frame()
+
+        if self.auto_clean:
+            self.get_consistent_frame()
+
+        if self.manual_clean:
+            pass
+
+        if not self.auto_clean and not self.manual_clean:
+            self.clean_frame = self.frame
+
         self.maybe_set_index_by_label()
+
         self.set_frame('ephemeral', self.clean_frame)
         if self.config.inspection.export_cleaned_frame:
             self.export_frame()
@@ -36,7 +49,7 @@ class CleanUp(DataBorg):
         """Get label index frame"""
         if isinstance(self.label_as_index, str):
             if self.label_as_index not in self.frame:
-                raise ValueError('Label index name is not in the data')
+                raise ValueError(f'Label index name: "{self.label_as_index}" is not in the data')
             self.label_index_frame = self.frame[self.label_as_index]
 
     def maybe_set_index_by_label(self) -> None:
