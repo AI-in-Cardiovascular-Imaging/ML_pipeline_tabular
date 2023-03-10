@@ -1,5 +1,6 @@
 import os
 
+import pandas as pd
 from crates.normalisers import Normalisers
 from loguru import logger
 from omegaconf import DictConfig
@@ -50,6 +51,7 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
             data = self.get_store('frame', self.state_name, 'selection_train')
             for step in job:
                 logger.trace(f'Running -> {step}')
+                data = self.__keep_data_only(data)
                 data, error = self.process_job(step, data)
                 if error:
                     logger.error(f'Step {step} is invalid')
@@ -70,6 +72,12 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
         if not selected_methods.issubset(valid_methods):
             raise ValueError(f'Invalid auto norm method, check -> {str(selected_methods - valid_methods)}')
 
+    def __keep_data_only(self, data: pd.DataFrame or tuple) -> pd.DataFrame:
+        """Keep only data"""
+        if isinstance(data, tuple):
+            return data[0]
+        return data
+
     def __store_features(self, data: tuple) -> None:
         """Store features"""
         if isinstance(data, tuple):
@@ -83,7 +91,7 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
                 f'feature elimination to your job definition'
             )
 
-    def process_job(self, step: str, data: dict) -> tuple:
+    def process_job(self, step: str, data: pd.DataFrame) -> tuple:
         """Process data according to the given step"""
         if data is None:
             logger.warning(

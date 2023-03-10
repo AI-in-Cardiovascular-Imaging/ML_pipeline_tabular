@@ -1,4 +1,5 @@
 import os
+import time
 
 from loguru import logger
 from omegaconf import DictConfig
@@ -32,5 +33,7 @@ class Factory:
     @staticmethod
     def produce_pipeline(config: DictConfig) -> None:
         """Pipeline producer"""
+        start_time = time.time()
         pipeline = Pipeline(config)
         pipeline()
+        logger.info(f'Pipelines finished in {(time.time() - start_time)/60:.2f} minutes')

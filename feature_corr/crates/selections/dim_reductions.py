@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 import plotly.express as px
+from loguru import logger
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from umap import UMAP
@@ -12,35 +13,38 @@ def plot_bubble(func):
 
     def wrapper(self, *args):
         frame = args[0]
-        y_train = frame[self.target_label]
-        x_train = frame.drop(self.target_label, axis=1)
+        if len(frame.columns) < 2:
+            y_train = frame[self.target_label]
+            x_train = frame.drop(self.target_label, axis=1)
 
-        proj_2d, proj_3d, name = func(self, x_train)  # call the wrapped function
+            proj_2d, proj_3d, name = func(self, x_train)  # call the wrapped function
 
-        fig_2d = px.scatter(
-            proj_2d,
-            x=0,
-            y=1,
-            color=y_train,
-            labels={'color': self.target_label},
-            title=f'{name} 2D',
-        )
-        fig_3d = px.scatter_3d(
-            proj_3d,
-            x=0,
-            y=1,
-            z=2,
-            color=y_train,
-            labels={'color': self.target_label},
-            title=f'{name} 3D',
-        )
-        fig_3d.update_traces(marker_size=5)
+            fig_2d = px.scatter(
+                proj_2d,
+                x=0,
+                y=1,
+                color=y_train,
+                labels={'color': self.target_label},
+                title=f'{name} 2D',
+            )
+            fig_3d = px.scatter_3d(
+                proj_3d,
+                x=0,
+                y=1,
+                z=2,
+                color=y_train,
+                labels={'color': self.target_label},
+                title=f'{name} 3D',
+            )
+            fig_3d.update_traces(marker_size=5)
 
-        fig_2d.write_image(os.path.join(self.job_dir, f'{name}_2d.svg'))
-        fig_2d.write_html(os.path.join(self.job_dir, f'{name}_2d.html'))
-        fig_3d.write_html(os.path.join(self.job_dir, f'{name}_3d.html'))
+            fig_2d.write_image(os.path.join(self.job_dir, f'{name}_2d.svg'))
+            fig_2d.write_html(os.path.join(self.job_dir, f'{name}_2d.html'))
+            fig_3d.write_html(os.path.join(self.job_dir, f'{name}_3d.html'))
+        else:
+            logger.warning("Umap, tsne and pca are only available for 3D data and higher")
 
-        return data
+        return frame
 
     return wrapper
 
