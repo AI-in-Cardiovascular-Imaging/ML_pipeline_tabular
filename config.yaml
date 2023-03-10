@@ -1,18 +1,18 @@
 meta:
   name: "phenomapping" # experiment name (i.e. file name in which to store merged data)
-  target_label: ["mace"] # which column to use as label for exploration, feature reduction and analysis
-  seed: [42] # random seed
+  target_label: ["LA_GLS_11.4"] # which column to use as label for exploration, feature reduction and analysis
+  seed: [42, 50, 90] # random seed
   logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
 
 inspection:
-  label_as_index: "subject" # column string name or None
+  label_as_index: "ID_Imaging" # column string name or None
   custom_clean_up: False # TODO: implement custom clean up
 
 impute:
   active: True # whether to impute missing values
-  method: ["drop_nan_impute"] #:  drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
+  method: ["drop_nan_impute"] #: drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
   constant: 0 # constant to use for imputation if method is 'constant'
 
 data_split:
@@ -22,13 +22,13 @@ data_split:
   over_sample_verification: True # oversample minority class to balance verification set
   over_sample_method:
     {
-      "binary_classification": "RandomOverSampler",
-      "multi_classification": "RandomOverSampler",
-      "regression": "RandomOverSampler",
+      "binary_classification": "RandomOverSampler",  #: RandomOverSampler, SMOTE, ADASYN
+      "multi_classification": "RandomOverSampler",  #: RandomOverSampler, SMOTE, ADASYN
+      "regression": "RandomOverSampler",  #: RandomOverSampler, SMOTE, ADASYN
     }
 
 selection:
-  active: True # whether to perform feature selections
+  active: False # whether to perform feature selections
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
@@ -53,7 +53,7 @@ selection:
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 verification:
-  active: True # whether to perform verification analysis
+  active: False # whether to perform verification analysis
   models:
     {
       "logistic_regression": False,

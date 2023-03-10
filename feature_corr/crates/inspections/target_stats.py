@@ -26,6 +26,8 @@ class TargetStatistics(DataBorg):
     def show_target_statistics(self) -> None:
         """Show target statistics"""
         for target_label in self.target_label:
+            if target_label not in self.original_data.columns:
+                raise ValueError(f'Target label {target_label} not in data')
             target_data = self.original_data[target_label]
             task = check_learn_task(target_data)
             self._plot_stats(target_label, target_data, task)
@@ -40,10 +42,10 @@ class TargetStatistics(DataBorg):
     def _plot_stats(target_label, target_data, task) -> None:
         """Show target statistics"""
         if task == 'binary_classification':
-            ratio = (target_data.sum() / len(target_data.index)).round(2)
+            perc = (target_data.sum() / len(target_data.index)).round(2) * 100
             logger.info(
                 f'\nSummary statistics for binary target variable {target_label}:\n'
-                f'Positive cases -> {(ratio * 100).round(2)}% or {target_data.sum()}/{len(target_data.index)} samples.'
+                f'Positive cases -> {perc}% or {target_data.sum()}/{len(target_data.index)} samples.'
             )
 
         elif task == 'multi_classification':

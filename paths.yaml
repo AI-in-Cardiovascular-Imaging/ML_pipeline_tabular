@@ -1,3 +1,3 @@
 meta:
   output_dir: "/home/melandur/Downloads"
-  input_file: "/home/melandur/Data/Myocarditis/new/5_merged/phenomapping.xlsx"
+  input_file: "/home/melandur/Data/Myocarditis/ct_strain_test.xlsx"

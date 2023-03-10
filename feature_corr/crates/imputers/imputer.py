@@ -15,10 +15,12 @@ def data_bubble(func):
     def wrapper(self, *args):
         data = args[0]
         impute = func(self)
-        imp_data = impute.fit_transform(data)
-        imp_data = pd.DataFrame(imp_data, index=data.index, columns=data.columns)
-        logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_data)}')
-        self.set_store('frame', self.state_name, 'ephemeral', imp_data)
+        imp_frame = impute.fit_transform(data)
+        imp_frame = pd.DataFrame(imp_frame, index=data.index, columns=data.columns)
+        logger.info(f'{self.impute_method} reduced features from {len(data)} -> {len(imp_frame)}')
+        self.set_store('frame', self.state_name, 'ephemeral', imp_frame)
+        if len(imp_frame) == 0:
+            raise ValueError('No cases left after dropping NaN values, use another imputation method or clean data')
 
     return wrapper
 
@@ -51,6 +53,8 @@ class Imputer(DataBorg):
         """Drop patients with any NaN values"""
         imp_frame = frame.dropna(axis=0, how='any')
         logger.info(f'{self.impute_method} reduced features from {len(frame)} -> {len(imp_frame)}')
+        if len(imp_frame) == 0:
+            raise ValueError('No cases left after dropping NaN values, use another imputation method or clean data')
         self.set_store('frame', self.state_name, 'ephemeral', imp_frame)
 
     @data_bubble
