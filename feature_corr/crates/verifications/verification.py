@@ -67,9 +67,14 @@ class Verification(DataBorg, Normalisers):
 
     def __call__(self):
         """Train random forest classifier to verify feature importance"""
-
-        job_names = self.get_feature_job_names(self.state_name)
-        print(job_names)
+        jobs = self.get_feature_job_names(self.state_name)
+        for job in jobs:
+            v_train = self.get_store('frame', self.state_name, 'verification_train')
+            v_test = self.get_store('frame', self.state_name, 'verification_test')
+            top_feature_names = [self.get_store('feature', self.state_name, job)]
+            self.x_train, self.y_train = self.prepare_data(v_train, top_feature_names)
+            self.x_test, self.y_test = self.prepare_data(v_test, top_feature_names)
+            self.train_models()
 
     def train_models(self):
         """Train random forest classifier to verify feature importance"""
@@ -103,7 +108,7 @@ class Verification(DataBorg, Normalisers):
         for ensemble in self.ensemble:
             logger.info(f'Combining optimised models in {ensemble} estimator')
             if 'voting' in ensemble:
-                if self.learn_task == 'classification':
+                if self.learn_task == 'binary_classification':
                     ens_estimator = VotingClassifier(estimators=best_estimators, voting='hard')
                     ens_estimator.estimators_ = [
                         est_tuple[1] for est_tuple in best_estimators
@@ -153,10 +158,8 @@ class Verification(DataBorg, Normalisers):
     def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None) -> tuple:
         """Prepare data for verification"""
         y = data[self.target_label]
-        data = self.z_score_norm(data)
-        x = data.drop(
-            columns=[c for c in data.columns if c not in features_to_keep], axis=1
-        )  # Keep only selected features
+        # data = self.z_score_norm(data)  # TODO: check this
+        x = data.drop(columns=[c for c in data.columns if c not in features_to_keep], axis=1)  # only selected features
         if self.target_label in x.columns:  # ensure that target column is dropped
             x = x.drop(self.target_label, axis=1)
         return x, y
