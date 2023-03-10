@@ -53,15 +53,7 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
-            if isinstance(data, tuple):
-                top_features = data[0]
-                logger.info(f'Found features')
-                self.set_store('feature', self.state_name, self.job_name, top_features)
-            else:
-                logger.warning(
-                    f'No features selected for {self.job_name}, add feature reduction or recursive '
-                    f'feature elimination to your job definition'
-                )
+            self.__store_features(data)
 
     def __check_jobs(self) -> None:
         """Check if the given jobs are valid"""
@@ -76,6 +68,18 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
         selected_methods = set(self.auto_norm_method.values())
         if not selected_methods.issubset(valid_methods):
             raise ValueError(f'Invalid auto norm method, check -> {str(selected_methods - valid_methods)}')
+
+    def __store_features(self, data: tuple) -> None:
+        """Store features"""
+        if isinstance(data, tuple):
+            top_features = data[0]
+            logger.info(f'Found features')
+            self.set_store('feature', self.state_name, self.job_name, top_features)
+        else:
+            logger.warning(
+                f'No features selected for {self.job_name}, add feature reduction or recursive '
+                f'feature elimination to your job definition'
+            )
 
     def process_job(self, step: str, data: dict) -> tuple:
         """Process data according to the given step"""

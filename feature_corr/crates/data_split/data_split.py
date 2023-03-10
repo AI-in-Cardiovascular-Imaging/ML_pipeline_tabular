@@ -1,3 +1,4 @@
+import pandas as pd
 from imblearn.over_sampling import (
     ADASYN,
     SMOTE,
@@ -35,13 +36,36 @@ class DataSplit(DataBorg):
 
     def __call__(self):
         """Split data"""
-        self.set_stratification()
-        self.create_selection_verification_set()
+        self.set_stratification(self.frame)
+        s_frame, v_frame = self.create_selection_verification_set()
+        if self.selection_frac > 0.0:
+            v_train, v_test = self.maybe_create_verification_split(v_frame)
+            s_train = s_frame
+        else:
+            s_train, v_train, v_test = s_frame, s_frame, v_frame
 
-    def set_stratification(self):
+        if self.over_sample_selection:
+            s_train = self.over_sampling(s_train)
+        if self.over_sample_verification:
+            v_train = self.over_sampling(v_train)
+            v_test = self.over_sampling(v_test)
+
+        self.set_store('frame', self.state_name, 'ephemeral', s_train)
+        self.set_store('frame', self.state_name, 'ephemeral', v_train)
+        self.set_store('frame', self.state_name, 'ephemeral', v_test)
+
+        logger.info(
+            f'\nData split overview:\n'
+            f'Original data set -> {len(self.frame)} rows\n'
+            f'Selection train set -> {len(s_train)} rows\n'
+            f'Verification train set -> {len(v_train)} rows\n'
+            f'Verification test set -> {len(v_test)} rows'
+        )
+
+    def set_stratification(self, frame: pd.DataFrame = None) -> None:
         """Set stratification"""
         if self.learn_task == 'binary_classification':
-            target_frame = self.frame[self.config.meta.target_label]
+            target_frame = frame[self.target_label]
             self.stratify = target_frame
         elif self.learn_task == 'multi_classification':
             raise NotImplementedError('Multi-classification not implemented')
@@ -53,62 +77,45 @@ class DataSplit(DataBorg):
     def create_selection_verification_set(self):
         """Split in selection and verification set"""
         if 0.0 < self.selection_frac < 1.0:
-            selection_train, verification_train = train_test_split(
-                self.frame,
-                stratify=self.stratify,
-                test_size=1.0 - self.selection_frac,
-                random_state=self.seed,
-            )
-            self.over_sampling(selection_train, selection_train[self.target_label])
-            self.set_store('frame', self.state_name, 'selection_train', selection_train)
-            self.set_store('frame', self.state_name, 'verification_train', verification_train)
-            self.set_store('frame', self.state_name, 'verification_test', None)
-            logger.info(
-                f'\nData split:'
-                f'\nselection_train -> {len(selection_train)}'
-                f'\nverification_train -> {len(verification_train)}'
-                f'\nverification_test -> None'
-            )
-
-        elif (
-            self.selection_frac == 0.0
-        ):  # special mode in which entire train data is used for selection and verification
-            self.over_sampling(self.frame, self.frame[self.target_label])
-            verification_train, verification_test = train_test_split(
-                self.frame,
-                stratify=self.stratify,
-                test_size=self.verification_test_frac,
-                random_state=self.seed,
-            )
-            self.set_store('frame', self.state_name, 'selection_train', verification_train)
-            self.set_store('frame', self.state_name, 'verification_train', verification_train)
-            self.set_store('frame', self.state_name, 'verification_test', verification_test)
-            logger.info(
-                f'\nData split:'
-                f'\nselection_train -> {len(verification_train)}'
-                f'\nverification_train -> {len(verification_train)}'
-                f'\nverification_test -> {len(verification_test)}'
-            )
+            test_size = 1.0 - self.selection_frac
+        elif self.selection_frac == 0.0:  # entire train data is used for selection and verification
+            test_size = self.verification_test_frac
         else:
             raise ValueError(f'Value {self.selection_frac} is invalid, must be float between (0.0, 1.0)')
 
-    def over_sampling(
-        self,
-        x_frame,
-        y_frame,
-    ):
-        """Oversample data"""
+        s_frame, v_frame = train_test_split(
+            self.frame,
+            stratify=self.stratify,
+            test_size=test_size,
+            random_state=self.seed,
+        )
+        return s_frame, v_frame
+
+    def maybe_create_verification_split(self, v_frame):
+        """Create verification split if needed"""
+        if 0.0 > self.verification_test_frac > 1.0:
+            raise ValueError(f'Value {self.verification_test_frac} is invalid, must be float between (0.0, 1.0)')
+        self.set_stratification(v_frame)
+        v_train, v_test = train_test_split(
+            v_frame,
+            stratify=self.stratify,
+            test_size=self.verification_test_frac,
+            random_state=self.seed,
+        )
+        return v_train, v_test
+
+    def over_sampling(self, x_frame):
+        """Over sample data"""
         method = self.over_sample_method[self.learn_task]
         over_sampler_name = f'{self.learn_task}_{method}'
-        print(over_sampler_name)
         over_sampler_dict = {
-            'ADASYN': ADASYN(random_state=self.seed),
-            'SMOTE': SMOTE(random_state=self.seed),
-            'SMOTEN': SMOTEN(random_state=self.seed),
-            'SMOTENC': SMOTENC(categorical_features=2, random_state=self.seed),
-            'SVMSMOTE': SVMSMOTE(random_state=self.seed),
-            'BorderlineSMOTE': BorderlineSMOTE(random_state=self.seed),
-            'KMeansSMOTE': KMeansSMOTE(random_state=self.seed),
+            'regression_ADASYN': ADASYN(random_state=self.seed),
+            'regression_SMOTE': SMOTE(random_state=self.seed),
+            'binary_classification_SMOTEN': SMOTEN(random_state=self.seed),
+            'binary_classification_SMOTENC': SMOTENC(categorical_features=2, random_state=self.seed),
+            'binary_classification_SVMSMOTE': SVMSMOTE(random_state=self.seed),
+            'binary_classification_BorderlineSMOTE': BorderlineSMOTE(random_state=self.seed),
+            'regression_KMeansSMOTE': KMeansSMOTE(random_state=self.seed),
             'regression_RandomOverSampler': RandomOverSampler(random_state=self.seed),
             'binary_classification_RandomOverSampler': RandomOverSampler(random_state=self.seed),
         }
@@ -117,12 +124,9 @@ class DataSplit(DataBorg):
             raise ValueError(f'Unknown over sampler: {over_sampler_name}')
 
         over_sampler = over_sampler_dict[over_sampler_name]
-
-        print(f'Over sampling with {over_sampler_name} ...')
-
-        over_sampler = RandomOverSampler(random_state=self.seed)
-        x_frame, y_frame = over_sampler.fit_resample(x_frame, y_frame)
-        # return self.x_train, self.y_train
+        y_frame = x_frame[self.target_label]
+        new_x_frame, _ = over_sampler.fit_resample(x_frame, y_frame)
+        return new_x_frame
 
     # def create_verification_split(self):
     #     """Split verification data in train and test set"""

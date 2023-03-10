@@ -1,9 +1,9 @@
 from pytest import fixture
 
-from cardio_parsers.stations.normalisers import Normaliser
+from feature_corr.crates.normalisers import Normalisers
 
 
 @fixture(scope='function')
 def normaliser():
     """Returns an unique normaliser for each function"""
-    return Normaliser()
+    return Normalisers()
