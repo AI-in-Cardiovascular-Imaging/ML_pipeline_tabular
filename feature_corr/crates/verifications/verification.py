@@ -3,7 +3,6 @@ import pandas as pd
 import seaborn as sns
 from crates.helpers import init_estimator
 from crates.normalisers import Normalisers
-from imblearn.over_sampling import RandomOverSampler
 from loguru import logger
 from sklearn.ensemble import VotingClassifier, VotingRegressor
 from sklearn.metrics import (
@@ -14,7 +13,7 @@ from sklearn.metrics import (
     mean_absolute_error,
     r2_score,
 )
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 
 from feature_corr.data_borg import DataBorg
@@ -44,7 +43,7 @@ class CrossValidation:
         return selector
 
 
-class Verifications(DataBorg, Normalisers):
+class Verification(DataBorg, Normalisers):
     """Train random forest classifier to verify feature importance"""
 
     def __init__(self, config):
@@ -54,9 +53,8 @@ class Verifications(DataBorg, Normalisers):
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
-        self.scoring = config.verification.scoring
-        self.class_weight = config.verification.class_weight
-        self.oversample = config.data_split.oversample_verification
+        self.scoring = config.selection.scoring
+        self.class_weight = config.selection.class_weight
         self.param_grids = config.verification.param_grids
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
@@ -69,6 +67,9 @@ class Verifications(DataBorg, Normalisers):
 
     def __call__(self):
         """Train random forest classifier to verify feature importance"""
+
+        job_names = self.get_feature_job_names(self.state_name)
+        print(job_names)
 
     def train_models(self):
         """Train random forest classifier to verify feature importance"""
@@ -149,13 +150,13 @@ class Verifications(DataBorg, Normalisers):
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
 
-    # def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None) -> tuple:
-    #     """Prepare data for verification"""
-    #     y = data[self.target_label]
-    #     data = self.z_score_norm(data)
-    #     x = data.drop(
-    #         columns=[c for c in data.columns if c not in features_to_keep], axis=1
-    #     )  # Keep only selected features
-    #     if self.target_label in x.columns:  # ensure that target column is dropped
-    #         x = x.drop(self.target_label, axis=1)
-    #     return x, y
+    def prepare_data(self, data: pd.DataFrame, features_to_keep: list = None) -> tuple:
+        """Prepare data for verification"""
+        y = data[self.target_label]
+        data = self.z_score_norm(data)
+        x = data.drop(
+            columns=[c for c in data.columns if c not in features_to_keep], axis=1
+        )  # Keep only selected features
+        if self.target_label in x.columns:  # ensure that target column is dropped
+            x = x.drop(self.target_label, axis=1)
+        return x, y

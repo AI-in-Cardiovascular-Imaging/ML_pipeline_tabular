@@ -1,1 +1,1 @@
-from feature_corr.crates.verifications.verifications import Verifications
+from feature_corr.crates.verifications.verification import Verification

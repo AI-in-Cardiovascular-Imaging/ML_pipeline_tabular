@@ -90,5 +90,5 @@ outputs/
 
 *.pyc
 
-config/dataset/train.yaml
-config/dataset/test.yaml
+paths.yaml
+

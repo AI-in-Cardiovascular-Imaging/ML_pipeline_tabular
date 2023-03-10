@@ -79,6 +79,13 @@ class DataBorg:
             return self._feature_store[state_name][step_name]
         raise ValueError(f'Invalid data name to get store data -> {data_name}, allowed -> frame, feature')
 
+    def get_feature_job_names(self, state_name: str) -> list:
+        """Returns the store value"""
+        if state_name not in self._feature_store:
+            raise ValueError(f'Invalid state name -> {state_name}')
+        logger.trace(f'Returning feature job names -> {type(self._feature_store[state_name])}')
+        return list(self._feature_store[state_name].keys())
+
     def sync_ephemeral_data_to_data_store(self, state_name: str, step_name: str) -> None:
         """Syncs the ephemeral data with the data store"""
         self._frame_store[state_name][step_name] = self._ephemeral_frame

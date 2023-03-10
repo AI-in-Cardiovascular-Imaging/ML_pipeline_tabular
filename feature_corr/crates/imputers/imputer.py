@@ -23,7 +23,7 @@ def data_bubble(func):
     return wrapper
 
 
-class Imputers(DataBorg):
+class Imputer(DataBorg):
     """Impute missing data"""
 
     def __init__(self, config) -> None:

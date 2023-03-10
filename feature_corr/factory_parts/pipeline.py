@@ -2,12 +2,11 @@ from crates.data_split.data_split import DataSplit
 from loguru import logger
 from omegaconf import OmegaConf
 
-from feature_corr.crates.imputers import Imputers
+from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.selections import Selection
+from feature_corr.crates.verifications import Verification
 from feature_corr.data_borg import DataBorg
-
-# from feature_corr.crates.verifications import Verifications
 
 
 def run_when_active(func):
@@ -53,7 +52,7 @@ class Pipeline(DataBorg):
     @run_when_active
     def impute(self) -> None:
         """Impute data"""
-        Imputers(self.config)()
+        Imputer(self.config)()
 
     def data_split(self) -> None:
         """Split data"""
@@ -67,4 +66,4 @@ class Pipeline(DataBorg):
     @run_when_active
     def verification(self) -> None:
         """Verify data"""
-        # Verification(self.config)()
+        Verification(self.config)()
