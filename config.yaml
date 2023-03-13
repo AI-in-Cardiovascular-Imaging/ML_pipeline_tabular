@@ -1,29 +1,20 @@
 meta:
   name: "strain_test" # experiment name
-  target_label: ["LA_GLS_11.4", "LV_GLS_14.89"] # which column to use as label for exploration, feature reduction and analysis
+  target_label: ["ATTR_Amyloidose"] # which column to use as label for exploration, feature reduction and analysis
 #  target_label: ["mace"]
-  seed: [12, 42, 34, 123, 234] # random seeds
-  logging_level: "TRACE" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  seed: [12, 23] # random seeds
+  logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   workers: 8 # number of workers for parallel processing
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
 
 inspection:
   label_as_index: "ID_Imaging" # column string name or None
-  export_cleaned_frame: False # for visual inspection of the cleaned data
+  export_cleaned_frame: True # for visual inspection of the cleaned data
   auto_clean: True # will run before manual_clean
   manual_clean: False # manual cleaning of data
   manual_strategy:
-      replace:
-        Gender:
-          999: 1
-          1: 0
-          2: 1
-          else: null
-      allow_only:
-        Age:
-          allowed: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-          else: null
+    drop_columns_regex: _\d+  # don't use strings, https://regex101.com/
 
 impute:
   active: True # impute missing values
@@ -31,10 +22,10 @@ impute:
 
 data_split:
   active: True # needs to be set to True for feature selection and verification
-  selection_frac: 0.2  # fraction of data to use for feature selection
+  selection_frac: 0.5  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing verification models
-  over_sample_selection: True # oversample minority class to balance feature selection set
-  over_sample_verification: True # oversample minority class to balance verification set
+  over_sample_selection: False # oversample minority class to balance feature selection set
+  over_sample_verification: False # oversample minority class to balance verification set
   over_sample_method:
     {
       "binary_classification": "RandomOverSampler",  #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
@@ -64,11 +55,7 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-      ["variance_threshold", "z_score_norm", "fr_forest", "pca", "umap"],
-      ["variance_threshold", "l1_norm", "fr_all", "pca", "umap"],
-      ["variance_threshold", "l2_norm", "fr_all", "pca", "umap"],
-      ["variance_threshold", "auto_norm", "fr_all", "pca", "umap"],
-
+        ["variance_threshold", "correlation", "l2_norm", "umap", "fr_forest", "pca", "umap"]
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 verification:
