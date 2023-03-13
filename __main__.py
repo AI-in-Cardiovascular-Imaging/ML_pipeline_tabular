@@ -11,11 +11,24 @@ from feature_corr.factory_parts.factory import Factory
 def main():
 
     logger.info(f'Loading config file -> {os.path.join(os.getcwd(), "config.yaml")}')
-    with open('config.yaml') as file:
-        config = OmegaConf.load(file)
 
-    with open('paths.yaml') as file:  # will be removed
-        path = OmegaConf.load(file)
+    if not os.path.exists('config.yaml'):
+        logger.error('Could not find config.yaml')
+        sys.exit(1)
+
+    if not os.path.exists('paths.yaml'):
+        logger.error('Could not find paths.yaml')
+        sys.exit(1)
+
+    try:
+        with open('config.yaml') as file:
+            config = OmegaConf.load(file)
+
+        with open('paths.yaml') as file:  # will be removed
+            path = OmegaConf.load(file)
+    except Exception as e:
+        logger.error(f'Type error in config file -> \n{e}')
+        sys.exit(1)
 
     config = OmegaConf.merge(config, path)
 
