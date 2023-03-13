@@ -166,5 +166,4 @@ class Verification(DataBorg, Normalisers):
         """Prepare frame for verification"""
         y_frame = frame[self.target_label]
         x_frame = frame[self.top_feature_names]  # only keep top features
-        x_frame = x_frame.drop(self.target_label, axis=1)
         return x_frame, y_frame

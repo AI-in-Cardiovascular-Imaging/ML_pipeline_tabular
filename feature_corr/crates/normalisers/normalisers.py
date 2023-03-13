@@ -18,7 +18,7 @@ def data_bubble(func):
         norm_frame = func(self, arr_frame)
         norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns)
         norm_frame[self.target_label] = tmp_label
-        return norm_frame
+        return norm_frame, None
 
     return wrapper
 
@@ -70,7 +70,7 @@ class Normalisers:
         """Power transform frame"""
         return preprocessing.PowerTransformer().fit_transform(frame)
 
-    def auto_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
+    def auto_norm(self, frame: pd.DataFrame) -> tuple:
         """Auto normalise frame based on data type per column"""
         if frame.isna().any(axis=None):
             raise ValueError('Data contains NaN values, consider imputing data')
@@ -83,7 +83,7 @@ class Normalisers:
             frame = self.__object_norm(frame, col_name, col_type)
             frame = self.__datatime_norm(frame, col_name, col_type)
         frame[self.target_label] = tmp_label
-        return frame
+        return frame, None
 
     def __normalise_accordingly(self, frame: pd.DataFrame, col_name: str, data_type_name: str) -> pd.DataFrame:
         """Normalise frame according to data type"""

@@ -48,15 +48,14 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
             self.job_name = '_'.join(job)  # name of current job
             self.job_dir = os.path.join(self.out_dir, self.experiment_name, self.state_name, self.job_name)
             os.makedirs(self.job_dir, exist_ok=True)
-            data = self.get_store('frame', self.state_name, 'selection_train')
+            frame = self.get_store('frame', self.state_name, 'selection_train')
             for step in job:
                 logger.trace(f'Running -> {step}')
-                data = self.__keep_data_only(data)
-                data, error = self.process_job(step, data)
+                frame, features, error = self.process_job(step, frame)
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
-            self.__store_features(data)
+                self.__store_features(features)
 
     def __check_jobs(self) -> None:
         """Check if the given jobs are valid"""
@@ -72,32 +71,25 @@ class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, R
         if not selected_methods.issubset(valid_methods):
             raise ValueError(f'Invalid auto norm method, check -> {str(selected_methods - valid_methods)}')
 
-    def __keep_data_only(self, data: pd.DataFrame or tuple) -> pd.DataFrame:
-        """Keep only data"""
-        if isinstance(data, tuple):
-            return data[0]
-        return data
-
-    def __store_features(self, data: tuple) -> None:
+    def __store_features(self, features: list) -> None:
         """Store features"""
-        if isinstance(data, tuple):
-            top_features = data[0]
-            top_feature_names = top_features.columns.tolist()
-            logger.info('Found top features')
-            self.set_store('feature', self.state_name, self.job_name, top_feature_names)
-        else:
-            logger.warning(
-                f'No features selected for {self.job_name}, add feature reduction or recursive '
-                f'feature elimination to your job definition'
-            )
+        if features:
+            if isinstance(features, list):
+                if len(features) > 0:
+                    logger.info('Found top features')
+                    self.set_store('feature', self.state_name, self.job_name, features)
+                else:
+                    logger.warning(f'No features found for {self.job_name}')
+            else:
+                logger.warning('Selected features are not a list')
 
-    def process_job(self, step: str, data: pd.DataFrame) -> tuple:
+    def process_job(self, step: str, frame: pd.DataFrame) -> tuple:
         """Process data according to the given step"""
-        if data is None:
+        if frame is None:
             logger.warning(
                 f'No data available for step: {step} in {self.job_name}. '
                 f'\nThe previous step does not seem to produce any output.'
             )
-            return None, True
-        data = getattr(self, step)(data)
-        return data, False
+            return None, None, True
+        frame, features = getattr(self, step)(frame)
+        return frame, features, False

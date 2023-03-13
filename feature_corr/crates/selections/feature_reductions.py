@@ -167,12 +167,12 @@ class FeatureReductions:
         ).to_excel(os.path.join(self.job_dir, 'investigate_outliers.xlsx'), index=True)
         return data
 
-    def feature_wiz(self, data: pd.DataFrame) -> pd.DataFrame:
+    def feature_wiz(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Use feature_wiz to select features"""
         from featurewiz import FeatureWiz
 
-        y_train = data[self.target_label]
-        x_train = data.drop(self.target_label, axis=1)
+        y_train = frame[self.target_label]
+        x_train = frame.drop(self.target_label, axis=1)
 
         features = FeatureWiz(
             corr_limit=self.corr_thresh,
@@ -185,19 +185,19 @@ class FeatureReductions:
         selected_features = features.fit_transform(x_train, y_train)
         return selected_features.join(y_train)
 
-    def variance_threshold(self, data: pd.DataFrame) -> pd.DataFrame:
+    def variance_threshold(self, frame: pd.DataFrame) -> tuple:
         """Remove features with variance below threshold"""
-        tmp = data[self.target_label]  # save label col
+        tmp = frame[self.target_label]  # save label col
         selector = VarianceThreshold(threshold=self.corr_thresh * (1 - self.corr_thresh))
-        selector.fit(data)
-        data = data.loc[:, selector.get_support()]
+        selector.fit(frame)
+        frame = frame.loc[:, selector.get_support()]
         logger.info(
-            f'Removed {len(selector.get_support()) - len(data.columns)} '
+            f'Removed {len(selector.get_support()) - len(frame.columns)} '
             f'features with same value in more than {int(self.corr_thresh*100)}% of subjects, '
-            f'number of remaining features: {len(data.columns)}'
+            f'number of remaining features: {len(frame.columns)}'
         )
 
-        if self.target_label not in data.columns:  # ensure label col is kept
+        if self.target_label not in frame.columns:  # ensure label col is kept
             logger.warning(f'Target label {self.target_label} has variance below threshold {self.corr_thresh}.')
-            data = pd.concat((data, tmp), axis=1)
-        return data
+            frame = pd.concat((frame, tmp), axis=1)
+        return frame, None
