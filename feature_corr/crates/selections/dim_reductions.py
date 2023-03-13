@@ -61,37 +61,39 @@ class DimensionReductions:
         self.target_label = None
 
     @plot_bubble
-    def pca(self, data: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame, str):
+    def pca(self, frame: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame, str):
         """Perform Principal Component Analysis (PCA)"""
         proj_2d, proj_3d = None, None
-        if len(data.columns) > 2:
+        if len(frame.columns) >= 2:
+            if self.target_label in frame.columns:
+                logger.warning('asdasdasd')
             pca_2d = PCA(n_components=2, random_state=self.seed)
-            proj_2d = pca_2d.fit_transform(data)
-        if len(data.columns) > 3:
+            proj_2d = pca_2d.fit_transform(frame)
+        if len(frame.columns) >= 3:
             pca_3d = PCA(n_components=3, random_state=self.seed)
-            proj_3d = pca_3d.fit_transform(data)
+            proj_3d = pca_3d.fit_transform(frame)
         return proj_2d, proj_3d, 'PCA'
 
     @plot_bubble
-    def tsne(self, data: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame, str):
+    def tsne(self, frame: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame, str):
         """Perform t-SNE dimensionality reduction and visualisation"""
         proj_2d, proj_3d = None, None
-        if len(data.columns) > 2:
+        if len(frame.columns) >= 2:
             tsne_2d = TSNE(n_components=2, random_state=self.seed)
-            proj_2d = tsne_2d.fit_transform(data)
-        if len(data.columns) > 3:
+            proj_2d = tsne_2d.fit_transform(frame)
+        if len(frame.columns) >= 3:
             tsne_3d = TSNE(n_components=3, random_state=self.seed)
-            proj_3d = tsne_3d.fit_transform(data)
+            proj_3d = tsne_3d.fit_transform(frame)
         return proj_2d, proj_3d, 't-SNE'
 
     @plot_bubble
-    def umap(self, data: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame, str):
+    def umap(self, frame: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame, str):
         """Perform UMAP dimensionality reduction and visualisation"""
         proj_2d, proj_3d = None, None
-        if len(data.columns) > 2:
+        if len(frame.columns) >= 2:
             umap_2d = UMAP(n_components=2, random_state=self.seed)
-            proj_2d = umap_2d.fit_transform(data)
-        if len(data.columns) > 3:
+            proj_2d = umap_2d.fit_transform(frame)
+        if len(frame.columns) >= 3:
             umap_3d = UMAP(n_components=3, random_state=self.seed)
-            proj_3d = umap_3d.fit_transform(data)
+            proj_3d = umap_3d.fit_transform(frame)
         return proj_2d, proj_3d, 'UMAP'

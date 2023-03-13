@@ -45,7 +45,7 @@ class DataSplit(DataBorg):
         if self.verification_test_frac <= 0.0 or self.verification_test_frac >= 1.0:
             raise ValueError('"verification_test_frac" is invalid, must be float between (0.0, 1.0)')
 
-        if self.selection_frac > 0.0:
+        if self.selection_frac < 1.0:
             v_train, v_test = self.create_verification_split(v_frame)
             s_train = s_frame
         else:
@@ -57,7 +57,6 @@ class DataSplit(DataBorg):
             s_train = self.over_sampling(s_train)
         if self.over_sample_verification:
             v_train = self.over_sampling(v_train)
-            v_test = self.over_sampling(v_test)
 
         if self.over_sample_selection or self.over_sample_verification:
             self.show_stats(s_train, v_train, v_test, 'Data split stats after over sampling')
@@ -93,10 +92,10 @@ class DataSplit(DataBorg):
         """Split in selection and verification set"""
         if 0.0 < self.selection_frac < 1.0:
             test_size = 1.0 - self.selection_frac
-        elif self.selection_frac == 0.0:  # entire train data is used for selection and verification
+        elif self.selection_frac == 1.0:  # entire train data is used for selection and verification
             test_size = self.verification_test_frac
         else:
-            raise ValueError('"selection_frac" is invalid, must be float between (0.0, 1.0)')
+            raise ValueError('Invalid "selection_frac" must be in range -> 0.0 < x <= 1.0')
 
         s_frame, v_frame = train_test_split(
             self.frame,
