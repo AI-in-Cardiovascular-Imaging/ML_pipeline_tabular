@@ -20,8 +20,8 @@ class Factory:
         """Run factory"""
         logger.info('Factory started')
 
-        TargetStatistics(self.config).show_target_statistics()
         CleanUp(self.config)()
+        TargetStatistics(self.config).show_target_statistics()
 
         for config in self.state_machine:
             self.produce_pipeline(config)
