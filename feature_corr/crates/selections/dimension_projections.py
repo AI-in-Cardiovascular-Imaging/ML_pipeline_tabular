@@ -27,6 +27,7 @@ def plot_bubble(func):
                     color=y_train,
                     labels={'color': self.target_label},
                     title=f'{name} 2D',
+                    color_continuous_scale='viridis',
                 )
                 fig_2d.write_image(os.path.join(self.job_dir, f'{name}_2d.svg'))
                 fig_2d.write_html(os.path.join(self.job_dir, f'{name}_2d.html'))
@@ -42,6 +43,7 @@ def plot_bubble(func):
                     color=y_train,
                     labels={'color': self.target_label},
                     title=f'{name} 3D',
+                    color_continuous_scale='viridis',
                 )
                 fig_3d.update_traces(marker_size=5)
                 fig_3d.write_html(os.path.join(self.job_dir, f'{name}_3d.html'))

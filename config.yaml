@@ -12,8 +12,8 @@ meta:
 inspection:
   label_as_index: "ID_Imaging" # column string name or None
   export_cleaned_frame: False # for visual inspection of the cleaned data
-  auto_clean: False # will run before manual_clean
-  manual_clean: False # manual cleaning of data
+  auto_clean: True # will run before manual_clean
+  manual_clean: True # manual cleaning of data
   manual_strategy:
     drop_columns_regex: [_\d+]  # don't use strings, example: _\d or [_\d, ^_, d+$] https://regex101.com/
 
@@ -24,12 +24,12 @@ impute:
 data_split:
   active: True # needs to be set to True for feature selection and verification
   selection_frac: 1.0  # fraction of data to use for feature selection
-  verification_test_frac: 0.2 # fraction of data to use for testing verification models
+  verification_test_frac: 0.05 # fraction of data to use for testing verification models
   over_sample_selection: False # oversample minority class to balance feature selection set
   over_sample_verification: False # oversample minority class to balance verification set
   over_sample_method:
     {
-      "binary_classification": "RandomOverSampler",  #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
+      "binary_classification": "SMOTEN",  #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
       "multi_classification": "RandomOverSampler",  # Not implemented yet
       "regression": "RandomOverSampler",  #: ADASYN, SMOTE, KMeansSMOTE, RandomOverSampler
     }
@@ -56,7 +56,7 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-        ["l2_norm","umap"],
+        ["variance_threshold", "l2_norm","fr_forest"],
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 verification:

@@ -79,6 +79,11 @@ class DataBorg:
             return self._feature_store[state_name][step_name]
         raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature')
 
+    def get_all_features(self) -> dict:
+        """Returns the store value"""
+        logger.trace(f'Returning all features -> {len(self._feature_store.keys())}')
+        return self._feature_store
+
     def get_feature_job_names(self, state_name: str) -> list:
         """Returns the store value"""
         if state_name not in self._feature_store:

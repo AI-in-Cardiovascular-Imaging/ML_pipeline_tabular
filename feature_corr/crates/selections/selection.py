@@ -19,7 +19,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
-
         self.seed = config.meta.seed
         self.jobs = config.selection.jobs
         self.task = config.meta.learn_task
@@ -50,7 +49,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
             os.makedirs(self.job_dir, exist_ok=True)
             frame = self.get_store('frame', self.state_name, 'selection_train')
             for step in job:
-                logger.debug(f'Running -> {step}')
+                logger.info(f'Running -> {step}')
                 frame, features, error = self.process_job(step, frame)
                 logger.debug(
                     f'\nStep outputs:'

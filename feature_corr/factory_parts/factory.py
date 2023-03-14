@@ -6,6 +6,7 @@ from omegaconf import DictConfig
 
 from feature_corr.crates.inspections import CleanUp, TargetStatistics
 from feature_corr.factory_parts.pipeline import Pipeline
+from feature_corr.factory_parts.report import Report
 from feature_corr.factory_parts.state_machine import StateMachine
 
 
@@ -14,6 +15,7 @@ class Factory:
 
     def __init__(self, config: DictConfig) -> None:
         self.config = config
+        self.report = Report()
         self.state_machine = StateMachine(config)
 
     def __call__(self) -> None:
@@ -27,6 +29,7 @@ class Factory:
             self.produce_pipeline(config)
 
     def __del__(self):
+        self.report()
         logger.info('Factory finished')
         logger.info(f'Check results in -> {os.path.join(self.config.meta.output_dir, self.config.meta.name)}')
 
