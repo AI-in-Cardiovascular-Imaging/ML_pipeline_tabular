@@ -26,13 +26,13 @@ class DataReader(DataBorg):
             logger.info(f'Reading csv file -> {self.file}')
             frame = pd.read_csv(self.file)
             self.set_frame('original', frame)
-            self.set_frame('ephemeral', data)
+            self.set_frame('ephemeral', frame)
 
         elif self.file.endswith('.xlsx'):
             logger.info(f'Reading excel file -> {self.file}')
-            data = pd.read_excel(self.file)
-            self.set_frame('original', data)
-            self.set_frame('ephemeral', data)
+            frame = pd.read_excel(self.file)
+            self.set_frame('original', frame)
+            self.set_frame('ephemeral', frame)
 
         elif isinstance(self.file, pd.DataFrame):
             logger.info(f'Reading dataframe -> {self.file}')

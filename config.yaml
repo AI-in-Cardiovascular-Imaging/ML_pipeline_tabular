@@ -1,18 +1,19 @@
 meta:
   name: "strain_test" # experiment name
-  target_label: ["ATTR_Amyloidose"] # which column to use as label for exploration, feature reduction and analysis
-  seed: [12, 23] # random seeds
-  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  seed: [67] # random seeds
   workers: 8 # number of workers for parallel processing
+  target_label: ["ATTR_Amyloidose"] # which column to use as label for exploration, feature reduction and analysis
+  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   pipeline_plots: True # store plots of pipeline steps
+
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
 
 inspection:
   label_as_index: "ID_Imaging" # column string name or None
   export_cleaned_frame: False # for visual inspection of the cleaned data
-  auto_clean: True # will run before manual_clean
-  manual_clean: True # manual cleaning of data
+  auto_clean: False # will run before manual_clean
+  manual_clean: False # manual cleaning of data
   manual_strategy:
     drop_columns_regex: [_\d+]  # don't use strings, example: _\d or [_\d, ^_, d+$] https://regex101.com/
 
@@ -22,10 +23,10 @@ impute:
 
 data_split:
   active: True # needs to be set to True for feature selection and verification
-  selection_frac: 0.5  # fraction of data to use for feature selection
+  selection_frac: 1.0  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing verification models
-  over_sample_selection: True # oversample minority class to balance feature selection set
-  over_sample_verification: True # oversample minority class to balance verification set
+  over_sample_selection: False # oversample minority class to balance feature selection set
+  over_sample_verification: False # oversample minority class to balance verification set
   over_sample_method:
     {
       "binary_classification": "RandomOverSampler",  #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
@@ -35,12 +36,12 @@ data_split:
 
 selection:
   active: True # whether to perform feature selections
-  variance_thresh: 0.1 # remove binary features with same value in more than variance_thresh subjects
+  class_weight: "balanced"
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
+  variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_drop_features: True # whether to drop highly correlated features
   keep_top_features: 20 # keep n top features
-  class_weight: "balanced"
   scoring:
     {
       "binary_classification": "average_precision",
@@ -55,8 +56,7 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-        ["auto_norm", "fr_forest", "umap"],
-        ["z_score_norm", "umap", "fr_forest", "fr_adaboost"]
+        ["l2_norm","umap"],
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 verification:

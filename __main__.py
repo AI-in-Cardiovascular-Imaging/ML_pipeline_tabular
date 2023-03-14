@@ -9,7 +9,20 @@ from feature_corr.factory_parts.factory import Factory
 
 
 def main():
+    """Main function"""
 
+    config = load_config_file()
+
+    logger.remove()
+    logger.add(sys.stderr, level=config.meta.logging_level)
+
+    DataReader(config)()
+    factory = Factory(config)
+    factory()
+
+
+def load_config_file():
+    """Load config file and merge with paths file"""
     logger.info(f'Loading config file -> {os.path.join(os.getcwd(), "config.yaml")}')
 
     if not os.path.exists('config.yaml'):
@@ -30,14 +43,7 @@ def main():
         logger.error(f'Type error in config file -> \n{e}')
         sys.exit(1)
 
-    config = OmegaConf.merge(config, path)
-
-    logger.remove()
-    logger.add(sys.stderr, level=config.meta.logging_level)
-
-    DataReader(config)()
-    factory = Factory(config)
-    factory()
+    return OmegaConf.merge(config, path)
 
 
 if __name__ == '__main__':
