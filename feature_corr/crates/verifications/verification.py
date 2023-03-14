@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from crates.helpers import init_estimator
-from crates.normalisers import Normalisers
 from loguru import logger
+from omegaconf import DictConfig
 from sklearn.ensemble import VotingClassifier, VotingRegressor
 from sklearn.metrics import (
     accuracy_score,
@@ -16,6 +15,11 @@ from sklearn.metrics import (
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 
+from feature_corr.crates.data_split import DataSplit
+from feature_corr.crates.helpers import init_estimator
+from feature_corr.crates.imputers import Imputer
+from feature_corr.crates.inspections import TargetStatistics
+from feature_corr.crates.normalisers import Normalisers
 from feature_corr.data_borg import DataBorg
 
 
@@ -57,10 +61,11 @@ class CrossValidation:
 class Verification(DataBorg, Normalisers):
     """Train random forest classifier to verify feature importance"""
 
-    def __init__(self, config):
+    def __init__(self, config: DictConfig, top_feature_names: str) -> None:
         super().__init__()
         self.config = config
-        self.seed = config.meta.seed
+        self.top_feature_names = top_feature_names
+        self.seeds = config.meta.seed
         self.workers = config.meta.workers
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
@@ -76,20 +81,30 @@ class Verification(DataBorg, Normalisers):
         self.y_train = None
         self.x_test = None
         self.y_test = None
-        self.top_feature_names = None
 
-    def __call__(self):
+    def __call__(self) -> None:
         """Train random forest classifier to verify feature importance"""
-        jobs = self.get_feature_job_names(self.state_name)
-        for job in jobs:
-            v_train = self.get_store('frame', self.state_name, 'verification_train')
-            v_test = self.get_store('frame', self.state_name, 'verification_test')
-            self.top_feature_names = self.get_store('feature', self.state_name, job)
-            self.x_train, self.y_train = self.prepare_frame(v_train)
-            self.x_test, self.y_test = self.prepare_frame(v_test)
+        for seed in self.seeds:
+            self.seed = seed + 17
+            self.pre_process_frame()
+            self.split_train_test()
             self.train_models()
 
-    def train_models(self):
+    def pre_process_frame(self) -> None:
+        """Pre-process frame for verification"""
+        frame = self.get_frame('ephemeral')
+        TargetStatistics(self.config).verification_mode(frame)
+        Imputer(self.config).verification_mode(frame, self.seed)
+        DataSplit(self.config).verification_mode(frame, self.seed)
+
+    def split_train_test(self) -> None:
+        """Prepare data for training"""
+        v_train = self.get_store('frame', 'verification', 'verification_train')
+        v_test = self.get_store('frame', 'verification', 'verification_test')
+        self.x_train, self.y_train = self.split_frame(v_train)
+        self.x_test, self.y_test = self.split_frame(v_test)
+
+    def train_models(self) -> None:
         """Train random forest classifier to verify feature importance"""
         best_estimators = []
         for model in self.models:
@@ -134,7 +149,7 @@ class Verification(DataBorg, Normalisers):
             y_pred = ens_estimator.predict(self.x_test)
             self.performance_statistics(y_pred)
 
-    def performance_statistics(self, y_pred):
+    def performance_statistics(self, y_pred: pd.DataFrame) -> None:
         """Print performance statistics"""
         if self.learn_task == 'binary_classification':
             print('Accuracy', accuracy_score(self.y_test, y_pred, normalize=True))
@@ -147,7 +162,7 @@ class Verification(DataBorg, Normalisers):
             sns.heatmap(conf_m, annot=True, fmt='d')
             plt.xlabel('Predicted')
             plt.ylabel('Truth')
-            # plt.show()
+            plt.show()
         elif self.learn_task == 'multi_classification':
             raise NotImplementedError('Multi-classification has not yet been implemented.')
         elif self.learn_task == 'regression':
@@ -162,8 +177,10 @@ class Verification(DataBorg, Normalisers):
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
 
-    def prepare_frame(self, frame: pd.DataFrame) -> tuple:
+    def split_frame(self, frame: pd.DataFrame) -> tuple:
         """Prepare frame for verification"""
         y_frame = frame[self.target_label]
         x_frame = frame[self.top_feature_names]  # only keep top features
+        if self.target_label in x_frame.columns:
+            raise ValueError(f'{self.target_label} was found in the top features')
         return x_frame, y_frame

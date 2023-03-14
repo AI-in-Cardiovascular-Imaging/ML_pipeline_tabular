@@ -39,6 +39,11 @@ class TargetStatistics(DataBorg):
         learn_task = check_learn_task(target_frame)
         OmegaConf.update(self.config.meta, 'learn_task', learn_task)
 
+    def verification_mode(self, frame: pd.DataFrame) -> None:
+        """Split data in selection and verification"""
+        self.ephemeral_frame = frame
+        self.set_target_task()
+
     @staticmethod
     def _plot_stats(target_label, target_frame, task) -> None:
         """Show target statistics"""

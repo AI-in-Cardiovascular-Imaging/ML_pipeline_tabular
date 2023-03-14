@@ -18,7 +18,7 @@ from feature_corr.data_borg import DataBorg
 class DataSplit(DataBorg):
     """Split frame in selection and verification"""
 
-    def __init__(self, config) -> None:
+    def __init__(self, config, frame) -> None:
         super().__init__()
         self.config = config
         self.seed = config.meta.seed
@@ -36,6 +36,16 @@ class DataSplit(DataBorg):
 
     def __call__(self):
         """Split data"""
+        self.split_frame()
+
+    def verification_mode(self, frame: pd.DataFrame, seed: int) -> None:
+        """Split data in selection and verification"""
+        self.state_name = 'verification'
+        self.frame = frame
+        self.seed = seed
+        self.split_frame()
+
+    def split_frame(self) -> None:
         if self.frame.isnull().values.any():
             raise ValueError('Data contains NaN values, clean up or impute data first')
 

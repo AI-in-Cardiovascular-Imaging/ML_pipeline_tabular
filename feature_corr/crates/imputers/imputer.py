@@ -37,11 +37,18 @@ class Imputer(DataBorg):
 
     def __call__(self) -> None:
         """Impute missing data"""
-        if self.__check_methods():
-            ephemeral_frame = self.get_store('frame', self.state_name, 'ephemeral')
+        ephemeral_frame = self.get_store('frame', self.state_name, 'ephemeral')
+        if self._check_methods():
             return getattr(self, self.impute_method)(ephemeral_frame)
 
-    def __check_methods(self) -> bool:
+    def verification_mode(self, frame: pd.DataFrame, seed: int) -> None:
+        """Impute missing data for verification mode"""
+        self.seed = seed
+        self.state_name = 'verification'
+        if self._check_methods():
+            return getattr(self, self.impute_method)(frame)
+
+    def _check_methods(self) -> bool:
         """Check if the given method is valid"""
         valid_methods = set([func for func in dir(self) if callable(getattr(self, func)) and not func.startswith('_')])
         method = set([self.impute_method])  # brackets to avoid splitting string into characters

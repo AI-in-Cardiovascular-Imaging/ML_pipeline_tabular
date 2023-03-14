@@ -1,10 +1,9 @@
-from crates.data_split.data_split import DataSplit
 from loguru import logger
 
+from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.selections import Selection
-from feature_corr.crates.verifications import Verification
 from feature_corr.data_borg import DataBorg
 
 
@@ -33,16 +32,14 @@ class Pipeline(DataBorg):
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
         for step in self.config.keys():
-            getattr(self, step)()
+            if hasattr(self, step):
+                getattr(self, step)()
 
     def __del__(self):
         """Delete assigned state data store"""
         self.remove_state_data_store(self.state_name)
 
-    @staticmethod
-    def meta() -> None:
-        """Skip meta step"""
-
+    @run_when_active
     def inspection(self) -> None:
         """Inspect data"""
         TargetStatistics(self.config).set_target_task()
@@ -62,7 +59,6 @@ class Pipeline(DataBorg):
         """Explore data"""
         Selection(self.config)()
 
-    @run_when_active
     def verification(self) -> None:
-        """Verify data"""
-        Verification(self.config)()
+        """Skip state wise verification"""
+        # TODO: maybe add verification score weighted features
