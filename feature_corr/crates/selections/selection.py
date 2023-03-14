@@ -50,12 +50,17 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
             os.makedirs(self.job_dir, exist_ok=True)
             frame = self.get_store('frame', self.state_name, 'selection_train')
             for step in job:
-                logger.trace(f'Running -> {step}')
+                logger.debug(f'Running -> {step}')
                 frame, features, error = self.process_job(step, frame)
+                logger.debug(
+                    f'\nStep outputs:'
+                    f'\n  Frame_specs -> {type(frame)}{frame.shape}'
+                    f'\n  Features -> {type(features)}{features}'
+                )
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break
-                self.__store_features(features)
+                self.__store_features(features, step)
 
     def __check_jobs(self) -> None:
         """Check if the given jobs are valid"""
@@ -71,12 +76,14 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         if not selected_methods.issubset(valid_methods):
             raise ValueError(f'Invalid auto norm method, check -> {str(selected_methods - valid_methods)}')
 
-    def __store_features(self, features: list) -> None:
+    def __store_features(self, features: list, step: str) -> None:
         """Store features"""
         if features:
             if isinstance(features, list):
                 if len(features) > 0:
                     logger.info('Found top features')
+                    if self.get_store('feature', self.state_name, self.job_name):
+                        logger.warning(f'Overwriting previous features with {step}')
                     self.set_store('feature', self.state_name, self.job_name, features)
                 else:
                     logger.warning(f'No features found for {self.job_name}')

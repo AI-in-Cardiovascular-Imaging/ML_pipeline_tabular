@@ -2,7 +2,7 @@ meta:
   name: "strain_test" # experiment name
   target_label: ["ATTR_Amyloidose"] # which column to use as label for exploration, feature reduction and analysis
   seed: [12, 23] # random seeds
-  logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   workers: 8 # number of workers for parallel processing
   pipeline_plots: True # store plots of pipeline steps
   state_name: "" # don't change this, will be set automatically by the pipeline
@@ -55,7 +55,8 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-        ["variance_threshold", "correlation", "l2_norm", "umap", "fr_forest", "pca", "umap"]
+        ["auto_norm", "fr_forest", "umap"],
+        ["z_score_norm", "umap", "fr_forest", "fr_adaboost"]
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 verification:

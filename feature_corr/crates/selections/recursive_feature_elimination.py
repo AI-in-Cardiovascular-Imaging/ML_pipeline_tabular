@@ -174,7 +174,8 @@ class RecursiveFeatureElimination:
         plt.close(fig)
 
         logger.info(f'Top features: {list(feature_scores["feature"])}')
-        features_to_keep = list(feature_scores["feature"]) + list(self.target_label)
-        frame = frame.drop(columns=[c for c in frame.columns if c not in features_to_keep], axis=1)
+        features_to_keep = list(feature_scores['feature']) + list(self.target_label)
+
+        new_frame = frame.drop(columns=[c for c in frame.columns if c not in features_to_keep], axis=1)
         features = feature_scores['feature'].tolist()[::-1]
-        return frame, features
+        return new_frame, features
