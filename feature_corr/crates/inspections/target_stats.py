@@ -1,5 +1,6 @@
 import pandas as pd
 from loguru import logger
+from omegaconf import OmegaConf
 
 from feature_corr.data_borg import DataBorg
 
@@ -32,11 +33,11 @@ class TargetStatistics(DataBorg):
             task = check_learn_task(target_frame)
             self._plot_stats(target_label, target_frame, task)
 
-    def set_target_task(self) -> str:
+    def set_target_task(self) -> None:
         """Set the learning task"""
         target_frame = self.ephemeral_frame[self.target_label]
-        task = check_learn_task(target_frame)
-        return task
+        learn_task = check_learn_task(target_frame)
+        OmegaConf.update(self.config.meta, 'learn_task', learn_task)
 
     @staticmethod
     def _plot_stats(target_label, target_frame, task) -> None:

@@ -59,6 +59,7 @@ class FeatureReductions:
         plt.clf()
         return frame, None
 
+    # todo: check if this is the best way to do it
     @staticmethod
     def highlight(frame: pd.DataFrame, lower_limit: np.array, upper_limit: np.array) -> tuple:
         """Highlight outliers in a dataframe"""
@@ -72,7 +73,7 @@ class FeatureReductions:
         )
         style_frame = style_frame.mask(mask, 'background-color: red')
         style_frame.iloc[:, lower_limit.size :] = ''  # uncolor metadata
-        return style_frame, None
+        return frame, None
 
     def bivariate_analysis(self, frame: pd.DataFrame) -> tuple:
         """Perform bivariate analysis"""
@@ -86,8 +87,8 @@ class FeatureReductions:
         corr_matrix = x_frame.corr(method=self.corr_method).round(2)
 
         if self.corr_drop_features:
-            # calculate feature importances
-            estimator = RandomForestClassifier(random_state=self.seed)
+            # calculate feature importance
+            estimator = RandomForestClassifier(random_state=self.seed)  # todo: does this make sense?
             estimator.fit(x_frame, y_frame)
             scoring = self.config.selection.scoring[self.learn_task]
             perm_importances = permutation_importance(estimator, x_frame, y_frame, scoring=scoring)
@@ -157,8 +158,8 @@ class FeatureReductions:
         """Use feature_wiz to select features"""
         from featurewiz import FeatureWiz
 
-        y_train = frame[self.target_label]
-        x_train = frame.drop(self.target_label, axis=1)
+        y_frame = frame[self.target_label]
+        x_frame = frame.drop(self.target_label, axis=1)
 
         features = FeatureWiz(
             corr_limit=self.corr_thresh,
@@ -168,24 +169,22 @@ class FeatureReductions:
             nrows=None,
             verbose=2,
         )
-        selected_features = features.fit_transform(x_train, y_train)
-
-        return selected_features.join(y_train), selected_features.columns.tolist()
+        selected_features = features.fit_transform(x_frame, y_frame)
+        new_frame = pd.concat([selected_features, y_frame], axis=1)
+        features = selected_features.columns.tolist()
+        return new_frame, features
 
     def variance_threshold(self, frame: pd.DataFrame) -> tuple:
         """Remove features with variance below threshold"""
         y_frame = frame[self.target_label]
-
+        x_frame = frame.drop(self.target_label, axis=1)
         selector = VarianceThreshold(threshold=self.corr_thresh * (1 - self.corr_thresh))
-        selector.fit(frame)
-        frame = frame.loc[:, selector.get_support()]
+        selector.fit(x_frame)
+        x_frame = x_frame.loc[:, selector.get_support()]
         logger.info(
-            f'Removed {len(selector.get_support()) - len(frame.columns)} '
+            f'Removed {len(selector.get_support()) - len(x_frame.columns)} '
             f'features with same value in more than {int(self.corr_thresh*100)}% of subjects, '
             f'number of remaining features: {len(frame.columns)}'
         )
-
-        if self.target_label not in frame.columns:  # ensure label col is kept
-            logger.warning(f'Target label {self.target_label} has variance below threshold {self.corr_thresh}.')
-            frame = pd.concat((frame, y_frame), axis=1)
-        return frame, None
+        new_frame = pd.concat([x_frame, y_frame], axis=1)
+        return new_frame, None

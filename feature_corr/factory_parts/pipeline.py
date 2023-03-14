@@ -1,6 +1,5 @@
 from crates.data_split.data_split import DataSplit
 from loguru import logger
-from omegaconf import OmegaConf
 
 from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.inspections import TargetStatistics
@@ -45,9 +44,8 @@ class Pipeline(DataBorg):
         """Skip meta step"""
 
     def inspection(self) -> None:
-        """Skip inspection step"""
-        learn_task = TargetStatistics(self.config).set_target_task()
-        OmegaConf.update(self.config.meta, 'learn_task', learn_task)
+        """Inspect data"""
+        TargetStatistics(self.config).set_target_task()
 
     @run_when_active
     def impute(self) -> None:

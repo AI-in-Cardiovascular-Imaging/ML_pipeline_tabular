@@ -30,7 +30,7 @@ def plot_bubble(func):
             fig_2d.write_image(os.path.join(self.job_dir, f'{name}_2d.svg'))
             fig_2d.write_html(os.path.join(self.job_dir, f'{name}_2d.html'))
         else:
-            logger.warning(f'Cannot plot {name} 2D, needs at least 2 features')
+            logger.warning(f'Cannot plot {name} 2D, needs at least 2 features to run')
 
         if proj_3d is not None:
             fig_3d = px.scatter_3d(
@@ -45,7 +45,7 @@ def plot_bubble(func):
             fig_3d.update_traces(marker_size=5)
             fig_3d.write_html(os.path.join(self.job_dir, f'{name}_3d.html'))
         else:
-            logger.warning(f'Cannot plot {name} 3D, needs at least 3 features')
+            logger.warning(f'Cannot plot {name} 3D, needs at least 3 features to run')
         return frame, None
 
     return wrapper
@@ -65,8 +65,6 @@ class DimensionReductions:
         """Perform Principal Component Analysis (PCA)"""
         proj_2d, proj_3d = None, None
         if len(frame.columns) >= 2:
-            if self.target_label in frame.columns:
-                logger.warning('asdasdasd')
             pca_2d = PCA(n_components=2, random_state=self.seed)
             proj_2d = pca_2d.fit_transform(frame)
         if len(frame.columns) >= 3:

@@ -12,7 +12,7 @@ logger.trace(enable_iterative_imputer)  # to avoid auto import removal
 def data_bubble(func):
     """Apply imputation method to frame"""
 
-    def wrapper(self, *args):
+    def wrapper(self, *args) -> None:
         frame = args[0]
         impute = func(self)
         imp_frame = impute.fit_transform(frame)

@@ -4,6 +4,7 @@ meta:
   seed: [12, 23] # random seeds
   logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   workers: 8 # number of workers for parallel processing
+  pipeline_plots: True # store plots of pipeline steps
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
 
