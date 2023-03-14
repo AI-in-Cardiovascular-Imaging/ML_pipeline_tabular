@@ -13,45 +13,54 @@ def plot_bubble(func):
 
     def wrapper(self, *args):
         frame = args[0]
+        show_plots = self.config.meta.pipeline_plots
         y_train = frame[self.target_label]
         x_train = frame.drop(self.target_label, axis=1)
 
         proj_2d, proj_3d, name = func(self, x_train)  # call the wrapped function
+        if show_plots:
+            if proj_2d is not None:
+                fig_2d = px.scatter(
+                    proj_2d,
+                    x=0,
+                    y=1,
+                    color=y_train,
+                    labels={'color': self.target_label},
+                    title=f'{name} 2D',
+                )
+                fig_2d.write_image(os.path.join(self.job_dir, f'{name}_2d.svg'))
+                fig_2d.write_html(os.path.join(self.job_dir, f'{name}_2d.html'))
+            else:
+                logger.warning(f'Cannot plot {name} 2D, needs at least 2 features to run')
+
+            if proj_3d is not None:
+                fig_3d = px.scatter_3d(
+                    proj_3d,
+                    x=0,
+                    y=1,
+                    z=2,
+                    color=y_train,
+                    labels={'color': self.target_label},
+                    title=f'{name} 3D',
+                )
+                fig_3d.update_traces(marker_size=5)
+                fig_3d.write_html(os.path.join(self.job_dir, f'{name}_3d.html'))
+            else:
+                logger.warning(f'Cannot plot {name} 3D, needs at least 3 features to run')
 
         if proj_2d is not None:
-            fig_2d = px.scatter(
-                proj_2d,
-                x=0,
-                y=1,
-                color=y_train,
-                labels={'color': self.target_label},
-                title=f'{name} 2D',
-            )
-            fig_2d.write_image(os.path.join(self.job_dir, f'{name}_2d.svg'))
-            fig_2d.write_html(os.path.join(self.job_dir, f'{name}_2d.html'))
-        else:
-            logger.warning(f'Cannot plot {name} 2D, needs at least 2 features to run')
-
+            proj_2d = pd.DataFrame(proj_2d, index=frame.index)
+            frame = pd.concat([proj_2d, y_train], axis=1)
         if proj_3d is not None:
-            fig_3d = px.scatter_3d(
-                proj_3d,
-                x=0,
-                y=1,
-                z=2,
-                color=y_train,
-                labels={'color': self.target_label},
-                title=f'{name} 3D',
-            )
-            fig_3d.update_traces(marker_size=5)
-            fig_3d.write_html(os.path.join(self.job_dir, f'{name}_3d.html'))
-        else:
-            logger.warning(f'Cannot plot {name} 3D, needs at least 3 features to run')
+            proj_3d = pd.DataFrame(proj_3d, index=frame.index)
+            frame = pd.concat([proj_3d, y_train], axis=1)
+
         return frame, None
 
     return wrapper
 
 
-class DimensionReductions:
+class DimensionProjections:
     """Dimensionality reduction and visualisation"""
 
     def __init__(self) -> None:

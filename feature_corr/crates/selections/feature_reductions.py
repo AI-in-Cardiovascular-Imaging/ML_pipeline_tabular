@@ -115,6 +115,7 @@ class FeatureReductions:
         plt.xticks(rotation=90)
         plt.savefig(os.path.join(self.job_dir, 'corr_plot.pdf'))
         plt.close(fig)
+
         frame = pd.concat((x_frame, frame[self.target_label]), axis=1)
         return frame, None
 
@@ -147,7 +148,7 @@ class FeatureReductions:
         upper_limit = q3 + whiskers * iqr
         # logger.debug(f'\nlower limit: {lower_limit}\nupper limit: {upper_limit}')
 
-        high_data = x_frame.copy(deep=True)
+        high_data = pd.concat([x_frame, y_frame], axis=1)
         # Highlight outliers in table
         high_data.style.apply(
             lambda _: self.highlight(frame=high_data, lower_limit=lower_limit, upper_limit=upper_limit), axis=None

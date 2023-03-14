@@ -5,7 +5,7 @@ from crates.normalisers import Normalisers
 from loguru import logger
 from omegaconf import DictConfig
 
-from feature_corr.crates.selections.dim_reductions import DimensionReductions
+from feature_corr.crates.selections.dimension_projections import DimensionProjections
 from feature_corr.crates.selections.feature_reductions import FeatureReductions
 from feature_corr.crates.selections.recursive_feature_elimination import (
     RecursiveFeatureElimination,
@@ -13,7 +13,7 @@ from feature_corr.crates.selections.recursive_feature_elimination import (
 from feature_corr.data_borg import DataBorg
 
 
-class Selection(DataBorg, Normalisers, DimensionReductions, FeatureReductions, RecursiveFeatureElimination):
+class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, RecursiveFeatureElimination):
     """Execute jobs"""
 
     def __init__(self, config: DictConfig) -> None:

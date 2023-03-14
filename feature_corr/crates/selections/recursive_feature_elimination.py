@@ -163,6 +163,7 @@ class RecursiveFeatureElimination:
             stacked=True,
             colormap='viridis',
         )
+
         fig = ax.get_figure()
         fig.legend(loc='lower right', borderaxespad=4.5)
         plt.title(f'Feature importance\nAll estimators for target: {self.target_label}')
@@ -175,4 +176,5 @@ class RecursiveFeatureElimination:
         logger.info(f'Top features: {list(feature_scores["feature"])}')
         features_to_keep = list(feature_scores["feature"]) + list(self.target_label)
         frame = frame.drop(columns=[c for c in frame.columns if c not in features_to_keep], axis=1)
-        return frame, feature_scores['feature'].tolist()[::-1]
+        features = feature_scores['feature'].tolist()[::-1]
+        return frame, features
