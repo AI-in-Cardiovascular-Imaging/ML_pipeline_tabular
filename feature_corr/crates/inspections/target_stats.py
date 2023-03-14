@@ -42,10 +42,10 @@ class TargetStatistics(DataBorg):
     def _plot_stats(target_label, target_frame, task) -> None:
         """Show target statistics"""
         if task == 'binary_classification':
-            perc = (target_frame.sum() / len(target_frame.index)).round(2) * 100
+            perc = int((target_frame.sum() / len(target_frame.index)).round(2) * 100)
             logger.info(
                 f'\nSummary statistics for binary target variable {target_label}:\n'
-                f'Positive cases -> {perc}% or {target_frame.sum()}/{len(target_frame.index)} samples.'
+                f'Positive cases -> {perc}% or {int(target_frame.sum())}/{len(target_frame.index)} samples.'
             )
 
         elif task == 'multi_classification':
