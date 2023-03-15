@@ -18,17 +18,21 @@ def main() -> None:
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
 
+    verification_only = config.meta.verification_only
+    selection_only = config.meta.selection_only
+
+    report = Report(config)
     DataReader(config)()
     CleanUp(config)()
-    TargetStatistics(config).show_target_statistics()
-    report = Report(config)
 
-    factory = Factory(config, report)
-    factory()
+    if not verification_only:
+        TargetStatistics(config).show_target_statistics()
+        factory = Factory(config, report)
+        factory()
 
-    top_features = report.get_rank_frequency_based_features()
-
-    Verification(config, top_features).verify_final()
+    if not selection_only:
+        top_features = report.get_rank_frequency_based_features()
+        Verification(config, top_features).verify_final()
 
 
 def load_config_file() -> DictConfig:

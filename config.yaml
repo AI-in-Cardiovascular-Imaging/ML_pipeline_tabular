@@ -1,10 +1,13 @@
 meta:
   name: "strain_test" # experiment name
-  seed: [67] # random seeds
+  seed: [17, 34, 57, 89, 101, 420] # random seeds
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   pipeline_plots: True # store plots of pipeline steps
+
+  selection_only: False # whether to perform final feature selection
+  verification_only: True # whether to perform final verification analysis
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
@@ -60,7 +63,6 @@ selection:
 
 verification:
   active: False # whether to perform verification analysis for each job TODO: not implemented yet
-  final_verification: True # whether to perform final verification analysis
   models:
     {
       "logistic_regression": False,
