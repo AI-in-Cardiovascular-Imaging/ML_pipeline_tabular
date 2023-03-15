@@ -22,7 +22,7 @@ class DataSplit(DataBorg):
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
-        self.seed = config.meta.seed
+        self.seed = config.data_split.seed
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
@@ -39,11 +39,10 @@ class DataSplit(DataBorg):
         """Split data"""
         self.split_frame()
 
-    def verification_mode(self, frame: pd.DataFrame, seed: int) -> None:
+    def verification_mode(self, frame: pd.DataFrame) -> None:
         """Split data in selection and verification"""
         self.state_name = 'verification'
         self.frame = frame
-        self.seed = seed
         self.split_frame()
 
     def split_frame(self) -> None:

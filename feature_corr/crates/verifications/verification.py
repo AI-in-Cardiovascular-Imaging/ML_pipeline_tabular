@@ -112,7 +112,7 @@ class Verification(DataBorg, Normalisers):
         TargetStatistics(self.config).verification_mode(frame)
         Imputer(self.config).verification_mode(frame, self.seed)
         frame = self.get_store('frame', 'verification', 'ephemeral')
-        DataSplit(self.config).verification_mode(frame, self.seed)
+        DataSplit(self.config).verification_mode(frame)
 
     def train_test_split(self) -> None:
         """Prepare data for training"""
