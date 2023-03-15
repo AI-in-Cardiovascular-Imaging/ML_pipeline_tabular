@@ -4,6 +4,9 @@ import sys
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
+from feature_corr.crates.inspections import CleanUp, TargetStatistics
+from feature_corr.crates.verifications import Verification
+from feature_corr.factory_parts.data_reader import DataReader
 from feature_corr.factory_parts.factory import Factory
 
 
@@ -14,8 +17,13 @@ def main() -> None:
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
 
+    DataReader(config)()
+    CleanUp(config)()
+    TargetStatistics(config).show_target_statistics()
+
     factory = Factory(config)
-    factory()
+    top_features = factory()
+    Verification(config).verify(top_features)
 
 
 def load_config_file() -> DictConfig:

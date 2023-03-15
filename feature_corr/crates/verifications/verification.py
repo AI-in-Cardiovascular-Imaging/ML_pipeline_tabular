@@ -61,11 +61,11 @@ class CrossValidation:
 class Verification(DataBorg, Normalisers):
     """Train random forest classifier to verify feature importance"""
 
-    def __init__(self, config: DictConfig, top_feature_names: str) -> None:
+    def __init__(self, config: DictConfig, top_feature_names: list = None) -> None:
         super().__init__()
         self.config = config
         self.top_feature_names = top_feature_names
-        self.seeds = config.meta.seed
+        self.seed = config.meta.seed
         self.workers = config.meta.workers
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
@@ -82,13 +82,22 @@ class Verification(DataBorg, Normalisers):
         self.x_test = None
         self.y_test = None
 
-    def __call__(self) -> None:
-        """Train random forest classifier to verify feature importance"""
-        for seed in self.seeds:
-            self.seed = seed + 17
-            self.pre_process_frame()
-            self.split_train_test()
+    def verify_jobs(self):
+        """Verify feature importance per job"""
+        jobs = self.get_feature_job_names(self.state_name)
+        for job in jobs:
+            v_train = self.get_store('frame', self.state_name, 'verification_train')
+            v_test = self.get_store('frame', self.state_name, 'verification_test')
+            self.top_feature_names = self.get_store('feature', self.state_name, job)
+            self.x_train, self.y_train = self.split_frame(v_train)
+            self.x_test, self.y_test = self.split_frame(v_test)
             self.train_models()
+
+    def verify_final(self) -> None:
+        """Train random forest classifier to verify final feature importance"""
+        self.pre_process_frame()
+        self.train_test_split()
+        self.train_models()
 
     def pre_process_frame(self) -> None:
         """Pre-process frame for verification"""
@@ -97,7 +106,7 @@ class Verification(DataBorg, Normalisers):
         Imputer(self.config).verification_mode(frame, self.seed)
         DataSplit(self.config).verification_mode(frame, self.seed)
 
-    def split_train_test(self) -> None:
+    def train_test_split(self) -> None:
         """Prepare data for training"""
         v_train = self.get_store('frame', 'verification', 'verification_train')
         v_test = self.get_store('frame', 'verification', 'verification_test')
@@ -119,7 +128,14 @@ class Verification(DataBorg, Normalisers):
             )
 
             optimiser = CrossValidation(
-                self.x_train, self.y_train, estimator, cross_validator, param_grid, scoring, self.seed, self.workers
+                self.x_train,
+                self.y_train,
+                estimator,
+                cross_validator,
+                param_grid,
+                scoring,
+                self.seed,
+                self.workers,
             )
             best_estimator = optimiser()
             best_estimators.append((model, best_estimator))
@@ -182,5 +198,6 @@ class Verification(DataBorg, Normalisers):
         y_frame = frame[self.target_label]
         x_frame = frame[self.top_feature_names]  # only keep top features
         if self.target_label in x_frame.columns:
-            raise ValueError(f'{self.target_label} was found in the top features')
+            x_frame = x_frame.drop(self.target_label, axis=1)
+            logger.warning(f'{self.target_label} was found in the top features for validation')
         return x_frame, y_frame
