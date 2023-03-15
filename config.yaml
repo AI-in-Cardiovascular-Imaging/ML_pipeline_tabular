@@ -2,7 +2,7 @@ meta:
   name: "strain_test" # experiment name
   seed: [67] # random seeds
   workers: 8 # number of workers for parallel processing
-  target_label: ["ATTR_Amyloidose"] # which column to use as label for exploration, feature reduction and analysis
+  target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   pipeline_plots: True # store plots of pipeline steps
 
@@ -22,7 +22,6 @@ impute:
   method: ["simple_impute"] #: drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
 
 data_split:
-  active: True # needs to be set to True for feature selection and verification
   selection_frac: 1.0  # fraction of data to use for feature selection
   verification_test_frac: 0.05 # fraction of data to use for testing verification models
   over_sample_selection: False # oversample minority class to balance feature selection set
@@ -60,7 +59,8 @@ selection:
     ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 verification:
-  active: False # whether to perform verification analysis
+  active: False # whether to perform verification analysis for each job TODO: not implemented yet
+  final_verification: True # whether to perform final verification analysis
   models:
     {
       "logistic_regression": False,

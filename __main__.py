@@ -8,6 +8,7 @@ from feature_corr.crates.inspections import CleanUp, TargetStatistics
 from feature_corr.crates.verifications import Verification
 from feature_corr.factory_parts.data_reader import DataReader
 from feature_corr.factory_parts.factory import Factory
+from feature_corr.factory_parts.report import Report
 
 
 def main() -> None:
@@ -20,10 +21,14 @@ def main() -> None:
     DataReader(config)()
     CleanUp(config)()
     TargetStatistics(config).show_target_statistics()
+    report = Report(config)
 
-    factory = Factory(config)
-    top_features = factory()
-    Verification(config).verify(top_features)
+    factory = Factory(config, report)
+    factory()
+
+    top_features = report.get_rank_frequency_based_features()
+
+    Verification(config, top_features).verify_final()
 
 
 def load_config_file() -> DictConfig:

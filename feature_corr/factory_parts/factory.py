@@ -1,29 +1,28 @@
 import os
 import time
+import typing as t
 
 from loguru import logger
 from omegaconf import DictConfig
 
 from feature_corr.factory_parts.pipeline import Pipeline
-from feature_corr.factory_parts.report import Report
 from feature_corr.factory_parts.state_machine import StateMachine
 
 
 class Factory:
     """Produces pipelines"""
 
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config: DictConfig, report: t.Callable) -> None:
         self.config = config
-        self.report = Report()
+        self.report = report
         self.state_machine = StateMachine(config)
 
-    def __call__(self) -> list:
+    def __call__(self) -> None:
         """Run factory"""
         logger.info('Factory started')
         for config in self.state_machine:
             self.produce_pipeline(config)
-        top_features = self.report()
-        return top_features
+        self.report()
 
     def __del__(self):
         logger.info('Factory finished')

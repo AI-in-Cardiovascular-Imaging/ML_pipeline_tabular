@@ -39,7 +39,6 @@ class Pipeline(DataBorg):
         """Delete assigned state data store"""
         self.remove_state_data_store(self.state_name)
 
-    @run_when_active
     def inspection(self) -> None:
         """Inspect data"""
         TargetStatistics(self.config).set_target_task()
@@ -49,7 +48,6 @@ class Pipeline(DataBorg):
         """Impute data"""
         Imputer(self.config)()
 
-    @run_when_active
     def data_split(self) -> None:
         """Split data"""
         DataSplit(self.config)()
@@ -59,6 +57,7 @@ class Pipeline(DataBorg):
         """Explore data"""
         Selection(self.config)()
 
+    @run_when_active
     def verification(self) -> None:
         """Skip state wise verification"""
         # TODO: maybe add verification score weighted features

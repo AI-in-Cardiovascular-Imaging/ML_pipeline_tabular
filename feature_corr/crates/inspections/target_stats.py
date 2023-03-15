@@ -26,12 +26,11 @@ class TargetStatistics(DataBorg):
 
     def show_target_statistics(self) -> None:
         """Show target statistics"""
-        for target_label in self.target_label:
-            if target_label not in self.ephemeral_frame:
-                raise ValueError(f'Target label {target_label} not in data')
-            target_frame = self.ephemeral_frame[target_label]
-            task = check_learn_task(target_frame)
-            self._plot_stats(target_label, target_frame, task)
+        if self.target_label not in self.ephemeral_frame:
+            raise ValueError(f'Target label {self.target_label} not in data')
+        target_frame = self.ephemeral_frame[self.target_label]
+        task = check_learn_task(target_frame)
+        self._plot_stats(self.target_label, target_frame, task)
 
     def set_target_task(self) -> None:
         """Set the learning task"""

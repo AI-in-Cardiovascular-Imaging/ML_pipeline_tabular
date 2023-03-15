@@ -25,7 +25,7 @@ class CleanUp(DataBorg):
         self.clean_frame = None
         self.frame = self.get_frame('ephemeral')
         self.label_index_frame = None
-        self.target_labels = self.config.meta.target_label
+        self.target_label = self.config.meta.target_label
 
     def __call__(self) -> None:
         """Autoclean, manual clean or do nothing"""
@@ -89,9 +89,8 @@ class CleanUp(DataBorg):
         regex = self.config.inspection.manual_strategy.drop_columns_regex
         drop_regexes = self._clean_up_regex(regex)
         y_frames = pd.DataFrame()
-        for target_label in self.target_labels:
-            y_frames = pd.concat([y_frames, self.clean_frame[target_label]], axis=1)
-        x_frame = self.clean_frame.drop(self.target_labels, axis=1)
+        y_frames = pd.concat([y_frames, self.clean_frame[self.target_label]], axis=1)
+        x_frame = self.clean_frame.drop(self.target_label, axis=1)
         if drop_regexes:
             for drop_regex in drop_regexes:
                 expression = re.compile(r'{}'.format(drop_regex))

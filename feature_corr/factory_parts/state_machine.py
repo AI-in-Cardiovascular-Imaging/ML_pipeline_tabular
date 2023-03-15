@@ -19,7 +19,6 @@ class StateMachine:
         self.max_count = None
         self.state_data = None
         self.state_names = [
-            'meta.target_label',
             'meta.seed',
             'impute.method',
         ]  # define state names to branch on

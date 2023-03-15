@@ -10,6 +10,7 @@ from imblearn.over_sampling import (
     RandomOverSampler,
 )
 from loguru import logger
+from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
 
 from feature_corr.data_borg import DataBorg
@@ -18,7 +19,7 @@ from feature_corr.data_borg import DataBorg
 class DataSplit(DataBorg):
     """Split frame in selection and verification"""
 
-    def __init__(self, config, frame) -> None:
+    def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
         self.seed = config.meta.seed
