@@ -3,7 +3,7 @@ meta:
   seed: [67] # random seeds
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   pipeline_plots: True # store plots of pipeline steps
 
   state_name: "" # don't change this, will be set automatically by the pipeline
@@ -15,7 +15,7 @@ inspection:
   auto_clean: True # will run before manual_clean
   manual_clean: True # manual cleaning of data
   manual_strategy:
-    drop_columns_regex: [_\d+]  # don't use strings, example: _\d or [_\d, ^_, d+$] https://regex101.com/
+    drop_columns_regex: [_\d+]  # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
 
 impute:
   active: True # impute missing values

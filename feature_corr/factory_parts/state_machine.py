@@ -63,4 +63,4 @@ class StateMachine:
             self.count += 1
         else:
             logger.info('All states have been run')
-            sys.exit(0)
+            raise StopIteration

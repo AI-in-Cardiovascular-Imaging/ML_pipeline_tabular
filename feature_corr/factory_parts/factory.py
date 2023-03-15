@@ -23,6 +23,7 @@ class Factory:
         for config in self.state_machine:
             self.produce_pipeline(config)
         self.report()
+        logger.warning('Factory finished')
 
     def __del__(self):
         logger.info('Factory finished')
