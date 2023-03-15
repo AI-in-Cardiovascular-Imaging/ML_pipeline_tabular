@@ -26,7 +26,7 @@ impute:
 
 data_split:
   selection_frac: 1.0  # fraction of data to use for feature selection
-  verification_test_frac: 0.05 # fraction of data to use for testing verification models
+  verification_test_frac: 0.2 # fraction of data to use for testing verification models
   over_sample_selection: False # oversample minority class to balance feature selection set
   over_sample_verification: False # oversample minority class to balance verification set
   over_sample_method:

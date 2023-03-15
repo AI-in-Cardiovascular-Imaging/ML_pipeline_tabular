@@ -66,9 +66,10 @@ class Report(DataBorg):
                         rank_score -= 1
 
         sorted_store = {k: v for k, v in sorted(store.items(), key=lambda item: item[1], reverse=True)}
-        logger.info(f'Rank frequency based features -> {json.dumps(sorted_store, indent=4)}')
         sorted_store = list(sorted_store.keys())
-        return sorted_store[:return_top]
+        top_features = sorted_store[:return_top]
+        logger.info(f'Rank frequency based top {return_top} features -> {json.dumps(top_features, indent=4)}')
+        return top_features
 
 
 if __name__ == '__main__':

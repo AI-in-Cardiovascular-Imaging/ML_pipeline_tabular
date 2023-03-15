@@ -186,7 +186,7 @@ class Verification(DataBorg, Normalisers):
             sns.heatmap(conf_m, annot=True, fmt='d')
             plt.xlabel('Predicted')
             plt.ylabel('Truth')
-            plt.show()
+            # plt.show()
         elif self.learn_task == 'multi_classification':
             raise NotImplementedError('Multi-classification has not yet been implemented.')
         elif self.learn_task == 'regression':
