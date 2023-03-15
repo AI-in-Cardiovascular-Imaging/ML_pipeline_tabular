@@ -11,7 +11,7 @@ class NormaliserTests:
     def test_l1_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.25, 0.50, 0.25], 'C': [-0.5, 0, 0.5], 'D': [1, 2, 3]})
-        result = normaliser.l1_norm(element)
+        result, _ = normaliser.l1_norm(element)
         assert result.equals(expected) is True
 
     @staticmethod
@@ -26,14 +26,14 @@ class NormaliserTests:
                 'D': [1, 2, 3],
             }
         )
-        result = normaliser.l2_norm(element).round(6)
+        result, _ = normaliser.l2_norm(element)
+        result = result.round(6)
         assert result.equals(expected) is True
 
     @staticmethod
     @mark.parametrize('element', [df])
     def test_z_score_norm(element, normaliser):
         normaliser.target_label = 'D'
-
         expected = pd.DataFrame(
             {
                 'A': [0.0, 0.0, 0.0],
@@ -42,7 +42,8 @@ class NormaliserTests:
                 'D': [1, 2, 3],
             }
         )
-        result = normaliser.z_score_norm(element).round(6)
+        result, _ = normaliser.z_score_norm(element)
+        result = result.round(6)
         assert result.equals(expected) is True
 
     @staticmethod
@@ -50,7 +51,8 @@ class NormaliserTests:
     def test_min_max_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.0, 1.0, 0.0], 'C': [0.0, 0.5, 1.0], 'D': [1, 2, 3]})
-        result = normaliser.min_max_norm(element).round(6)
+        result, _ = normaliser.min_max_norm(element)
+        result = result.round(6)
         assert result.equals(expected) is True
 
     @staticmethod
@@ -58,7 +60,8 @@ class NormaliserTests:
     def test_max_abs_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.5, 1.0, 0.5], 'C': [-1.0, 0.0, 1.0], 'D': [1, 2, 3]})
-        result = normaliser.max_abs_norm(element).round(6)
+        result, _ = normaliser.max_abs_norm(element)
+        result = result.round(6)
         assert result.equals(expected) is True
 
     @staticmethod
@@ -66,7 +69,8 @@ class NormaliserTests:
     def test_robust_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.0, 2.0, 0.0], 'C': [-1.0, 0.0, 1.0], 'D': [1, 2, 3]})
-        result = normaliser.robust_norm(element).round(6)
+        result, _ = normaliser.robust_norm(element)
+        result = result.round(6)
         assert result.equals(expected) is True
 
     @staticmethod
@@ -74,7 +78,8 @@ class NormaliserTests:
     def test_quantile_norm(element, normaliser):
         normaliser.target_label = 'D'
         expected = pd.DataFrame({'A': [0.0, 0.0, 0.0], 'B': [0.0, 1.0, 0.0], 'C': [0.0, 0.5, 1.0], 'D': [1, 2, 3]})
-        result = normaliser.quantile_norm(element).round(6)
+        result, _ = normaliser.quantile_norm(element)
+        result = result.round(6)
         assert result.equals(expected) is True
 
     @staticmethod
@@ -89,5 +94,6 @@ class NormaliserTests:
                 'D': [1, 2, 3],
             }
         )
-        result = normaliser.power_norm(element).round(6)
+        result, _ = normaliser.power_norm(element)
+        result = result.round(6)
         assert result.equals(expected) is True

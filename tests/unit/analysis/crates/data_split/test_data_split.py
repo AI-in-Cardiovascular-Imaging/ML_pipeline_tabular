@@ -23,7 +23,7 @@ class DataSplitTests:
     @mark.parametrize('element', [df])
     def test_1(element, data_split):
         data_split.frame = element
-        data_split.data_split()
+        data_split.split_frame()
         sel_train = data_split._frame_store['test']['selection_train']
         del sel_train['A']
         sel_train = set(sel_train.to_numpy().flatten())
