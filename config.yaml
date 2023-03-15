@@ -7,7 +7,7 @@ meta:
   pipeline_plots: True # store plots of pipeline steps
 
   selection_only: False # whether to perform final feature selection
-  verification_only: False # whether to perform final verification analysis
+  verification_only: True # whether to perform final verification analysis
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
@@ -15,7 +15,7 @@ meta:
 inspection:
   label_as_index: "ID_Imaging" # column string name or None
   export_cleaned_frame: False # for visual inspection of the cleaned data
-  
+
   auto_clean: True # will run before manual_clean
 
   manual_clean: True # manual cleaning of data
@@ -32,8 +32,8 @@ data_split:
   selection_frac: 0.6  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing verification models
 
-  over_sample_selection: True # oversample minority class to balance feature selection set
-  over_sample_verification: True # oversample minority class to balance verification set
+  over_sample_selection: False # oversample minority class to balance feature selection set
+  over_sample_verification: False # oversample minority class to balance verification set
 
   over_sample_method:
     binary_classification: "SMOTEN"  #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
@@ -49,7 +49,6 @@ selection:
   corr_thresh: 0.6 # threshold above which correlated features are removed
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
   corr_drop_features: True # whether to drop highly correlated features
-  keep_top_features: 20 # keep n top features
 
   scoring:
     binary_classification: "average_precision"
@@ -71,14 +70,15 @@ selection:
 
 verification:
   active: False # whether to perform verification analysis for each job TODO: not implemented yet
+  use_n_top_features: 20
 
   models:
-    logistic_regression: True
+    logistic_regression: False
     forest: False
-    extreme_forest: False
-    adaboost: False
+    extreme_forest: True
+    adaboost: True
     xgboost: False
-    ensemble_voting: False
+    ensemble_voting: True
 
   param_grids:
     logistic_regression:

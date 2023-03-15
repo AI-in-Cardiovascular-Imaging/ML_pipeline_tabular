@@ -48,7 +48,7 @@ class Report(DataBorg):
             self.all_features = json.load(file)
         logger.trace(f'Features -> {json.dumps(self.all_features, indent=4)}')
 
-    def get_rank_frequency_based_features(self, return_top: int = 10) -> list:
+    def get_rank_frequency_based_features(self) -> list:
         """Get ranked features"""
         if self.all_features is None:
             self.load_features()
@@ -67,6 +67,7 @@ class Report(DataBorg):
 
         sorted_store = {k: v for k, v in sorted(store.items(), key=lambda item: item[1], reverse=True)}
         sorted_store = list(sorted_store.keys())
+        return_top = self.config.verification.use_n_top_features
         top_features = sorted_store[:return_top]
         logger.info(f'Rank frequency based top {return_top} features -> {json.dumps(top_features, indent=4)}')
         return top_features
