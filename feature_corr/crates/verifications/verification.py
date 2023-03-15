@@ -96,16 +96,20 @@ class Verification(DataBorg, Normalisers):
     def verify_final(self) -> None:
         """Train random forest classifier to verify final feature importance"""
         logger.info('Verifying final feature importance')
+
+        # TODO: maybe there is a better way to do this
+        self.config.impute.method = 'simple_impute'
+        self.seed = 17
+        self.config.meta.seed = self.seed
+
         self.pre_process_frame()
         self.train_test_split()
         self.train_models()
 
     def pre_process_frame(self) -> None:
         """Pre-process frame for verification"""
-        self.config.impute.method = 'simple_impute'
         frame = self.get_frame('ephemeral')
         TargetStatistics(self.config).verification_mode(frame)
-        frame = self.get_store('frame', 'verification', 'ephemeral')
         Imputer(self.config).verification_mode(frame, self.seed)
         frame = self.get_store('frame', 'verification', 'ephemeral')
         DataSplit(self.config).verification_mode(frame, self.seed)

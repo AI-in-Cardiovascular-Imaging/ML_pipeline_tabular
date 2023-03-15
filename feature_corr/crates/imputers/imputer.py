@@ -45,6 +45,7 @@ class Imputer(DataBorg):
         """Impute missing data for verification mode"""
         self.seed = seed
         self.state_name = 'verification'
+        logger.warning(frame)
         if self._check_methods():
             return getattr(self, self.impute_method)(frame)
 

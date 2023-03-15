@@ -46,17 +46,34 @@ class Report(DataBorg):
         logger.info(f'Loading features from -> {self.feature_file_path}')
         with open(self.feature_file_path, 'r', encoding='utf-8') as file:
             self.all_features = json.load(file)
+        logger.trace(f'Features -> {json.dumps(self.all_features, indent=4)}')
 
-    def get_rank_frequency_based_features(self, number: int = 10) -> list:
+    def get_rank_frequency_based_features(self, return_top: int = 10) -> list:
         """Get ranked features"""
         if self.all_features is None:
             self.load_features()
-        return self.all_features
+
+        store = {}
+        for state_name in self.all_features.keys():
+            for job_name in self.all_features[state_name].keys():
+                rank_score = 1000
+                for features in self.all_features[state_name][job_name]:
+                    for feature in [features]:
+                        if feature not in store:
+                            store[feature] = rank_score
+                        else:
+                            store[feature] += rank_score
+                        rank_score -= 1
+
+        sorted_store = {k: v for k, v in sorted(store.items(), key=lambda item: item[1], reverse=True)}
+        logger.info(f'Rank frequency based features -> {json.dumps(sorted_store, indent=4)}')
+        sorted_store = list(sorted_store.keys())
+        return sorted_store[:return_top]
 
 
 if __name__ == '__main__':
     from omegaconf import OmegaConf
 
-    conf = OmegaConf.create({'meta': {'name': 'test', 'output_dir': '/home/melandur/Downloads'}})
+    conf = OmegaConf.create({'meta': {'name': 'strain_test', 'output_dir': '/home/melandur/Downloads'}})
     r = Report(conf)
     r.get_rank_frequency_based_features()
