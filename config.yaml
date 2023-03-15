@@ -1,14 +1,13 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "strain_test_1" # experiment name
-  seed: [ 17, 34, 57, 89, 101, 420, 88] # random seeds
+  name: "strain_testero" # experiment name
+  seed: [17, 34, 57, 89, 101, 420, 88] # random seeds
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
-  pipeline_plots: True # store plots of pipeline steps
 
   selection_only: False # whether to perform final feature selection
-  verification_only: False # whether to perform final verification analysis
+  verification_only: True # whether to perform final verification analysis
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
@@ -22,25 +21,25 @@ inspection:
 
   manual_clean: True # manual cleaning of data
   manual_strategy:
-    drop_columns_regex: [ _\d+, mean]  # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
+    drop_columns_regex: [_\d+]  # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
 
 # imputation strategy
 impute:
   active: True # impute missing values
-  method: [ "simple_impute" ] #: drop_nan_impute, iterative_impute, simple_impute, missing_indicator, knn_impute
+  method: "simple_impute"  #: drop_nan_impute, iterative_impute, simple_impute, knn_impute
 
 # data split definitions
 data_split:
-  seed: 32 # random seed for data split
+  seed: 18 # random seed for data split
 
-  selection_frac: 0.6  # fraction of data to use for feature selection
+  selection_frac: 0.4  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing verification models
 
-  over_sample_selection: True # oversample minority class to balance feature selection set
+  over_sample_selection: False # oversample minority class to balance feature selection set
   over_sample_verification: False # oversample minority class to balance verification set
 
   over_sample_method:
-    binary_classification: ["SVMSMOTE", "BorderlineSMOTE", "RandomOverSampler"]  #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
+    binary_classification: "RandomOverSampler"  #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
     multi_classification: "RandomOverSampler"  # Not implemented yet
     regression: "RandomOverSampler"  #: ADASYN, SMOTE, KMeansSMOTE, RandomOverSampler
 
@@ -48,7 +47,7 @@ data_split:
 selection:
   active: True # whether to perform feature selections
 
-  class_weight: "balanced"
+  class_weight: null
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
@@ -66,22 +65,22 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-    [ "z_score_norm", "fr_forest" ],
-    ["z_score_norm", "fr_extreme_forest" ],
-    [ "z_score_norm", "fr_xgboost" ],
-    [ "z_score_norm", "fr_adaboost" ],
+    ["variance_threshold", "z_score_norm", "fr_xgboost" ],
+      ["variance_threshold", "z_score_norm", "fr_adaboost" ],
+      ["variance_threshold", "z_score_norm", "fr_forest" ],
+      ["variance_threshold", "z_score_norm", "fr_extreme_forest" ],
   ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 # verification strategy and final model to train and evaluate
 verification:
   active: False # whether to perform verification analysis for each job TODO: not implemented yet
-  use_n_top_features: 20
+  use_n_top_features: 12
 
   models:
-    logistic_regression: False
+    logistic_regression: True
     forest: False
-    extreme_forest: True
-    adaboost: True
+    extreme_forest: False
+    adaboost: False
     xgboost: False
     ensemble_voting: False
 
@@ -90,6 +89,7 @@ verification:
       penalty: [ "l1", "l2" ]
       C: [ 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000 ]
       solver: [ "saga" ]  # supports both l1 and l2 penalties
+      max_iter: [ 10000 ]
 
     forest:
       n_estimators: [ 100, 500, 1000 ]
@@ -97,6 +97,7 @@ verification:
       max_depth: [ 10, 50, 100, null ]
       max_features: [ "sqrt", "log2", null ]
       bootstrap: [ True, False ]
+
 
     extreme_forest:
       n_estimators: [ 100, 500, 1000 ]
@@ -112,5 +113,5 @@ verification:
     xgboost:
       n_estimators: [ 100, 500, 1000 ]
       learning_rate: [ 0.0001, 0.001, 0.01, 0.1, 1 ]
-      max_depth: [ 10, 50, 100, null ]
+      max_depth: [ 10, 50, 100, 1000, null ]
       max_features: [ "sqrt", "log2", null ]

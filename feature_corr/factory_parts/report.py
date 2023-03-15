@@ -71,11 +71,3 @@ class Report(DataBorg):
         top_features = sorted_store[:return_top]
         logger.info(f'Rank frequency based top {return_top} features -> {json.dumps(top_features, indent=4)}')
         return top_features
-
-
-if __name__ == '__main__':
-    from omegaconf import OmegaConf
-
-    conf = OmegaConf.create({'meta': {'name': 'strain_test', 'output_dir': '/home/melandur/Downloads'}})
-    r = Report(conf)
-    r.get_rank_frequency_based_features()

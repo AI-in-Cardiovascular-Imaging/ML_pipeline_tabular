@@ -99,6 +99,7 @@ class Verification(DataBorg, Normalisers):
 
         # TODO: maybe there is a better way to do this
         self.config.impute.method = 'simple_impute'
+        self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
         self.seed = 17
         self.config.meta.seed = self.seed
 
@@ -203,6 +204,7 @@ class Verification(DataBorg, Normalisers):
 
     def split_frame(self, frame: pd.DataFrame) -> tuple:
         """Prepare frame for verification"""
+        frame, _ = self.z_score_norm(frame)  # todo: config
         y_frame = frame[self.target_label]
         x_frame = frame[self.top_feature_names]  # only keep top features
         if self.target_label in x_frame.columns:

@@ -1,5 +1,4 @@
 import itertools
-import sys
 from copy import deepcopy
 
 from dictlib import dig, dug
@@ -20,8 +19,6 @@ class StateMachine:
         self.state_data = None
         self.state_names = [
             'meta.seed',
-            'impute.method',
-            'data_split.over_sample_method.binary_classification',
         ]  # define state names to branch on
 
         self.check_state_names()

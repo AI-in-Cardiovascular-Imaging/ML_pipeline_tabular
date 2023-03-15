@@ -53,7 +53,7 @@ class Imputer(DataBorg):
         valid_methods = set([func for func in dir(self) if callable(getattr(self, func)) and not func.startswith('_')])
         method = set([self.impute_method])  # brackets to avoid splitting string into characters
         if not method.issubset(valid_methods):
-            raise ValueError(f'Unknown imputation method: {self.impute_method}')
+            raise ValueError(f'Unknown imputation method -> "{self.impute_method}"')
         return True
 
     def drop_nan_impute(self, frame: pd.DataFrame) -> None:

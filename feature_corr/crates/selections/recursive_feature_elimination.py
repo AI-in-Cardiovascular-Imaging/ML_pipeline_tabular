@@ -34,9 +34,9 @@ class RecursiveFeatureElimination:
             self.class_weight,
         )
 
-        x = frame.drop(self.target_label, axis=1)
         y = frame[self.target_label]
-        min_features = 1
+        x = frame.drop(self.target_label, axis=1)
+        min_features = 1  # todo: make this configurable?
 
         selector = RFECV(
             estimator=estimator,

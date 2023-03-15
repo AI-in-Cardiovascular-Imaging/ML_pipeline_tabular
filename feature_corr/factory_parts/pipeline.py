@@ -59,5 +59,4 @@ class Pipeline(DataBorg):
 
     @run_when_active
     def verification(self) -> None:
-        """Skip state wise verification"""
-        # TODO: maybe add verification score weighted features
+        """Skip state wise verification, maybe a feature in the future"""
