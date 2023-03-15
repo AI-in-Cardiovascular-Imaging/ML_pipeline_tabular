@@ -22,7 +22,6 @@ class RecursiveFeatureElimination:
         self.scoring = None
         self.class_weight = None
         self.learn_task = None
-        self.keep_top_features = None
         np.random.seed(self.seed)
 
     def __reduction(self, frame: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
@@ -74,7 +73,7 @@ class RecursiveFeatureElimination:
 
         importances = pd.DataFrame(importances, index=x.columns[selector.support_], columns=['importance'])
         importances = importances.sort_values(by='importance', ascending=True)
-        importances = importances.iloc[-self.keep_top_features :, :]  # keep only the top features
+        importances = importances.iloc[-50:, :]  # keep only the top 50 features
 
         logger.info(
             f'Removed {len(x.columns) + 1 - len(frame.columns)} features with RFE and {rfe_estimator} estimator, '
@@ -83,10 +82,7 @@ class RecursiveFeatureElimination:
 
         ax = importances.plot.barh()
         fig = ax.get_figure()
-        plt.title(
-            f'Feature importance (top {self.keep_top_features})'
-            f'\n{rfe_estimator} estimator for target: {self.target_label}'
-        )
+        plt.title(f'Feature importance (top {50})' f'\n{rfe_estimator} estimator for target: {self.target_label}')
         plt.tight_layout()
         plt.gca().legend_.remove()
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'), dpi=fig.dpi)
