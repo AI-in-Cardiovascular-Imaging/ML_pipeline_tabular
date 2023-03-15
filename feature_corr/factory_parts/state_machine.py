@@ -21,6 +21,7 @@ class StateMachine:
         self.state_names = [
             'meta.seed',
             'impute.method',
+            'data_split.over_sample_method.binary_classification',
         ]  # define state names to branch on
 
         self.check_state_names()
@@ -33,7 +34,7 @@ class StateMachine:
     def __next__(self) -> DictConfig:
         """Return the next item"""
         self.update_state()
-        logger.info(f'State -> {self.state}')
+        logger.info(f'State {self.count} -> {self.state}')
         return self.get_state_config()
 
     def check_state_names(self) -> None:
@@ -47,6 +48,7 @@ class StateMachine:
         self.state_data = [dig(self.config, x) for x in self.state_names]  # get data for each state name
         self.state_tree = list(itertools.product(*self.state_data))  # create tree of all possible states
         self.max_count = len(self.state_tree)
+        logger.info(f'State machine is about to run -> {self.max_count} experiments')
 
     def get_state_config(self) -> DictConfig:
         """Return config for current state"""

@@ -133,7 +133,7 @@ class DataSplit(DataBorg):
         over_sampler_dict = {
             'binary_classification_smoten': SMOTEN(random_state=self.seed),
             'binary_classification_smotenc': SMOTENC(categorical_features=2, random_state=self.seed),
-            'binary_classification_svmmote': SVMSMOTE(random_state=self.seed),
+            'binary_classification_svmsmote': SVMSMOTE(random_state=self.seed),
             'binary_classification_borderlinesmote': BorderlineSMOTE(random_state=self.seed),
             'binary_classification_randomoversampler': RandomOverSampler(random_state=self.seed),
             'regression_adasyn': ADASYN(random_state=self.seed),
