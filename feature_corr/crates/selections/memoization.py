@@ -11,10 +11,10 @@ class Memoize:
     def set_mem(self, frame: pd.DataFrame) -> tuple:
         """Memoization of the frame"""
         self.frame_memory = frame
-        logger.info(f'Frame memory chached')
+        logger.info(f'Frame cached')
         return frame, None
 
     def get_mem(self, frame: pd.DataFrame) -> tuple:
         """Memoization of the frame"""
-        logger.info(f'Frame memory retrieved')
+        logger.info(f'Frame retrieved')
         return self.frame_memory, None
