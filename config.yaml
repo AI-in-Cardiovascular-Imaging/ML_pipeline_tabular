@@ -16,11 +16,11 @@ meta:
 # specify the clean strategy
 inspection:
   label_as_index: "ID_Imaging" # column string name or None
-  export_cleaned_frame: True # for visual inspection of the cleaned data
+  export_cleaned_frame: False # for visual inspection of the cleaned data
 
   auto_clean: True # will run before manual_clean
 
-  manual_clean: True # manual cleaning of data
+  manual_clean: False # manual cleaning of data
   manual_strategy:
     drop_columns_regex: [_\d+]  # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
 
@@ -67,10 +67,10 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-      ["variance_threshold", "z_score_norm", "correlation", "set_mem", "fr_forest" ],
-      ["get_mem", "fr_adaboost" ],
-      ["get_mem", "fr_extreme_forest" ],
-      ["get_mem", "fr_xgboost" ],
+      ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest" ],
+      ["get_memory", "fr_adaboost" ],
+      ["get_memory", "fr_extreme_forest" ],
+      ["get_memory", "fr_xgboost" ],
   ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 # verification strategy and final model to train and evaluate
