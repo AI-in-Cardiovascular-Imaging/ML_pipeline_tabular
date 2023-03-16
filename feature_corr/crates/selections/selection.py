@@ -7,13 +7,14 @@ from omegaconf import DictConfig
 
 from feature_corr.crates.selections.dimension_projections import DimensionProjections
 from feature_corr.crates.selections.feature_reductions import FeatureReductions
+from feature_corr.crates.selections.memoization import Memoize
 from feature_corr.crates.selections.recursive_feature_elimination import (
     RecursiveFeatureElimination,
 )
 from feature_corr.data_borg import DataBorg
 
 
-class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, RecursiveFeatureElimination):
+class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, RecursiveFeatureElimination, Memoize):
     """Execute jobs"""
 
     def __init__(self, config: DictConfig) -> None:
