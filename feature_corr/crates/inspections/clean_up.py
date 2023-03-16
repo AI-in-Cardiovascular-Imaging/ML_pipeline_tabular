@@ -7,10 +7,6 @@ from loguru import logger
 
 from feature_corr.data_borg import DataBorg
 
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', None)
-pd.set_option('display.width', None)
-
 
 class CleanUp(DataBorg):
     """ "Clean up data"""
@@ -19,13 +15,13 @@ class CleanUp(DataBorg):
         super().__init__()
         self.config = config
         self.label_as_index = self.config.inspection.label_as_index
-        logger.info(f'Running -> {self.__class__.__name__}')
         self.auto_clean = self.config.inspection.auto_clean
         self.manual_clean = self.config.inspection.manual_clean
         self.clean_frame = None
         self.frame = self.get_frame('ephemeral')
         self.label_index_frame = None
         self.target_label = self.config.meta.target_label
+        logger.info(f'Running -> {self.__class__.__name__}')
 
     def __call__(self) -> None:
         """Autoclean, manual clean or do nothing"""
@@ -50,7 +46,9 @@ class CleanUp(DataBorg):
 
     def export_frame(self) -> None:
         """Export frame"""
-        file_path = os.path.join(self.config.meta.output_dir, self.config.meta.name, 'cleaned_up_frame.xlsx')
+        output_dir = os.path.join(self.config.meta.output_dir, self.config.meta.name)
+        os.makedirs(output_dir, exist_ok=True)
+        file_path = os.path.join(output_dir, 'cleaned_up_frame.xlsx')
         self.clean_frame.to_excel(file_path)
         logger.info(f'Exported cleaned frame to -> {file_path}')
 

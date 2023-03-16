@@ -86,15 +86,16 @@ class FeatureReductions:
         x_frame = frame.drop(self.target_label, axis=1)
         corr_matrix = x_frame.corr(method=self.corr_method).round(2)
 
-        if self.corr_drop_features:
+        if self.corr_drop_features or True:  # todo: maybe reconsider this flag, always true now
             # calculate feature importance
-            estimator = RandomForestClassifier(random_state=self.seed)  # todo: does this make sense?
+            estimator = RandomForestClassifier(random_state=self.seed)
             estimator.fit(x_frame, y_frame)
             scoring = self.config.selection.scoring[self.learn_task]
             perm_importances = permutation_importance(estimator, x_frame, y_frame, scoring=scoring)
             importances = perm_importances.importances_mean
             importances = pd.Series(importances, index=x_frame.columns)
             importances = importances.sort_values(ascending=False)
+            features = importances.index.tolist()
 
             # sort corr_matrix w.r.t. feature importance
             corr_matrix = corr_matrix.reindex(index=importances.index, columns=importances.index)
@@ -116,8 +117,8 @@ class FeatureReductions:
         plt.savefig(os.path.join(self.job_dir, 'corr_plot.pdf'))
         plt.close(fig)
 
-        frame = pd.concat((x_frame, frame[self.target_label]), axis=1)
-        return frame, None
+        mod_frame = pd.concat([x_frame, y_frame], axis=1)
+        return mod_frame, features
 
     def drop_outliers(self, frame: pd.DataFrame) -> tuple:
         """Detect outliers in the data, optionally removing or further investigating them"""

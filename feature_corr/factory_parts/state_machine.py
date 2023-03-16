@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from dictlib import dig, dug
 from loguru import logger
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, ListConfig
 
 
 class StateMachine:
@@ -21,6 +21,7 @@ class StateMachine:
             'meta.seed',
         ]  # define state names to branch on
 
+        self.config.meta.aggregated_seeds = self.minor_setup()
         self.check_state_names()
         self.create_state_tree()
 
@@ -33,6 +34,16 @@ class StateMachine:
         self.update_state()
         logger.info(f'State {self.count} -> {self.state}')
         return self.get_state_config()
+
+    def minor_setup(self) -> bool or ListConfig:
+        """Minor config setup"""
+        if self.config.meta.aggregated_jobs is True:
+            return self.config.meta.seed
+        if self.config.meta.aggregated_jobs is False:
+            return self.config.meta.aggregated_jobs
+        if isinstance(self.config.meta.aggregated_jobs, ListConfig):
+            return self.config.meta.aggregated_jobs
+        raise ValueError('Aggregated seeds must be a True, False or List[int]')
 
     def check_state_names(self) -> None:
         """Check if all state names have valid types"""

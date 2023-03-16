@@ -1,21 +1,22 @@
 # meta specifies the experiment name and the random seed
 meta:
   name: "strain_testero" # experiment name
-  seed: [17, 34, 57, 89, 101, 420, 88] # random seeds
+  seed: [17, 1, 34, 45] # random seeds
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-  selection_only: False # whether to perform final feature selection
-  verification_only: True # whether to perform final verification analysis
+  run_selection: True # whether to perform final feature selection
+  run_verification: True # whether to perform final verification analysis
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
+  aggregated_jobs: [12, 1, 2, 3, 5, 63, 123, 34, 67, 74, 24, 74, 12, 5, 356, 653, 6322, 721, 624, 67, 2424, 7672] # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
 
 # specify the clean strategy
 inspection:
   label_as_index: "ID_Imaging" # column string name or None
-  export_cleaned_frame: False # for visual inspection of the cleaned data
+  export_cleaned_frame: True # for visual inspection of the cleaned data
 
   auto_clean: True # will run before manual_clean
 
@@ -30,9 +31,9 @@ impute:
 
 # data split definitions
 data_split:
-  seed: 18 # random seed for data split
+  seed: 13 # random seed for data split
 
-  selection_frac: 0.4  # fraction of data to use for feature selection
+  selection_frac: 0.2  # fraction of data to use for feature selection
   verification_test_frac: 0.2 # fraction of data to use for testing verification models
 
   over_sample_selection: False # oversample minority class to balance feature selection set
@@ -46,6 +47,7 @@ data_split:
 # feature reduction strategy
 selection:
   active: True # whether to perform feature selections
+  aggregate_seeds: True # aggregate results from different seeds
 
   class_weight: null
   corr_method: "pearson" # correlation method
@@ -65,10 +67,10 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-    ["variance_threshold", "z_score_norm", "fr_xgboost" ],
-      ["variance_threshold", "z_score_norm", "fr_adaboost" ],
-      ["variance_threshold", "z_score_norm", "fr_forest" ],
-      ["variance_threshold", "z_score_norm", "fr_extreme_forest" ],
+      ["variance_threshold", "z_score_norm", "correlation", "fr_forest" ],
+      ["variance_threshold", "z_score_norm", "correlation", "fr_adaboost" ],
+      ["variance_threshold", "z_score_norm", "correlation", "fr_extreme_forest" ],
+      ["variance_threshold", "z_score_norm", "correlation", "fr_xgboost" ],
   ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
 # verification strategy and final model to train and evaluate
