@@ -3,18 +3,18 @@ import pandas as pd
 
 
 class Memoize:
-    """Dimensionality reduction and visualisation"""
+    """Memoization of the frame"""
 
     def __init__(self) -> None:
         self.frame_memory = None
 
     def set_mem(self, frame: pd.DataFrame) -> tuple:
-        """Memoization of the frame"""
+        """Cache the frame"""
         self.frame_memory = frame
         logger.info(f'Frame cached')
         return frame, None
 
     def get_mem(self, frame: pd.DataFrame) -> tuple:
-        """Memoization of the frame"""
+        """Retrieve the frame"""
         logger.info(f'Frame retrieved')
         return self.frame_memory, None
