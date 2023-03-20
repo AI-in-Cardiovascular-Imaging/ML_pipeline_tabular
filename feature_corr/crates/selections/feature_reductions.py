@@ -26,6 +26,19 @@ class FeatureReductions:
         self.learn_task = None
         np.random.seed(self.seed)
 
+    def new_kid(self, frame: pd.DataFrame) -> tuple:
+        """Reduce the number of features using a simple method"""
+        y_frame = frame[self.target_label]
+        x_frame = frame.drop(self.target_label, axis=1)
+        from sklearn.feature_selection import SelectKBest
+        from sklearn.feature_selection import f_classif, chi2, mutual_info_classif
+        array = SelectKBest(mutual_info_classif, k=2).fit_transform(x_frame, y_frame)
+        new_frame = pd.DataFrame(array, index=frame.index)
+        new_frame = pd.concat([new_frame, y_frame], axis=1)
+        features = list(new_frame.columns.t)
+        logger.warning(f'New kid: {features}')
+        return new_frame, features
+
     def univariate_analysis(self, frame: pd.DataFrame) -> tuple:
         """Perform univariate analysis (box plots and distributions)"""
         frame_long = frame.melt(id_vars=[self.target_label])

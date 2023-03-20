@@ -12,7 +12,7 @@ class Memoize:
         self.frame_memory = frame
         return frame, None
 
-    def get_memory(self, frame: pd.DataFrame) -> tuple:
+    def get_memory(self) -> tuple:
         """Retrieve the frame"""
         if self.frame_memory is None:
             raise ValueError('No frame available in memory')
