@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -10,7 +12,10 @@ from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     mean_absolute_error,
+    precision_recall_curve,
     r2_score,
+    roc_auc_score,
+    roc_curve,
 )
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
@@ -82,19 +87,17 @@ class Verification(DataBorg, Normalisers):
         self.x_test = None
         self.y_test = None
 
-    def verify_jobs(self):
-        """Verify feature importance per job"""
-        jobs = self.get_feature_job_names(self.state_name)
-        for job in jobs:
-            v_train = self.get_store('frame', self.state_name, 'verification_train')
-            v_test = self.get_store('frame', self.state_name, 'verification_test')
-            self.top_feature_names = self.get_store('feature', self.state_name, job)
-            self.x_train, self.y_train = self.split_frame(v_train)
-            self.x_test, self.y_test = self.split_frame(v_test)
-            self.train_models()
+        self.fig_roc, self.ax_roc = plt.subplots()
+        self.ax_roc.set_title('Receiver-operator curve (ROC)')
+        self.ax_roc.set_xlabel('1 - Specificity')
+        self.ax_roc.set_ylabel('Sensitivity')
+        self.ax_roc.grid()
+        self.ax_roc.plot([0, 1], [0, 1], 'k--', label='Baseline, AUROC=0.5', alpha=0.7)  # baseline
+        self.ax_roc.legend()
+        self.fig_prc, self.ax_prc = plt.subplots()
 
     def verify_final(self) -> None:
-        """Train random forest classifier to verify final feature importance"""
+        """Train classifier to verify final feature importance"""
         logger.info('Verifying final feature importance')
 
         # TODO: maybe there is a better way to do this
@@ -103,9 +106,14 @@ class Verification(DataBorg, Normalisers):
         self.seed = 17
         self.config.meta.seed = self.seed
 
-        self.pre_process_frame()
-        self.train_test_split()
-        self.train_models()
+        features = [[feature] for feature in self.top_feature_names]
+        features.append(list(self.top_feature_names))
+
+        for feature in features:
+            self.top_feature_names = feature
+            self.pre_process_frame()
+            self.train_test_split()
+            self.train_models()
 
     def pre_process_frame(self) -> None:
         """Pre-process frame for verification"""
@@ -123,7 +131,7 @@ class Verification(DataBorg, Normalisers):
         self.x_test, self.y_test = self.split_frame(v_test)
 
     def train_models(self) -> None:
-        """Train random forest classifier to verify feature importance"""
+        """Train classifier to verify feature importance"""
         best_estimators = []
         for model in self.models:
             logger.info(f'Optimising {model} model...')
@@ -150,7 +158,10 @@ class Verification(DataBorg, Normalisers):
             best_estimators.append((model, best_estimator))
             y_pred = best_estimator.predict(self.x_test)
             logger.info(f'Model was optimised using {self.scoring[self.learn_task]}.')
+            self.auc_plots(y_pred, best_estimator)
             self.performance_statistics(y_pred)
+
+        self.fig_roc.savefig(os.path.join(self.out_dir, 'AUROC.pdf'))
 
         for ensemble in self.ensemble:
             logger.info(f'Combining optimised models in {ensemble} estimator')
@@ -201,6 +212,23 @@ class Verification(DataBorg, Normalisers):
             plt.show()
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
+
+    def auc_plots(self, y_pred: pd.DataFrame, best_estimator) -> None:
+        try:  # for logistic regression
+            probas = best_estimator.decision_function(self.x_test)
+        except AttributeError:
+            probas = best_estimator.predict_proba(self.x_test)[:, 1]
+
+        if len(self.top_feature_names) == 1:  # name clean-up for plot
+            f_name = self.top_feature_names[0]
+        else:
+            f_name = f'{len(self.top_feature_names)}-item score'
+        fpr, tpr, _ = roc_curve(self.y_test, probas, drop_intermediate=True)  # AUROC
+        auroc = round(roc_auc_score(self.y_test, y_pred), 3)
+        self.ax_roc.plot(fpr, tpr, label=f'{f_name}, AUROC={str(auroc)}', alpha=0.7)
+        precision, recall, _ = precision_recall_curve(self.y_test, probas)  # AUPRC
+        auprc = round(average_precision_score(self.y_test, y_pred), 3)
+        self.ax_prc.plot(precision, recall, label=f'{f_name}, AUPRC={str(auprc)}', alpha=0.7)
 
     def split_frame(self, frame: pd.DataFrame) -> tuple:
         """Prepare frame for verification"""
