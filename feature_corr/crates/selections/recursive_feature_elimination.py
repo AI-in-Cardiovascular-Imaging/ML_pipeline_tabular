@@ -3,9 +3,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from crates.helpers import init_estimator
 from loguru import logger
 from sklearn.feature_selection import RFECV
+
+from feature_corr.crates.helpers import init_estimator
 
 
 class RecursiveFeatureElimination:

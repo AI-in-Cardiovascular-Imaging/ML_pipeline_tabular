@@ -1,10 +1,10 @@
 import os
 
 import pandas as pd
-from crates.normalisers import Normalisers
 from loguru import logger
 from omegaconf import DictConfig
 
+from feature_corr.crates.normalisers import Normalisers
 from feature_corr.crates.selections.dimension_projections import DimensionProjections
 from feature_corr.crates.selections.feature_reductions import FeatureReductions
 from feature_corr.crates.selections.memoization import Memoize
