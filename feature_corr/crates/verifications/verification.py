@@ -88,13 +88,26 @@ class Verification(DataBorg, Normalisers):
         self.y_test = None
 
         self.fig_roc, self.ax_roc = plt.subplots()
+        self.fig_prc, self.ax_prc = plt.subplots()
+
+    def __del__(self) -> None:
         self.ax_roc.set_title('Receiver-operator curve (ROC)')
         self.ax_roc.set_xlabel('1 - Specificity')
         self.ax_roc.set_ylabel('Sensitivity')
         self.ax_roc.grid()
         self.ax_roc.plot([0, 1], [0, 1], 'k--', label='Baseline, AUROC=0.5', alpha=0.7)  # baseline
         self.ax_roc.legend()
-        self.fig_prc, self.ax_prc = plt.subplots()
+        self.fig_roc.savefig(os.path.join(self.out_dir, 'AUROC.pdf'))
+        self.ax_prc.set_title('Precision-recall curve (PRC)')
+        self.ax_prc.set_xlabel('Recall (Sensitivity)')
+        self.ax_prc.set_ylabel('Precision')
+        self.ax_prc.grid()
+        pos_rate = round(self.y_test.sum() / len(self.y_test), 3)
+        self.ax_prc.axhline(
+            y=pos_rate, color='k', linestyle='--', label=f'Baseline, AUPRC={pos_rate}', alpha=0.7
+        )  # baseline
+        self.ax_prc.legend()
+        self.fig_prc.savefig(os.path.join(self.out_dir, 'AUPRC.pdf'))
 
     def verify_final(self) -> None:
         """Train classifier to verify final feature importance"""
@@ -106,8 +119,11 @@ class Verification(DataBorg, Normalisers):
         self.seed = 17
         self.config.meta.seed = self.seed
 
-        features = [[feature] for feature in self.top_feature_names]
-        features.append(list(self.top_feature_names))
+        num_features_plots = min(
+            len(self.top_feature_names), 4
+        )  # max number of features to use for AUROC and AUPRC plots
+        features = [[feature] for feature in self.top_feature_names[:num_features_plots]]
+        features.append(list(self.top_feature_names[:num_features_plots]))
 
         for feature in features:
             self.top_feature_names = feature
@@ -160,8 +176,6 @@ class Verification(DataBorg, Normalisers):
             logger.info(f'Model was optimised using {self.scoring[self.learn_task]}.')
             self.auc_plots(y_pred, best_estimator)
             self.performance_statistics(y_pred)
-
-        self.fig_roc.savefig(os.path.join(self.out_dir, 'AUROC.pdf'))
 
         for ensemble in self.ensemble:
             logger.info(f'Combining optimised models in {ensemble} estimator')
