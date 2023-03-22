@@ -69,7 +69,7 @@ class Verification(DataBorg, Normalisers):
     def __init__(self, config: DictConfig, top_feature_names: list = None) -> None:
         super().__init__()
         self.config = config
-        self.top_feature_names = top_feature_names
+        self.top_features = top_feature_names
         self.out_dir = os.path.join(config.meta.output_dir, config.meta.name)
         os.makedirs(self.out_dir, exist_ok=True)
         self.seeds = config.meta.seed
@@ -77,10 +77,12 @@ class Verification(DataBorg, Normalisers):
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
-        self.scoring = config.selection.scoring
+        self.train_scoring = config.selection.scoring
         self.class_weight = config.selection.class_weight
-        self.param_grids = config.verification.param_grids
+        v_scoring_dict = config.verification.scoring[self.learn_task]
+        self.verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
         models_dict = config.verification.models
+        self.param_grids = config.verification.param_grids
         self.models = [model for model in models_dict if models_dict[model]]
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]
@@ -101,10 +103,12 @@ class Verification(DataBorg, Normalisers):
         self.config.impute.method = 'simple_impute'
         self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
 
-        self.feature_sets = [[feature] for feature in self.top_feature_names]
-        self.feature_sets.append(list(self.top_feature_names))
+        self.feature_sets = [[feature] for feature in self.top_features]
+        self.feature_sets.append(list(self.top_features))
+        self.feature_names = [feature for feature in self.top_features]
+        self.feature_names.append(f'{len(self.top_features)}-item score')
         for self.seed in self.seeds:
-            for self.top_feature_names in self.feature_sets:
+            for self.top_features, self.feature_name in zip(self.feature_sets, self.feature_names):
                 self.pre_process_frame()
                 self.train_test_split()
                 self.train_models()  # optimise all models
@@ -135,7 +139,7 @@ class Verification(DataBorg, Normalisers):
                 model,
                 self.learn_task,
                 self.seed,
-                self.scoring,
+                self.train_scoring,
                 self.class_weight,
             )
             optimiser = CrossValidation(
@@ -150,10 +154,8 @@ class Verification(DataBorg, Normalisers):
             )
             best_estimator = optimiser()
             estimators.append((model, best_estimator))
-            self.best_estimators[model][self.seed][
-                self.top_feature_names
-            ] = best_estimator  # store for evaluation later
-            logger.info(f'Model was optimised using {self.scoring[self.learn_task]}.')
+            self.best_estimators[model][self.seed][self.feature_name] = best_estimator  # store for evaluation later
+            logger.info(f'Model was optimised using {self.train_scoring[self.learn_task]}.')
             y_pred = best_estimator.predict(self.x_test)
             self.auc_plots(y_pred, best_estimator)
             self.performance_statistics(y_pred)
@@ -177,19 +179,17 @@ class Verification(DataBorg, Normalisers):
                 logger.error(f'{ensemble} has not yet been implemented.')
                 raise NotImplementedError
             self.best_estimators[ens_estimator][self.seed][
-                self.top_feature_names
+                self.feature_name
             ] = best_estimator  # store for evaluation later
-            y_pred = ens_estimator.predict(self.x_test)
-            self.performance_statistics(y_pred)
 
     def evaluate(self) -> None:
         """Evaluate all optimised models"""
         fig_all, ax_all = plt.subplots()
         for model in self.models + self.ensemble:
-            for feature_set in self.feature_sets:
-                # score collection init
+            for feature_name in self.feature_names:
+                # score collection init for each metric according to config dict
                 for seed in self.seeds:
-                    estimator = self.best_estimators[model][seed][feature_set]
+                    estimator = self.best_estimators[model][seed][feature_name]
                     y_pred = estimator.predict(self.x_test)
                     # automatically call sklearn function according to config dict, store in collection
 
@@ -238,10 +238,10 @@ class Verification(DataBorg, Normalisers):
         except AttributeError:
             probas = best_estimator.predict_proba(self.x_test)[:, 1]
 
-        if len(self.top_feature_names) == 1:  # name clean-up for plot
-            f_name = self.top_feature_names[0]
+        if len(self.top_features) == 1:  # name clean-up
+            f_name = self.top_features[0]
         else:
-            f_name = f'{len(self.top_feature_names)}-item score'
+            f_name = f'{len(self.top_features)}-item score'
         fpr, tpr, _ = roc_curve(self.y_test, probas, drop_intermediate=True)  # AUROC
         auroc = round(roc_auc_score(self.y_test, y_pred), 3)
         self.ax_roc.plot(fpr, tpr, label=f'{f_name}, AUROC={str(auroc)}', alpha=0.7)
@@ -274,7 +274,7 @@ class Verification(DataBorg, Normalisers):
         """Prepare frame for verification"""
         frame, _ = self.z_score_norm(frame)  # todo: config
         y_frame = frame[self.target_label]
-        x_frame = frame[self.top_feature_names]  # only keep top features
+        x_frame = frame[self.top_features]  # only keep top features
         if self.target_label in x_frame.columns:
             x_frame = x_frame.drop(self.target_label, axis=1)
             logger.warning(f'{self.target_label} was found in the top features for validation')
