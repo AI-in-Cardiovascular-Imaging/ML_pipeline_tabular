@@ -107,18 +107,18 @@ class Verification(DataBorg, Normalisers):
         self.feature_sets.append(list(self.top_features))
         self.feature_names = [feature for feature in self.top_features]
         self.feature_names.append(f'{len(self.top_features)}-item score')
-        for self.seed in self.seeds:
-            for self.top_features, self.feature_name in zip(self.feature_sets, self.feature_names):
-                self.pre_process_frame()
+        for seed in self.seeds:
+            for top_feature, feature_name in zip(self.feature_sets, self.feature_names):
+                self.pre_process_frame(seed)
                 self.train_test_split()
-                self.train_models()  # optimise all models
+                self.train_models(seed, top_feature, feature_name)  # optimise all models
         self.evaluate()  # evaluate all optimised models
 
-    def pre_process_frame(self) -> None:
+    def pre_process_frame(self, seed) -> None:
         """Pre-process frame for verification"""
         frame = self.get_frame('ephemeral')
         TargetStatistics(self.config).verification_mode(frame)
-        Imputer(self.config).verification_mode(frame, self.seed)
+        Imputer(self.config).verification_mode(frame, seed)
         frame = self.get_store('frame', 'verification', 'ephemeral')
         DataSplit(self.config).verification_mode(frame)
 
@@ -129,7 +129,7 @@ class Verification(DataBorg, Normalisers):
         self.x_train, self.y_train = self.split_frame(v_train)
         self.x_test, self.y_test = self.split_frame(v_test)
 
-    def train_models(self) -> None:
+    def train_models(self, seed, top_feature, feature_name) -> None:
         """Train classifier to verify feature importance"""
         estimators = []
         for model in self.models:
@@ -138,7 +138,7 @@ class Verification(DataBorg, Normalisers):
             estimator, cross_validator, scoring = init_estimator(
                 model,
                 self.learn_task,
-                self.seed,
+                seed,
                 self.train_scoring,
                 self.class_weight,
             )
@@ -149,12 +149,12 @@ class Verification(DataBorg, Normalisers):
                 cross_validator,
                 param_grid,
                 scoring,
-                self.seed,
+                seed,
                 self.workers,
             )
             best_estimator = optimiser()
             estimators.append((model, best_estimator))
-            self.best_estimators[model][self.seed][self.feature_name] = best_estimator  # store for evaluation later
+            self.best_estimators[model][seed][feature_name] = best_estimator  # store for evaluation later
             logger.info(f'Model was optimised using {self.train_scoring[self.learn_task]}.')
             y_pred = best_estimator.predict(self.x_test)
             self.auc_plots(y_pred, best_estimator)
@@ -178,9 +178,7 @@ class Verification(DataBorg, Normalisers):
             else:
                 logger.error(f'{ensemble} has not yet been implemented.')
                 raise NotImplementedError
-            self.best_estimators[ens_estimator][self.seed][
-                self.feature_name
-            ] = best_estimator  # store for evaluation later
+            self.best_estimators[ens_estimator][seed][feature_name] = best_estimator  # store for evaluation later
 
     def evaluate(self) -> None:
         """Evaluate all optimised models"""
@@ -190,6 +188,7 @@ class Verification(DataBorg, Normalisers):
                 # score collection init for each metric according to config dict
                 for seed in self.seeds:
                     estimator = self.best_estimators[model][seed][feature_name]
+                    logger.debug(feature_name)
                     y_pred = estimator.predict(self.x_test)
                     # automatically call sklearn function according to config dict, store in collection
 
