@@ -1,48 +1,50 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "strain_testero" # experiment name
-  seed: [17, 1, 34, 45, 13, 423, 35] # random seeds
+  name: "phenomapping" # experiment name
+  seed: [12, 35, 26, 36, 853, 234] # random seeds
+  # seed: [77]
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "WARNING" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
   run_selection: True # whether to perform final feature selection
   run_verification: True # whether to perform final verification analysis
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
-  aggregated_jobs: [12, 1, 2, 3, 5, 63, 123, 34, 67, 74, 24, 74, 12, 5, 356, 653, 6322, 721, 624, 67, 2424, 7672] # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
+  aggregated_jobs: [12, 35, 26, 36, 853, 234] # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
+  # aggregated_jobs: False
 
 # specify the clean strategy
 inspection:
-  label_as_index: "ID_Imaging" # column string name or None
-  export_cleaned_frame: False # for visual inspection of the cleaned data
+  label_as_index: "ATTRAS_Redcap" # column string name or None
+  export_cleaned_frame: True # for visual inspection of the cleaned data
 
   auto_clean: True # will run before manual_clean
 
-  manual_clean: False # manual cleaning of data
+  manual_clean: True # manual cleaning of data
   manual_strategy:
-    drop_columns_regex: [_\d+]  # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
+    drop_columns_regex: ['([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+'] # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
 
 # imputation strategy
 impute:
   active: True # impute missing values
-  method: "simple_impute"  #: drop_nan_impute, iterative_impute, simple_impute, knn_impute
+  method: "simple_impute" #: drop_nan_impute, iterative_impute, simple_impute, knn_impute
 
 # data split definitions
 data_split:
-  seed: 13 # random seed for data split
+  seed: 77 # random seed for data split
 
-  selection_frac: 0.6  # fraction of data to use for feature selection
+  selection_frac: 1.0 # fraction of data to use for feature selection
   verification_test_frac: 0.3 # fraction of data to use for testing verification models
 
   over_sample_selection: False # oversample minority class to balance feature selection set
   over_sample_verification: False # oversample minority class to balance verification set
 
   over_sample_method:
-    binary_classification: "RandomOverSampler"  #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
-    multi_classification: "RandomOverSampler"  # Not implemented yet
-    regression: "RandomOverSampler"  #: ADASYN, SMOTE, KMeansSMOTE, RandomOverSampler
+    binary_classification: "RandomOverSampler" #: SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
+    multi_classification: "RandomOverSampler" # Not implemented yet
+    regression: "RandomOverSampler" #: ADASYN, SMOTE, KMeansSMOTE, RandomOverSampler
 
 # feature reduction strategy
 selection:
@@ -55,7 +57,7 @@ selection:
   corr_drop_features: True # whether to drop highly correlated features
 
   scoring:
-    binary_classification: "average_precision"
+    binary_classification: "roc_auc"
     multi_classification: "average_precision"
     regression: "neg_mean_absolute_error"
 
@@ -65,18 +67,28 @@ selection:
     object: "z_score_norm"
     datatime: "z_score_norm"
 
-  jobs: [
-      ["z_score_norm", "correlation", "set_memory", "fr_forest" ],
-      ["get_memory", "fr_adaboost" ],
-      ["get_memory", "fr_extreme_forest" ],
-      ["get_memory", "fr_xgboost" ],
+  jobs: [["variance_threshold", "z_score_norm", "correlation", "fr_forest"]] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
 
-  ] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
+# ["get_memory", "fr_adaboost" ],
+# ["get_memory", "fr_extreme_forest" ],
+# ["get_memory", "fr_xgboost" ],
 
 # verification strategy and final model to train and evaluate
 verification:
   active: False # whether to perform verification analysis for each job TODO: not implemented yet
-  use_n_top_features: 12
+  use_n_top_features: 4
+  scoring:
+    binary_classification:
+      "accuracy_score": True
+      "roc_auc_score": True
+      "average_precision_score": True
+      "f1_score": True
+    multi_classification: {}
+    regression:
+      "r2_score": True
+      "mean_absolute_error": True
+      "mean_squared_error": True
+      "explained_variance_score": True
 
   models:
     logistic_regression: True
@@ -88,32 +100,31 @@ verification:
 
   param_grids:
     logistic_regression:
-      penalty: [ "l1", "l2" ]
-      C: [ 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000 ]
-      solver: [ "saga" ]  # supports both l1 and l2 penalties
-      max_iter: [ 10000 ]
+      penalty: ["l1", "l2"]
+      C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+      solver: ["saga"] # supports both l1 and l2 penalties
+      max_iter: [10000]
 
     forest:
-      n_estimators: [ 100, 500, 1000 ]
-      criterion: [ "gini", "entropy" ]
-      max_depth: [ 10, 50, 100, null ]
-      max_features: [ "sqrt", "log2", null ]
-      bootstrap: [ True, False ]
-
+      n_estimators: [100, 500, 1000]
+      criterion: ["gini", "entropy"]
+      max_depth: [10, 50, 100, null]
+      max_features: ["sqrt", "log2", null]
+      bootstrap: [True, False]
 
     extreme_forest:
-      n_estimators: [ 100, 500, 1000 ]
-      criterion: [ "gini", "entropy" ]
-      max_depth: [ 10, 50, 100, null ]
-      max_features: [ "sqrt", "log2", null ]
-      bootstrap: [ True, False ]
+      n_estimators: [100, 500, 1000]
+      criterion: ["gini", "entropy"]
+      max_depth: [10, 50, 100, null]
+      max_features: ["sqrt", "log2", null]
+      bootstrap: [True, False]
 
     adaboost:
-      n_estimators: [ 100, 500, 1000 ]
-      learning_rate: [ 0.0001, 0.001, 0.01, 0.1, 1 ]
+      n_estimators: [100, 500, 1000]
+      learning_rate: [0.0001, 0.001, 0.01, 0.1, 1]
 
     xgboost:
-      n_estimators: [ 100, 500, 1000 ]
-      learning_rate: [ 0.0001, 0.001, 0.01, 0.1, 1 ]
-      max_depth: [ 10, 50, 100, 1000, null ]
-      max_features: [ "sqrt", "log2", null ]
+      n_estimators: [100, 500, 1000]
+      learning_rate: [0.0001, 0.001, 0.01, 0.1, 1]
+      max_depth: [10, 50, 100, 1000, null]
+      max_features: ["sqrt", "log2", null]

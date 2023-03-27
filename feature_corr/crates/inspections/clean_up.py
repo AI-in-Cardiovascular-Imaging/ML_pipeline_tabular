@@ -102,5 +102,5 @@ class CleanUp(DataBorg):
 
                 x_frame = x_frame.drop(drop_col_names, axis=1)
                 diff_drop = len(tmp_frame.columns) - len(x_frame.columns)
-                logger.info(f'Dropped {diff_drop} columns by regex -> {drop_col_names}')
+                logger.info(f'Dropped {diff_drop} columns by regex')
             self.clean_frame = pd.concat([x_frame, y_frames], axis=1)

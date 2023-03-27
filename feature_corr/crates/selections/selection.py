@@ -30,9 +30,9 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.target_label = config.meta.target_label
         self.corr_method = config.selection.corr_method
         self.corr_thresh = config.selection.corr_thresh
+        self.variance_thresh = config.selection.variance_thresh
         self.class_weight = config.selection.class_weight
         self.aggregated_jobs = config.meta.aggregated_jobs
-        self.variance_thresh = config.selection.variance_thresh
         self.auto_norm_method = config.selection.auto_norm_method
         self.corr_drop_features = config.selection.corr_drop_features
         self.job_name = ''
@@ -52,11 +52,11 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
             for step in job:
                 logger.info(f'Running -> {step}')
                 frame, features, error = self.process_job(step, frame)
-                logger.debug(
-                    f'\nStep outputs:'
-                    f'\n  Frame_specs -> {type(frame)}{frame.shape}'
-                    f'\n  Features -> {type(features)}{features}'
-                )
+                # logger.debug(
+                #     f'\nStep outputs:'
+                #     f'\n  Frame_specs -> {type(frame)}{frame.shape}'
+                #     f'\n  Features -> {type(features)}{features}'
+                # )
                 if error:
                     logger.error(f'Step {step} is invalid')
                     break

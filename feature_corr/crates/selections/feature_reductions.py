@@ -21,6 +21,7 @@ class FeatureReductions:
         self.target_label = None
         self.corr_method = None
         self.corr_thresh = None
+        self.variance_thresh = None
         self.corr_drop_features = None
         self.scoring = None
         self.learn_task = None
@@ -30,8 +31,13 @@ class FeatureReductions:
         """Reduce the number of features using a simple method"""
         y_frame = frame[self.target_label]
         x_frame = frame.drop(self.target_label, axis=1)
-        from sklearn.feature_selection import SelectKBest
-        from sklearn.feature_selection import f_classif, chi2, mutual_info_classif
+        from sklearn.feature_selection import (
+            SelectKBest,
+            chi2,
+            f_classif,
+            mutual_info_classif,
+        )
+
         array = SelectKBest(mutual_info_classif, k=2).fit_transform(x_frame, y_frame)
         new_frame = pd.DataFrame(array, index=frame.index)
         new_frame = pd.concat([new_frame, y_frame], axis=1)
@@ -193,13 +199,13 @@ class FeatureReductions:
         """Remove features with variance below threshold"""
         y_frame = frame[self.target_label]
         x_frame = frame.drop(self.target_label, axis=1)
-        selector = VarianceThreshold(threshold=self.corr_thresh * (1 - self.corr_thresh))
+        selector = VarianceThreshold(threshold=self.variance_thresh * (1 - self.variance_thresh))
         selector.fit(x_frame)
         x_frame = x_frame.loc[:, selector.get_support()]
         logger.info(
             f'Removed {len(selector.get_support()) - len(x_frame.columns)} '
-            f'features with same value in more than {int(self.corr_thresh*100)}% of subjects, '
-            f'number of remaining features: {len(frame.columns)}'
+            f'features with same value in more than {int(self.variance_thresh*100)}% of subjects, '
+            f'number of remaining features: {len(x_frame.columns)}'
         )
         new_frame = pd.concat([x_frame, y_frame], axis=1)
         return new_frame, None
