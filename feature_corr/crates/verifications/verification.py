@@ -218,7 +218,9 @@ class Verification(DataBorg, Normalisers):
 
             print(y_pred)
             if y_pred.sum() == 0:
-                logger.warning(f'No positive class instance was predicted correctly using top features {top_feature}.')
+                logger.warning(
+                    f'{int(y_pred.sum())}/{int(self.y_test.sum())} positive samples were predicted using top features {top_feature}.'
+                )
             self.save_plots(model)
             # store and clear model-wise plots
             # plot on ax_all

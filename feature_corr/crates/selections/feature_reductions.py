@@ -107,6 +107,7 @@ class FeatureReductions:
 
         if self.corr_drop_features or True:  # todo: maybe reconsider this flag, always true now
             # calculate feature importance
+            np.random.seed(self.seed)
             estimator = RandomForestClassifier(random_state=self.seed)
             estimator.fit(x_frame, y_frame)
             scoring = self.config.selection.scoring[self.learn_task]
@@ -114,7 +115,6 @@ class FeatureReductions:
             importances = perm_importances.importances_mean
             importances = pd.Series(importances, index=x_frame.columns)
             importances = importances.sort_values(ascending=False)
-            features = importances.index.tolist()
 
             # sort corr_matrix w.r.t. feature importance
             corr_matrix = corr_matrix.reindex(index=importances.index, columns=importances.index)
@@ -137,6 +137,7 @@ class FeatureReductions:
         plt.close(fig)
 
         mod_frame = pd.concat([x_frame, y_frame], axis=1)
+        features = list(x_frame.columns)
         return mod_frame, features
 
     def drop_outliers(self, frame: pd.DataFrame) -> tuple:
