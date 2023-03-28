@@ -91,9 +91,9 @@ class Verification(DataBorg, Normalisers):
         self.config.impute.method = 'simple_impute'
         self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
 
-        self.feature_sets = [[feature] for feature in self.top_features[:4]]
+        self.feature_sets = [[feature] for feature in self.top_features]
         self.feature_sets.append(list(self.top_features))
-        self.feature_names = [feature for feature in self.top_features[:4]]
+        self.feature_names = [feature for feature in self.top_features]
         self.feature_names.append(f'{len(self.top_features)}-item score')
         for seed in self.seeds:
             for top_feature, feature_name in zip(self.feature_sets, self.feature_names):
@@ -212,14 +212,12 @@ class Verification(DataBorg, Normalisers):
                 precisions_lower = np.maximum(mean_precision - std_precision, 0)
                 ax_prc.fill_between(mean_x, precisions_lower, precisions_upper, color='grey', alpha=0.2)
 
-                print(f'{scores} for {feature_name}')
-
             if y_pred.sum() == 0:
                 logger.warning(
                     f'0/{int(self.y_test.sum())} positive samples were predicted using top features {top_feature}.'
                 )
             self.save_plots(fig_roc, ax_roc, fig_prc, ax_prc, f'{model}.pdf')  # store and clear model-wise plots
-            self.performance_statistics(y_pred)
+            self.performance_statistics(scores, y_pred)
             ax_roc_models.plot(mean_x, mean_tpr, label=f'{model}, AUROC={scores["roc_auc_score"]}', alpha=0.7)
             ax_roc_models.fill_between(mean_x, tprs_lower, tprs_upper, color='grey', alpha=0.2)
             ax_prc_models.plot(
@@ -229,11 +227,12 @@ class Verification(DataBorg, Normalisers):
 
         self.save_plots(fig_roc_models, ax_roc_models, fig_prc_models, ax_prc_models, 'all_models.pdf')
 
-    def performance_statistics(self, y_pred: pd.DataFrame) -> None:
+    def performance_statistics(self, scores, y_pred: pd.DataFrame) -> None:
         """Print performance statistics"""
         if self.learn_task == 'binary_classification':
-            print('Accuracy', metrics.accuracy_score(self.y_test, y_pred, normalize=True))
-            print('Average precision', metrics.average_precision_score(self.y_test, y_pred))
+            for metric, score in scores.items():
+                print(f'{metric}: {score}')
+
             print(metrics.classification_report(self.y_test, y_pred, zero_division=0))
             conf_m = metrics.confusion_matrix(self.y_test, y_pred)
             print(conf_m)
