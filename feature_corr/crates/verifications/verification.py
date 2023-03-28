@@ -4,18 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-
-# from sklearn.metrics import (
-#     accuracy_score,
-#     average_precision_score,
-#     classification_report,
-#     confusion_matrix,
-#     mean_absolute_error,
-#     precision_recall_curve,
-#     r2_score,
-#     roc_auc_score,
-#     roc_curve,
-# )
 import sklearn.metrics as metrics
 from loguru import logger
 from omegaconf import DictConfig
@@ -95,9 +83,6 @@ class Verification(DataBorg, Normalisers):
         self.x_test = None
         self.y_test = None
 
-        self.fig_roc, self.ax_roc = plt.subplots()
-        self.fig_prc, self.ax_prc = plt.subplots()
-
     def verify_final(self) -> None:
         """Train classifier to verify final feature importance"""
         logger.info('Verifying final feature importance')
@@ -106,9 +91,9 @@ class Verification(DataBorg, Normalisers):
         self.config.impute.method = 'simple_impute'
         self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
 
-        self.feature_sets = [[feature] for feature in self.top_features]
+        self.feature_sets = [[feature] for feature in self.top_features[:4]]
         self.feature_sets.append(list(self.top_features))
-        self.feature_names = [feature for feature in self.top_features]
+        self.feature_names = [feature for feature in self.top_features[:4]]
         self.feature_names.append(f'{len(self.top_features)}-item score')
         for seed in self.seeds:
             for top_feature, feature_name in zip(self.feature_sets, self.feature_names):
@@ -136,7 +121,6 @@ class Verification(DataBorg, Normalisers):
         """Train classifier to verify feature importance"""
         estimators = []
         for model in self.models:
-            logger.info(f'Optimising {model} model...')
             param_grid = self.param_grids[model]
             estimator, cross_validator, scoring = init_estimator(
                 model,
@@ -158,13 +142,11 @@ class Verification(DataBorg, Normalisers):
             best_estimator = optimiser()
             estimators.append((model, best_estimator))
             self.best_estimators[model][seed][feature_name] = best_estimator  # store for evaluation later
-            logger.info(f'Model was optimised using {self.train_scoring[self.learn_task]}.')
 
         for ensemble in self.ensemble:
-            logger.info(f'Combining optimised models in {ensemble} estimator')
             if 'voting' in ensemble:
                 if self.learn_task == 'binary_classification':
-                    ens_estimator = VotingClassifier(estimators=estimators, voting='hard')
+                    ens_estimator = VotingClassifier(estimators=estimators, voting='soft')
                     ens_estimator.estimators_ = [
                         est_tuple[1] for est_tuple in estimators
                     ]  # best_estimators are already fit -> need to set estimators_, le_ and classes_
@@ -178,16 +160,21 @@ class Verification(DataBorg, Normalisers):
             else:
                 logger.error(f'{ensemble} has not yet been implemented.')
                 raise NotImplementedError
-            self.best_estimators[ens_estimator][seed][feature_name] = best_estimator  # store for evaluation later
+
+            self.best_estimators[ensemble][seed][feature_name] = ens_estimator  # store for evaluation later
 
     def evaluate(self) -> None:
         """Evaluate all optimised models"""
-        fig_all, ax_all = plt.subplots()
+        fig_roc_models, ax_roc_models = plt.subplots()
+        fig_prc_models, ax_prc_models = plt.subplots()
         for model in self.models + self.ensemble:
+            fig_roc, ax_roc = plt.subplots()
+            fig_prc, ax_prc = plt.subplots()
             for top_feature, feature_name in zip(self.feature_sets, self.feature_names):
                 scores = {score: [] for score in self.verif_scoring}
                 tprs = []
-                mean_fpr = np.linspace(0, 1, 100)
+                precisions = []
+                mean_x = np.linspace(0, 1, 100)
                 for seed in self.seeds:
                     estimator = self.best_estimators[model][seed][feature_name]
                     y_pred = estimator.predict(self.x_test[top_feature])
@@ -197,36 +184,50 @@ class Verification(DataBorg, Normalisers):
                             scores[score].append(getattr(metrics, score)(self.y_test, probas))
                         except ValueError:
                             scores[score].append(getattr(metrics, score)(self.y_test, y_pred))
-                    interp_tpr = np.interp(mean_fpr, fpr, tpr)
+                    interp_tpr = np.interp(mean_x, fpr, tpr)  # AUROC
                     interp_tpr[0] = 0.0
                     tprs.append(interp_tpr)
+                    interp_recall = np.interp(mean_x, precision, recall)  # AUPRC
+                    interp_recall[0] = 1.0
+                    precisions.append(interp_recall)
                 scores = {
                     score: f'{np.mean(scores[score]):.3f} +- {np.std(scores[score]):.3f}'
                     for score in self.verif_scoring
                 }  # compute mean +- std for all scores
                 mean_tpr = np.mean(tprs, axis=0)  # compute mean +- std for AUC plots
-                self.ax_roc.plot(
-                    mean_fpr, mean_tpr, label=f'{feature_name}, AUROC={scores["roc_auc_score"]}', alpha=0.7
-                )
+                ax_roc.plot(mean_x, mean_tpr, label=f'{feature_name}, AUROC={scores["roc_auc_score"]}', alpha=0.7)
                 std_tpr = np.std(tprs, axis=0)
                 tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
                 tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-                self.ax_roc.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=0.2)
-                # print(pd.DataFrame(scores, index=scores.keys()))
-                print(f'{scores} for {feature_name}')
-                # self.ax_prc.plot(precision, recall, label=f'{feature_name}, AUPRC={scores["average_precision_score"]}', alpha=0.7)
+                ax_roc.fill_between(mean_x, tprs_lower, tprs_upper, color='grey', alpha=0.2)
+                mean_precision = np.mean(precisions, axis=0)  # AUPRC
+                ax_prc.plot(
+                    mean_x,
+                    mean_precision,
+                    label=f'{feature_name}, AUPRC={scores["average_precision_score"]}',
+                    alpha=0.7,
+                )
+                std_precision = np.std(precisions, axis=0)
+                precisions_upper = np.minimum(mean_precision + std_precision, 1)
+                precisions_lower = np.maximum(mean_precision - std_precision, 0)
+                ax_prc.fill_between(mean_x, precisions_lower, precisions_upper, color='grey', alpha=0.2)
 
-            print(y_pred)
+                print(f'{scores} for {feature_name}')
+
             if y_pred.sum() == 0:
                 logger.warning(
-                    f'{int(y_pred.sum())}/{int(self.y_test.sum())} positive samples were predicted using top features {top_feature}.'
+                    f'0/{int(self.y_test.sum())} positive samples were predicted using top features {top_feature}.'
                 )
-            self.save_plots(model)
-            # store and clear model-wise plots
-            # plot on ax_all
-            # (opt.) print some results
-        # store fig_all
-        # (opt.) print some summary results
+            self.save_plots(fig_roc, ax_roc, fig_prc, ax_prc, f'{model}.pdf')  # store and clear model-wise plots
+            self.performance_statistics(y_pred)
+            ax_roc_models.plot(mean_x, mean_tpr, label=f'{model}, AUROC={scores["roc_auc_score"]}', alpha=0.7)
+            ax_roc_models.fill_between(mean_x, tprs_lower, tprs_upper, color='grey', alpha=0.2)
+            ax_prc_models.plot(
+                mean_x, mean_precision, label=f'{model}, AUPRC={scores["average_precision_score"]}', alpha=0.7
+            )
+            ax_prc_models.fill_between(mean_x, precisions_lower, precisions_upper, color='grey', alpha=0.2)
+
+        self.save_plots(fig_roc_models, ax_roc_models, fig_prc_models, ax_prc_models, 'all_models.pdf')
 
     def performance_statistics(self, y_pred: pd.DataFrame) -> None:
         """Print performance statistics"""
@@ -252,7 +253,7 @@ class Verification(DataBorg, Normalisers):
             sns.regplot(x=self.y_test, y=y_pred, ci=None)
             plt.xlabel(f'True {self.target_label}')
             plt.ylabel(f'Predicted {self.target_label}')
-            plt.show()
+            # plt.show()
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
 
@@ -266,26 +267,26 @@ class Verification(DataBorg, Normalisers):
 
         return probas, fpr, tpr, precision, recall
 
-    def save_plots(self, model) -> None:
-        self.ax_roc.set_title('Receiver-operator curve (ROC)')
-        self.ax_roc.set_xlabel('1 - Specificity')
-        self.ax_roc.set_ylabel('Sensitivity')
-        self.ax_roc.grid()
-        self.ax_roc.plot([0, 1], [0, 1], 'k--', label='Baseline, AUROC=0.5', alpha=0.7)  # baseline
-        self.ax_roc.legend()
-        self.fig_roc.savefig(os.path.join(self.out_dir, f'AUROC_{model}.pdf'))
-        self.fig_roc.clear()
-        self.ax_prc.set_title('Precision-recall curve (PRC)')
-        self.ax_prc.set_xlabel('Recall (Sensitivity)')
-        self.ax_prc.set_ylabel('Precision')
-        self.ax_prc.grid()
+    def save_plots(self, fig_roc, ax_roc, fig_prc, ax_prc, name: str) -> None:
+        ax_roc.set_title('Receiver-operator curve (ROC)')
+        ax_roc.set_xlabel('1 - Specificity')
+        ax_roc.set_ylabel('Sensitivity')
+        ax_roc.grid()
+        ax_roc.plot([0, 1], [0, 1], 'k--', label='Baseline, AUROC=0.5', alpha=0.7)  # baseline
+        ax_roc.legend()
+        fig_roc.savefig(os.path.join(self.out_dir, f'AUROC_{name}'))
+        fig_roc.clear()
+        ax_prc.set_title('Precision-recall curve (PRC)')
+        ax_prc.set_xlabel('Recall (Sensitivity)')
+        ax_prc.set_ylabel('Precision')
+        ax_prc.grid()
         pos_rate = round(self.y_test.sum() / len(self.y_test), 3)
-        self.ax_prc.axhline(
+        ax_prc.axhline(
             y=pos_rate, color='k', linestyle='--', label=f'Baseline, AUPRC={pos_rate}', alpha=0.7
         )  # baseline
-        self.ax_prc.legend()
-        self.fig_prc.savefig(os.path.join(self.out_dir, f'AUPRC_{model}.pdf'))
-        self.fig_prc.clear()
+        ax_prc.legend()
+        fig_prc.savefig(os.path.join(self.out_dir, f'AUPRC_{name}'))
+        fig_prc.clear()
 
     def split_frame(self, frame: pd.DataFrame, top_features) -> tuple:
         """Prepare frame for verification"""

@@ -69,5 +69,7 @@ class Report(DataBorg):
         sorted_store = list(sorted_store.keys())
         return_top = self.config.verification.use_n_top_features
         top_features = sorted_store[:return_top]
-        logger.info(f'Rank frequency based top {return_top} features -> {json.dumps(top_features, indent=4)}')
+        logger.info(
+            f'Rank frequency based top {min(return_top, len(top_features))} features -> {json.dumps(top_features, indent=4)}'
+        )
         return top_features
