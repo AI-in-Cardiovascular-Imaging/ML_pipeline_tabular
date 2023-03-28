@@ -140,7 +140,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
 
         sorted_store = {k: v for k, v in sorted(store.items(), key=lambda item: item[1], reverse=True)}
         sorted_store = list(sorted_store.keys())
-        return_top = self.config.verification.use_n_top_features
-        top_features = sorted_store[:return_top]
-        logger.info(f'Aggregated features -> {top_features}')
+        top_features = sorted_store
+        logger.debug(f'Aggregated features -> {top_features}')
         return top_features

@@ -22,7 +22,6 @@ class TargetStatistics(DataBorg):
         self.config = config
         self.target_label = config.meta.target_label
         self.ephemeral_frame = self.get_frame('ephemeral')
-        logger.info(f'Running -> {self.__class__.__name__}')
 
     def show_target_statistics(self) -> None:
         """Show target statistics"""

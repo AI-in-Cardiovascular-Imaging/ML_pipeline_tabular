@@ -17,7 +17,10 @@ def data_bubble(func):
         impute = func(self)
         imp_frame = impute.fit_transform(frame)
         imp_frame = pd.DataFrame(imp_frame, index=frame.index, columns=frame.columns)
-        logger.info(f'{self.impute_method} reduced features from {len(frame.columns)-1} -> {len(imp_frame.columns)-1}')
+        if len(frame.columns) != len(imp_frame.columns):
+            logger.info(
+                f'{self.impute_method} reduced features from {len(frame.columns)-1} -> {len(imp_frame.columns)-1}'
+            )
         self.set_store('frame', self.state_name, 'ephemeral', imp_frame)
         if len(imp_frame) == 0:
             raise ValueError('No cases left after dropping NaN values, use another imputation method or clean data')
