@@ -1,19 +1,18 @@
 # meta specifies the experiment name and the random seed
 meta:
   name: "phenomapping" # experiment name
-  seed: [12, 35, 26, 36, 853, 234] # random seeds
+  seed: [77, 12, 46, 82, 94] # random seeds
   # seed: [77]
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  logging_level: "WARNING" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
   run_selection: True # whether to perform final feature selection
   run_verification: True # whether to perform final verification analysis
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
-  aggregated_jobs: [12, 35, 26, 36, 853, 234] # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
-  # aggregated_jobs: False
+  aggregated_jobs: True # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
 
 # specify the clean strategy
 inspection:
@@ -36,7 +35,7 @@ data_split:
   seed: 77 # random seed for data split
 
   selection_frac: 1.0 # fraction of data to use for feature selection
-  verification_test_frac: 0.3 # fraction of data to use for testing verification models
+  verification_test_frac: 0.4 # fraction of data to use for testing verification models
 
   over_sample_selection: False # oversample minority class to balance feature selection set
   over_sample_verification: False # oversample minority class to balance verification set

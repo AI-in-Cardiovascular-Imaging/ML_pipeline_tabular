@@ -61,15 +61,15 @@ class DataSplit(DataBorg):
         else:
             s_train, v_train, v_test = s_frame, s_frame, v_frame
 
-        self.show_stats(s_train, v_train, v_test, 'Data split stats')
+        # self.show_stats(s_train, v_train, v_test, 'Data split stats')
 
         if self.over_sample_selection:
             s_train = self.over_sampling(s_train)
         if self.over_sample_verification:
             v_train = self.over_sampling(v_train)
 
-        if self.over_sample_selection or self.over_sample_verification:
-            self.show_stats(s_train, v_train, v_test, 'Data split stats after over sampling')
+        # if self.over_sample_selection or self.over_sample_verification:
+        #     self.show_stats(s_train, v_train, v_test, 'Data split stats after over sampling')
 
         self.set_store('frame', self.state_name, 'selection_train', s_train)
         self.set_store('frame', self.state_name, 'verification_train', v_train)

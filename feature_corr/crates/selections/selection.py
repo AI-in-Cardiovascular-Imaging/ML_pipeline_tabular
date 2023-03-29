@@ -139,7 +139,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
                     rank_score -= 1
 
         sorted_store = {k: v for k, v in sorted(store.items(), key=lambda item: item[1], reverse=True)}
-        sorted_store = list(sorted_store.keys())
-        top_features = sorted_store
+        top_features = list(sorted_store.keys())
         logger.debug(f'Aggregated features -> {top_features}')
         return top_features

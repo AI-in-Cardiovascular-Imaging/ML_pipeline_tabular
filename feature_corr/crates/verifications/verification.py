@@ -230,9 +230,11 @@ class Verification(DataBorg, Normalisers):
     def performance_statistics(self, scores, y_pred: pd.DataFrame) -> None:
         """Print performance statistics"""
         if self.learn_task == 'binary_classification':
+            print('Averaged metrics:')
             for metric, score in scores.items():
                 print(f'{metric}: {score}')
 
+            print('Metrics calculated from single evaluation:')
             print(metrics.classification_report(self.y_test, y_pred, zero_division=0))
             conf_m = metrics.confusion_matrix(self.y_test, y_pred)
             print(conf_m)

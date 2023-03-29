@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from dictlib import dig, dug
 from loguru import logger
-from omegaconf import DictConfig, OmegaConf, ListConfig
+from omegaconf import DictConfig, ListConfig, OmegaConf
 
 
 class StateMachine:
@@ -20,6 +20,12 @@ class StateMachine:
         self.state_names = [
             'meta.seed',
         ]  # define state names to branch on
+
+        if config.meta.aggregated_jobs:  # one aggregated_jobs run covers all random seeds
+            try:
+                self.state_names.remove('meta.seed')
+            except ValueError:
+                pass  # meta.seed not in state_names
 
         self.config.meta.aggregated_seeds = self.minor_setup()
         self.check_state_names()
