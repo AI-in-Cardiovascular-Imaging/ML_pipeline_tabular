@@ -106,7 +106,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         tmp_seed = self.seed
         feature_store = {}
         y_frame = frame[self.target_label]
-        for aggregated_seed in self.aggregated_jobs:
+        for aggregated_seed in self.config.meta.aggregated_seeds:
             logger.info(f'Running aggregated job -> {aggregated_seed}')
             self.seed = aggregated_seed
             _, features = getattr(self, step)(frame)
