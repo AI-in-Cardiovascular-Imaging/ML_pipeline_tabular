@@ -1,8 +1,8 @@
 # meta specifies the experiment name and the random seed
 meta:
   name: "phenomapping" # experiment name
-  seed: [77, 12, 46, 82, 94] # random seeds
-  # seed: [77]
+  # seed: [77, 12, 46, 82, 94] # random seeds
+  seed: [77]
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -28,14 +28,14 @@ inspection:
 # imputation strategy
 impute:
   active: True # impute missing values
-  method: "simple_impute" #: drop_nan_impute, iterative_impute, simple_impute, knn_impute
+  method: "iterative_impute" #: drop_nan_impute, iterative_impute, simple_impute, knn_impute
 
 # data split definitions
 data_split:
   seed: 77 # random seed for data split
 
   selection_frac: 1.0 # fraction of data to use for feature selection
-  verification_test_frac: 0.4 # fraction of data to use for testing verification models
+  verification_test_frac: 0.2 # fraction of data to use for testing verification models
 
   over_sample_selection: False # oversample minority class to balance feature selection set
   over_sample_verification: False # oversample minority class to balance verification set
@@ -49,7 +49,7 @@ data_split:
 selection:
   active: True # whether to perform feature selections
 
-  class_weight: null
+  class_weight: "balanced"
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
   variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
@@ -104,7 +104,6 @@ verification:
       penalty: ["l1", "l2"]
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       solver: ["saga"] # supports both l1 and l2 penalties
-      max_iter: [10000]
 
     forest:
       n_estimators: [100, 500, 1000]
