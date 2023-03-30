@@ -75,7 +75,7 @@ selection:
 # verification strategy and final model to train and evaluate
 verification:
   active: False # whether to perform verification analysis for each job TODO: not implemented yet
-  use_n_top_features: 4
+  use_n_top_features: 50
   scoring:
     binary_classification:
       accuracy_score: True
@@ -104,6 +104,7 @@ verification:
       penalty: ["l1", "l2"]
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       solver: ["saga"] # supports both l1 and l2 penalties
+      max_iter: [10000]
 
     forest:
       n_estimators: [100, 500, 1000]

@@ -21,9 +21,9 @@ def main() -> None:
     report = Report(config)
     DataReader(config)()
     CleanUp(config)()
+    TargetStatistics(config).show_target_statistics()
 
     if config.meta.run_selection:
-        TargetStatistics(config).show_target_statistics()
         factory = Factory(config, report)
         factory()
 
