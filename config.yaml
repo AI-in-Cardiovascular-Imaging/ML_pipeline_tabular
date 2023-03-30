@@ -1,11 +1,11 @@
 # meta specifies the experiment name and the random seed
 meta:
   name: "phenomapping" # experiment name
-  # seed: [77, 12, 46, 82, 94, 34, 67, 91, 53, 29] # random seeds
-  seed: [77]
+  # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
+  seed: [784, 125, 467, 822, 943]
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  logging_level: "WARNING" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "INFO" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
   run_selection: True # whether to perform final feature selection
   run_verification: True # whether to perform final verification analysis
@@ -74,7 +74,7 @@ selection:
 # verification strategy and final model to train and evaluate
 verification:
   active: False # whether to perform verification analysis for each job TODO: not implemented yet
-  use_n_top_features: 50
+  use_n_top_features: 10
   scoring:
     binary_classification:
       accuracy_score: True
@@ -92,10 +92,10 @@ verification:
 
   models:
     logistic_regression: True
-    forest: False
-    extreme_forest: False
-    adaboost: False
-    xgboost: False
+    forest: True
+    extreme_forest: True
+    adaboost: True
+    xgboost: True
     ensemble_voting: False
 
   param_grids:
@@ -106,25 +106,25 @@ verification:
       max_iter: [10000]
 
     forest:
-      n_estimators: [100, 500, 1000]
+      n_estimators: [100, 500]
       criterion: ["gini", "entropy"]
       max_depth: [10, 50, 100, null]
       max_features: ["sqrt", "log2", null]
       bootstrap: [True, False]
 
     extreme_forest:
-      n_estimators: [100, 500, 1000]
+      n_estimators: [100, 500]
       criterion: ["gini", "entropy"]
       max_depth: [10, 50, 100, null]
       max_features: ["sqrt", "log2", null]
       bootstrap: [True, False]
 
     adaboost:
-      n_estimators: [100, 500, 1000]
+      n_estimators: [100, 500]
       learning_rate: [0.0001, 0.001, 0.01, 0.1, 1]
 
     xgboost:
-      n_estimators: [100, 500, 1000]
+      n_estimators: [100, 500]
       learning_rate: [0.0001, 0.001, 0.01, 0.1, 1]
       max_depth: [10, 50, 100, 1000, null]
       max_features: ["sqrt", "log2", null]

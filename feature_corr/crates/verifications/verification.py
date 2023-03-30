@@ -95,7 +95,8 @@ class Verification(DataBorg, Normalisers):
         self.feature_sets.append(list(self.top_features))
         self.feature_names = [feature for feature in self.top_features]
         self.feature_names.append(f'{len(self.top_features)}-item score')
-        for seed in self.seeds:
+        for i, seed in enumerate(self.seeds):
+            logger.info(f'Optimising models for seed {seed} ({i+1}/{len(self.seeds)})...')
             for top_feature, feature_name in zip(self.feature_sets, self.feature_names):
                 self.pre_process_frame(seed)
                 self.train_test_split(top_feature)
@@ -167,7 +168,8 @@ class Verification(DataBorg, Normalisers):
         """Evaluate all optimised models"""
         fig_roc_models, ax_roc_models = plt.subplots()
         fig_prc_models, ax_prc_models = plt.subplots()
-        for model in self.models + self.ensemble:
+        for i, model in enumerate(self.models + self.ensemble):
+            logger.info(f'Evaluating {model} model ({i+1}/{len(self.models + self.ensemble)})...')
             fig_roc, ax_roc = plt.subplots()
             fig_prc, ax_prc = plt.subplots()
             for top_feature, feature_name in zip(self.feature_sets, self.feature_names):
