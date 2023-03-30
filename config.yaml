@@ -1,11 +1,11 @@
 # meta specifies the experiment name and the random seed
 meta:
   name: "phenomapping" # experiment name
-  # seed: [77, 12, 46, 82, 94] # random seeds
+  # seed: [77, 12, 46, 82, 94, 34, 67, 91, 53, 29] # random seeds
   seed: [77]
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "WARNING" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
   run_selection: True # whether to perform final feature selection
   run_verification: True # whether to perform final verification analysis
@@ -19,11 +19,9 @@ inspection:
   label_as_index: "ATTRAS_Redcap" # column string name or None
   export_cleaned_frame: True # for visual inspection of the cleaned data
 
-  auto_clean: True # will run before manual_clean
-
   manual_clean: True # manual cleaning of data
   manual_strategy:
-    drop_columns_regex: ['([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+'] # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
+    drop_columns_regex: ["([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+"] # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
 
 # imputation strategy
 impute:
@@ -66,11 +64,12 @@ selection:
     object: "z_score_norm"
     datatime: "z_score_norm"
 
-  jobs: [["variance_threshold", "z_score_norm", "correlation", "fr_forest"]] #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
-
-# ["get_memory", "fr_adaboost" ],
-# ["get_memory", "fr_extreme_forest" ],
-# ["get_memory", "fr_xgboost" ],
+  jobs: [
+    ["variance_threshold", "z_score_norm", "correlation", "fr_forest"], #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
+    # ["get_memory", "fr_adaboost" ],
+    # ["get_memory", "fr_extreme_forest" ],
+    # ["get_memory", "fr_xgboost" ],
+  ]
 
 # verification strategy and final model to train and evaluate
 verification:

@@ -15,9 +15,7 @@ class CleanUp(DataBorg):
         super().__init__()
         self.config = config
         self.label_as_index = self.config.inspection.label_as_index
-        self.auto_clean = self.config.inspection.auto_clean
         self.manual_clean = self.config.inspection.manual_clean
-        self.clean_frame = None
         self.frame = self.get_frame('ephemeral')
         self.label_index_frame = None
         self.target_label = self.config.meta.target_label
@@ -25,22 +23,18 @@ class CleanUp(DataBorg):
 
     def __call__(self) -> None:
         """Autoclean, manual clean or do nothing"""
-        self.maybe_set_index_by_label()
-        self.clean_frame = pd.DataFrame().reindex_like(self.frame)
-
-        if self.auto_clean:
-            self.get_consistent_data_types()
+        self.set_index_by_label()
 
         if self.manual_clean:
             self.drop_columns_rex()
 
-        if not self.auto_clean and not self.manual_clean:
-            self.clean_frame = self.frame
+        self.frame = self.frame.apply(pd.to_numeric, errors='coerce')  # Replace non-numeric entries with NaN
+        nunique = self.frame.nunique()
+        non_binary_cols = nunique[nunique != 2].index
+        self.frame[non_binary_cols] = self.frame[non_binary_cols].replace(0, np.nan)  # Replace 0 with NaN
+        self.frame = self.frame.dropna(how='all', axis=1)  # Drop columns with all NaN
 
-        self.clean_frame = self.clean_frame.dropna(how='all', axis=1)  # Drop columns with all NaN
-        self.clean_frame = self.clean_frame.replace(r'^\s*$', np.nan, regex=True)  # Replace empty strings with NaN
-
-        self.set_frame('ephemeral', self.clean_frame)
+        self.set_frame('ephemeral', self.frame)
         if self.config.inspection.export_cleaned_frame:
             self.export_frame()
 
@@ -49,25 +43,15 @@ class CleanUp(DataBorg):
         output_dir = os.path.join(self.config.meta.output_dir, self.config.meta.name)
         os.makedirs(output_dir, exist_ok=True)
         file_path = os.path.join(output_dir, 'cleaned_up_frame.xlsx')
-        self.clean_frame.to_excel(file_path)
+        self.frame.to_excel(file_path)
         logger.info(f'Exported cleaned frame to -> {file_path}')
 
-    def maybe_set_index_by_label(self) -> None:
+    def set_index_by_label(self) -> None:
         """Set index by label"""
         if isinstance(self.label_as_index, str):
             logger.info(f'Reindex table by name -> {self.label_as_index}')
             self.frame = self.frame.set_index(self.label_as_index)
-            self.frame.sort_index(inplace=True)
-
-    def get_consistent_data_types(self) -> None:
-        """Get all columns with consistent data types"""
-        frame = self.frame.replace(r'^\s*$', np.nan, regex=True)  # Replace empty strings with NaN
-        for x_type in ['int64', 'float64']:
-            pure_cols = list(frame.select_dtypes(include=x_type).columns)
-            for col in pure_cols:
-                self.clean_frame[col] = self.frame[col]
-        clean_frame = self.clean_frame.dropna(how='all', axis=1)  # Drop columns with all NaN
-        logger.info(f'Found data type consistent columns -> {len(clean_frame.columns)}/{len(self.frame.columns)}')
+            # self.frame.sort_index(inplace=True)
 
     @staticmethod
     def _clean_up_regex(regex: str) -> list:
@@ -87,8 +71,8 @@ class CleanUp(DataBorg):
         regex = self.config.inspection.manual_strategy.drop_columns_regex
         drop_regexes = self._clean_up_regex(regex)
         y_frames = pd.DataFrame()
-        y_frames = pd.concat([y_frames, self.clean_frame[self.target_label]], axis=1)
-        x_frame = self.clean_frame.drop(self.target_label, axis=1)
+        y_frames = pd.concat([y_frames, self.frame[self.target_label]], axis=1)
+        x_frame = self.frame.drop(self.target_label, axis=1)
         if drop_regexes:
             for drop_regex in drop_regexes:
                 expression = re.compile(r'{}'.format(drop_regex))
@@ -103,4 +87,4 @@ class CleanUp(DataBorg):
                 x_frame = x_frame.drop(drop_col_names, axis=1)
                 diff_drop = len(tmp_frame.columns) - len(x_frame.columns)
                 logger.info(f'Dropped {diff_drop} columns by regex')
-            self.clean_frame = pd.concat([x_frame, y_frames], axis=1)
+            self.frame = pd.concat([x_frame, y_frames], axis=1)

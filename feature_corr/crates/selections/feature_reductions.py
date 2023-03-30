@@ -111,11 +111,12 @@ class FeatureReductions:
             estimator = RandomForestClassifier(random_state=self.seed)
             estimator.fit(x_frame, y_frame)
             scoring = self.config.selection.scoring[self.learn_task]
-            perm_importances = permutation_importance(estimator, x_frame, y_frame, scoring=scoring)
+            perm_importances = permutation_importance(
+                estimator, x_frame, y_frame, n_repeats=5, scoring=scoring, random_state=self.seed
+            )
             importances = perm_importances.importances_mean
             importances = pd.Series(importances, index=x_frame.columns)
             importances = importances.sort_values(ascending=False)
-
             # sort corr_matrix w.r.t. feature importance
             corr_matrix = corr_matrix.reindex(index=importances.index, columns=importances.index)
             abs_corr = corr_matrix.abs()
