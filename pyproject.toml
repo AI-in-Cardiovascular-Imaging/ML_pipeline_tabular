@@ -29,7 +29,6 @@ omegaconf = "^2.2"
 scikit-learn = "^1.2.0"
 xlsxwriter = "^3.0.7"
 umap-learn = "^0.5"
-pytest = "^7.2.1"
 category_encoders = "^2.6.0"
 xgboost = "^1.7.3"
 lightgbm = "^3.3.5"
@@ -39,19 +38,18 @@ kaleido = "0.2.1"
 llvmlite = "^0.39.1"
 dictlib = "^1.1.5"
 
-[tool.poetry.dev-dependencies]
-black = "^22.6.0"
-isort = "^5.10.1"
-
 [tool.poetry.group.dev.dependencies]
 autohooks = "^23.1.0"
 autohooks-plugin-black = "^22.11.0"
 autohooks-plugin-isort = "^22.8.0"
-
+pytest = "^7.2.1"
+black = "^22.6.0"
+isort = "^5.10.1"
 
 [tool.autohooks]
 mode = "poetry"
 pre-commit = ["autohooks.plugins.black", "autohooks.plugins.isort"]
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
