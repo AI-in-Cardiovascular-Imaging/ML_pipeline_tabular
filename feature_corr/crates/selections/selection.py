@@ -21,6 +21,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         super().__init__()
         self.config = config
         self.seed = config.meta.seed
+        self.workers = config.meta.workers
         self.jobs = config.selection.jobs
         self.task = config.meta.learn_task
         self.out_dir = config.meta.output_dir
@@ -46,7 +47,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         for job in self.jobs:
             logger.info(f'Running -> {job}')
             self.job_name = '_'.join(job)  # name of current job
-            self.job_dir = os.path.join(self.out_dir, self.experiment_name, self.state_name, self.job_name)
+            self.job_dir = os.path.join(self.out_dir, self.experiment_name, self.job_name, self.state_name)
             os.makedirs(self.job_dir, exist_ok=True)
             frame = self.get_store('frame', self.state_name, 'selection_train')
             for step in job:
