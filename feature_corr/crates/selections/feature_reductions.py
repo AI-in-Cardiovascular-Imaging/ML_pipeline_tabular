@@ -18,6 +18,7 @@ class FeatureReductions:
         self.job_dir = None
         self.metadata = None
         self.seed = None
+        self.workers = None
         self.target_label = None
         self.corr_method = None
         self.corr_thresh = None
@@ -108,11 +109,11 @@ class FeatureReductions:
         if self.corr_drop_features or True:  # todo: maybe reconsider this flag, always true now
             # calculate feature importance
             np.random.seed(self.seed)
-            estimator = RandomForestClassifier(random_state=self.seed)
+            estimator = RandomForestClassifier(random_state=self.seed, n_jobs=self.workers)
             estimator.fit(x_frame, y_frame)
             scoring = self.config.selection.scoring[self.learn_task]
             perm_importances = permutation_importance(
-                estimator, x_frame, y_frame, n_repeats=5, scoring=scoring, random_state=self.seed
+                estimator, x_frame, y_frame, n_repeats=5, scoring=scoring, random_state=self.seed, n_jobs=self.workers
             )
             importances = perm_importances.importances_mean
             importances = pd.Series(importances, index=x_frame.columns)

@@ -69,6 +69,7 @@ class DimensionProjections:
         self.job_dir = None
         self.metadata = None
         self.seed = None
+        self.workers = None
         self.target_label = None
 
     @plot_bubble
@@ -88,10 +89,10 @@ class DimensionProjections:
         """Perform t-SNE dimensionality reduction and visualisation"""
         proj_2d, proj_3d = None, None
         if len(frame.columns) >= 2:
-            tsne_2d = TSNE(n_components=2, random_state=self.seed)
+            tsne_2d = TSNE(n_components=2, random_state=self.seed, n_jobs=self.workers)
             proj_2d = tsne_2d.fit_transform(frame)
         if len(frame.columns) >= 3:
-            tsne_3d = TSNE(n_components=3, random_state=self.seed)
+            tsne_3d = TSNE(n_components=3, random_state=self.seed, n_jobs=self.workers)
             proj_3d = tsne_3d.fit_transform(frame)
         return proj_2d, proj_3d, 't-SNE'
 

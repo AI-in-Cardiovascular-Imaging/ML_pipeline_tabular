@@ -77,6 +77,8 @@ class Verification(DataBorg, Normalisers):
         self.models = [model for model in models_dict if models_dict[model]]
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]
+        if len(self.models) < 2:  # ensemble methods need at least two models two combine their results
+            self.ensemble = []
         self.best_estimators = NestedDefaultDict()
         self.x_train = None
         self.y_train = None
@@ -129,6 +131,7 @@ class Verification(DataBorg, Normalisers):
                 seed,
                 self.train_scoring,
                 self.class_weight,
+                self.workers,
             )
             optimiser = CrossValidation(
                 self.x_train,
@@ -147,14 +150,14 @@ class Verification(DataBorg, Normalisers):
         for ensemble in self.ensemble:
             if 'voting' in ensemble:
                 if self.learn_task == 'binary_classification':
-                    ens_estimator = VotingClassifier(estimators=estimators, voting='soft')
+                    ens_estimator = VotingClassifier(estimators=estimators, voting='soft', n_jobs=self.workers)
                     ens_estimator.estimators_ = [
                         est_tuple[1] for est_tuple in estimators
                     ]  # best_estimators are already fit -> need to set estimators_, le_ and classes_
                     ens_estimator.le_ = LabelEncoder().fit(self.y_test)
                     ens_estimator.classes_ = ens_estimator.le_.classes_
                 else:  # regression
-                    ens_estimator = VotingRegressor(estimators=estimators)
+                    ens_estimator = VotingRegressor(estimators=estimators, n_jobs=self.workers)
                     ens_estimator.estimators_ = [
                         est_tuple[1] for est_tuple in estimators
                     ]  # best_estimators are already fit -> need to set estimators_

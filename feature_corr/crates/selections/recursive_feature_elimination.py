@@ -16,6 +16,7 @@ class RecursiveFeatureElimination:
         self.job_dir = None
         self.metadata = None
         self.seed = None
+        self.workers = None
         self.target_label = None
         self.corr_method = None
         self.corr_thresh = None
@@ -28,11 +29,7 @@ class RecursiveFeatureElimination:
     def __reduction(self, frame: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
         """Reduce the number of features using recursive feature elimination"""
         estimator, cross_validator, scoring = init_estimator(
-            rfe_estimator,
-            self.learn_task,
-            self.seed,
-            self.scoring,
-            self.class_weight,
+            rfe_estimator, self.learn_task, self.seed, self.scoring, self.class_weight, self.workers
         )
 
         y = frame[self.target_label]
@@ -44,7 +41,7 @@ class RecursiveFeatureElimination:
             min_features_to_select=min_features,
             cv=cross_validator,
             scoring=scoring,
-            n_jobs=self.config.meta.workers,
+            n_jobs=self.workers,
         )
         selector.fit(x, y)
 
