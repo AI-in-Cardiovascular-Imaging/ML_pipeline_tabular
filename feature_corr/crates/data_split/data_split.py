@@ -22,7 +22,7 @@ class DataSplit(DataBorg):
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
-        self.data_split_seed = config.data_split.seed
+        self.seed = config.meta.seed
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
@@ -111,7 +111,7 @@ class DataSplit(DataBorg):
             self.frame,
             stratify=self.stratify,
             test_size=test_size,
-            random_state=self.data_split_seed,
+            random_state=self.seed,
         )
         return s_frame, v_frame
 
@@ -122,7 +122,7 @@ class DataSplit(DataBorg):
             v_frame,
             stratify=self.stratify,
             test_size=self.verification_test_frac,
-            random_state=self.data_split_seed,
+            random_state=self.seed,
         )
         return v_train, v_test
 
@@ -131,15 +131,15 @@ class DataSplit(DataBorg):
         method = self.over_sample_method[self.learn_task]
         over_sampler_name = f'{self.learn_task}_{method}'.lower()
         over_sampler_dict = {
-            'binary_classification_smoten': SMOTEN(random_state=self.data_split_seed),
-            'binary_classification_smotenc': SMOTENC(categorical_features=2, random_state=self.data_split_seed),
-            'binary_classification_svmsmote': SVMSMOTE(random_state=self.data_split_seed),
-            'binary_classification_borderlinesmote': BorderlineSMOTE(random_state=self.data_split_seed),
-            'binary_classification_randomoversampler': RandomOverSampler(random_state=self.data_split_seed),
-            'regression_adasyn': ADASYN(random_state=self.data_split_seed),
-            'regression_smote': SMOTE(random_state=self.data_split_seed),
-            'regression_kmeanssmote': KMeansSMOTE(random_state=self.data_split_seed),
-            'regression_randomoversampler': RandomOverSampler(random_state=self.data_split_seed),
+            'binary_classification_smoten': SMOTEN(random_state=self.seed),
+            'binary_classification_smotenc': SMOTENC(categorical_features=2, random_state=self.seed),
+            'binary_classification_svmsmote': SVMSMOTE(random_state=self.seed),
+            'binary_classification_borderlinesmote': BorderlineSMOTE(random_state=self.seed),
+            'binary_classification_randomoversampler': RandomOverSampler(random_state=self.seed),
+            'regression_adasyn': ADASYN(random_state=self.seed),
+            'regression_smote': SMOTE(random_state=self.seed),
+            'regression_kmeanssmote': KMeansSMOTE(random_state=self.seed),
+            'regression_randomoversampler': RandomOverSampler(random_state=self.seed),
         }
 
         if over_sampler_name not in over_sampler_dict:

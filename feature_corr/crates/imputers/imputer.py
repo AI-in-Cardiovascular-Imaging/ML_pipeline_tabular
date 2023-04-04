@@ -34,7 +34,7 @@ class Imputer(DataBorg):
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
-        self.seed = config.data_split.seed
+        self.seed = config.meta.seed
         self.state_name = config.meta.state_name
         self.impute_method = config.impute.method
 
