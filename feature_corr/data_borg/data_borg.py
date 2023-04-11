@@ -20,6 +20,7 @@ class DataBorg:
     shared_state = {
         '_frame_store': NestedDefaultDict(),
         '_feature_store': NestedDefaultDict(),
+        '_score_store': NestedDefaultDict(),
         '_original_frame': None,
         '_ephemeral_frame': None,
     }
@@ -27,6 +28,7 @@ class DataBorg:
     def __init__(self) -> None:
         self._frame_store = NestedDefaultDict()
         self._feature_store = NestedDefaultDict()
+        self._score_store = NestedDefaultDict()
         self._original_frame = None
         self._ephemeral_frame = None
         self.__dict__ = self.shared_state  # borg design pattern
@@ -35,6 +37,7 @@ class DataBorg:
         """Sets the state name"""
         self._frame_store[state_name] = NestedDefaultDict()
         self._feature_store[state_name] = NestedDefaultDict()
+        self._score_store[state_name] = NestedDefaultDict()
         logger.trace(f'State name set -> {state_name}')
 
     def set_frame(self, name: str, frame: pd.DataFrame) -> None:
@@ -66,6 +69,9 @@ class DataBorg:
         elif 'feature' in name:
             self._feature_store[state_name][step_name] = data
             logger.trace(f'Feature data set -> {type(data)}')
+        elif 'score' in name:
+            self._score_store[state_name][step_name] = data
+            logger.trace(f'Score data set -> {type(data)}')
         else:
             raise ValueError(f'Invalid data name to set store data -> {name}, allowed -> frame, feature')
 
@@ -74,9 +80,12 @@ class DataBorg:
         if 'frame' in name:
             logger.trace(f'Returning frame -> {type(self._frame_store[state_name][step_name])}')
             return self._frame_store[state_name][step_name]
-        if 'feature' in name:
+        elif 'feature' in name:
             logger.trace(f'Returning feature -> {type(self._feature_store[state_name][step_name])}')
             return self._feature_store[state_name][step_name]
+        elif 'score' in name:
+            logger.trace(f'Returning score -> {type(self._frame_store[state_name][step_name])}')
+            return self._score_store[state_name][step_name]
         raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature')
 
     def get_all_features(self) -> dict:

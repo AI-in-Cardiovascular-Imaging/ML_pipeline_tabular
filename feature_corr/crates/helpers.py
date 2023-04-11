@@ -50,3 +50,22 @@ def init_estimator(
     estimator = estimator_dict[estimator_name]
     scoring = scoring[learn_task]
     return estimator, cross_fold, scoring
+
+
+def job_name_cleaner(jobs: list) -> str:
+    """Transform jobs given in list into job name strings"""
+    job_names = []
+    for job in jobs:
+        if 'set_memory' in job:
+            index = job.index('set_memory')
+            steps_before_set = job[:index]  # store steps before set_memory for upcoming jobs
+            tmp = [step for step in job if step != 'set_memory']
+        elif 'get_memory' in job:
+            index = job.index('get_memory')
+            tmp = job[index + 1 :]  # keep only steps after get_memory
+            tmp = steps_before_set + tmp
+        else:
+            tmp = job
+        job_names.append('_'.join(tmp))
+
+    return job_names

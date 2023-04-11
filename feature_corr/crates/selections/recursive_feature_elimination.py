@@ -115,7 +115,7 @@ class RecursiveFeatureElimination:
 
     def fr_all(self, frame: pd.DataFrame) -> tuple:
         """Feature reduction using all estimators in an ensemble manner"""
-        number_of_estimators = 4
+        estimators = ['forest', 'xgboost', 'adaboost', 'extreme_forest']
         _, f_features = self.__reduction(frame, 'forest')
         _, xg_features = self.__reduction(frame, 'xgboost')
         _, ada_features = self.__reduction(frame, 'adaboost')
@@ -152,7 +152,7 @@ class RecursiveFeatureElimination:
 
         ax = feature_scores.plot(
             x='feature',
-            y=['forest', 'xgboost', 'adaboost', 'extreme_forest'],
+            y=estimators,
             kind='barh',
             stacked=True,
             colormap='viridis',
@@ -161,7 +161,7 @@ class RecursiveFeatureElimination:
         fig = ax.get_figure()
         fig.legend(loc='lower right', borderaxespad=4.5)
         plt.title(f'Feature importance\nAll estimators for target: {self.target_label}')
-        plt.xlabel(f'Summed importance (max {number_of_estimators*min_len})')
+        plt.xlabel(f'Summed importance (max {len(estimators)*min_len})')
         plt.tight_layout()
         plt.gca().legend_.remove()
         plt.savefig(os.path.join(self.job_dir, 'feature_importance_all.pdf'), dpi=fig.dpi)
