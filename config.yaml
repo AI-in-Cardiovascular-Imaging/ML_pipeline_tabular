@@ -1,19 +1,18 @@
 # meta specifies the experiment name and the random seed
 meta:
   name: "phenomapping" # experiment name
-  seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
+  # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125, 467, 822, 943]
+  seed: [784, 125]
   workers: 8 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  logging_level: "ERROR" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
-
-  run_selection: True # whether to perform final feature selection
-  run_verification: True # whether to perform final verification analysis
+  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
-  aggregated_jobs: True # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
-
+  aggregated_jobs: False # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
+  output_dir: '/home/sebalzer/Documents/Mike_init/ATTRAS/'
+  input_file: '/home/sebalzer/Documents/Mike_init/ATTRAS/ATTRAS_amyloidose.xlsx'
 # specify the clean strategy
 inspection:
   label_as_index: "ATTRAS_Redcap" # column string name or None
@@ -30,8 +29,6 @@ impute:
 
 # data split definitions
 data_split:
-  seed: 0 # random seed for data split
-
   selection_frac: 1.0 # fraction of data to use for feature selection
   verification_test_frac: 0.3 # fraction of data to use for testing verification models
 
@@ -74,8 +71,8 @@ selection:
 
 # verification strategy and final model to train and evaluate
 verification:
-  active: False # whether to perform verification analysis for each job TODO: not implemented yet
-  use_n_top_features: 20
+  active: True # whether to perform verification analysis for each job
+  use_n_top_features: 4
   scoring:
     binary_classification:
       accuracy_score: True
@@ -97,14 +94,15 @@ verification:
     extreme_forest: False
     adaboost: False
     xgboost: False
-    ensemble_voting: True
+    ensemble_voting: False
 
   param_grids:
     logistic_regression:
       penalty: ["l1", "l2"]
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       solver: ["saga"] # supports both l1 and l2 penalties
-      max_iter: [10000]
+      warm_start: [True, False]
+      max_iter: [100000]
 
     forest:
       n_estimators: [100, 500]

@@ -1,9 +1,13 @@
+import os
+
 from loguru import logger
 
 from feature_corr.crates.data_split import DataSplit
+from feature_corr.crates.helpers import job_name_cleaner
 from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.selections import Selection
+from feature_corr.crates.verifications import Verification
 from feature_corr.data_borg import DataBorg
 
 
@@ -25,15 +29,27 @@ class Pipeline(DataBorg):
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
+        self.experiment_name = config.meta.name
         self.state_name = config.meta.state_name
+        self.out_dir = config.meta.output_dir
+        self.jobs = config.selection.jobs
         self.add_state_name(self.state_name)
         self.sync_ephemeral_data_to_data_store(self.state_name, 'ephemeral')
 
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
-        for step in self.config.keys():
-            if hasattr(self, step):
-                getattr(self, step)()
+        self.impute()
+        self.data_split()
+
+        # self.verification('all_features')  # run only once per data split, not for every job
+
+        job_names = job_name_cleaner(self.jobs)
+        for job, job_name in zip(self.jobs, job_names):
+            logger.info(f'Running -> {job_name}')
+            job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, self.state_name)
+            os.makedirs(job_dir, exist_ok=True)
+            self.selection(job, job_name, job_dir)
+            self.verification(job_name)
 
     def __del__(self):
         """Delete assigned state data store"""
@@ -53,10 +69,11 @@ class Pipeline(DataBorg):
         DataSplit(self.config)()
 
     @run_when_active
-    def selection(self) -> None:
+    def selection(self, job, job_name, job_dir):
         """Explore data"""
-        Selection(self.config)()
+        Selection(self.config)(job, job_name, job_dir)
 
     @run_when_active
-    def verification(self) -> None:
-        """Skip state wise verification, maybe a feature in the future"""
+    def verification(self, job_name) -> None:
+        """Verify selected features"""
+        Verification(self.config)(job_name)

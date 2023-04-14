@@ -24,9 +24,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.workers = config.meta.workers
         self.jobs = config.selection.jobs
         self.task = config.meta.learn_task
-        self.out_dir = config.meta.output_dir
         self.scoring = config.selection.scoring
-        self.experiment_name = config.meta.name
         self.state_name = config.meta.state_name
         self.target_label = config.meta.target_label
         self.corr_method = config.selection.corr_method
@@ -39,29 +37,26 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.job_name = ''
         self.job_dir = None
 
-    def __call__(self) -> None:
+    def __call__(self, job, job_name, job_dir) -> None:
         """Run all jobs"""
         self.__check_jobs()
         self.__check_auto_norm_methods()
+        self.job_name = job_name
+        self.job_dir = job_dir
 
-        for job in self.jobs:
-            logger.info(f'Running -> {job}')
-            self.job_name = '_'.join(job)  # name of current job
-            self.job_dir = os.path.join(self.out_dir, self.experiment_name, self.job_name, self.state_name)
-            os.makedirs(self.job_dir, exist_ok=True)
+        for step in job:
+            logger.info(f'Running -> {step}')
             frame = self.get_store('frame', self.state_name, 'selection_train')
-            for step in job:
-                logger.info(f'Running -> {step}')
-                frame, features, error = self.process_job(step, frame)
-                # logger.debug(
-                #     f'\nStep outputs:'
-                #     f'\n  Frame_specs -> {type(frame)}{frame.shape}'
-                #     f'\n  Features -> {type(features)}{features}'
-                # )
-                if error:
-                    logger.error(f'Step {step} is invalid')
-                    break
-                self.__store_features(features, step)
+            frame, features, error = self.process_job(step, frame)
+            # logger.debug(
+            #     f'\nStep outputs:'
+            #     f'\n  Frame_specs -> {type(frame)}{frame.shape}'
+            #     f'\n  Features -> {type(features)}{features}'
+            # )
+            if error:
+                logger.error(f'Step {step} is invalid')
+                break
+            self.__store_features(features, step)
 
     def __check_jobs(self) -> None:
         """Check if the given jobs are valid"""
@@ -128,18 +123,18 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
 
     def get_rank_frequency_based_features(self, feature_store: dict) -> list:
         """Get ranked features"""
-        store = {}
+        scores = {}
         for seed in feature_store.keys():
             rank_score = 1000
             for features in feature_store[seed]:
                 for feature in [features]:
-                    if feature not in store:
-                        store[feature] = rank_score
+                    if feature not in scores:
+                        scores[feature] = rank_score
                     else:
-                        store[feature] += rank_score
+                        scores[feature] += rank_score
                     rank_score -= 1
 
-        sorted_store = {k: v for k, v in sorted(store.items(), key=lambda item: item[1], reverse=True)}
+        sorted_store = {k: v for k, v in sorted(scores.items(), key=lambda item: item[1], reverse=True)}
         top_features = list(sorted_store.keys())
         logger.debug(f'Aggregated features -> {top_features}')
         return top_features

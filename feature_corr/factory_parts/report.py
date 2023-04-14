@@ -1,9 +1,12 @@
 import json
 import os
 
+import matplotlib as plt
+import numpy as np
 from loguru import logger
 from omegaconf import DictConfig
 
+from feature_corr.crates.helpers import job_name_cleaner
 from feature_corr.data_borg import DataBorg
 
 
@@ -14,9 +17,16 @@ class Report(DataBorg):
         super().__init__()
         self.config = config
         self.all_features = None
-        experiment_name = self.config.meta.name
-        output_dir = self.config.meta.output_dir
-        self.feature_file_path = os.path.join(output_dir, experiment_name, 'all_features.json')
+        experiment_name = config.meta.name
+        self.output_dir = config.meta.output_dir
+        self.feature_file_path = os.path.join(self.output_dir, experiment_name, 'all_features.json')
+        self.jobs = config.selection.jobs
+        models_dict = config.verification.models
+        self.models = [model for model in models_dict if models_dict[model]]
+        self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
+        self.models = [model for model in self.models if model not in self.ensemble]
+        if len(self.models) < 2:  # ensemble methods need at least two models two combine their results
+            self.ensemble = []
 
     def __call__(self):
         """Run feature report"""
@@ -73,3 +83,65 @@ class Report(DataBorg):
             f'Rank frequency based top {min(return_top, len(top_features))} features -> {json.dumps(top_features, indent=4)}'
         )
         return top_features
+
+    def summarise_verification(self) -> None:
+        """Summarise verification results over all seeds"""
+        job_names = job_name_cleaner(self.jobs)
+        fig_roc_jobs, ax_roc_jobs = plt.subplots()
+        fig_prc_jobs, ax_prc_jobs = plt.subplots()
+        for job_name in job_names:
+            fig_roc_models, ax_roc_models = plt.subplots()
+            fig_prc_models, ax_prc_models = plt.subplots()
+            for model in self.models + self.ensemble:
+                out_dir = os.path.join(self.output_dir, job_name, model)
+                tprs = []
+                precisions = []
+                mean_x = np.linspace(0, 1, 100)
+                for seed in self.seeds:
+                    scores = self.get_store('score', str(seed), job_name)
+                    interp_tpr = np.interp(mean_x, scores['fpr'], scores['tpr'])  # AUROC
+                    interp_tpr[0] = 0.0
+                    tprs.append(interp_tpr)
+                    interp_recall = np.interp(mean_x, scores['precision'], scores['recall'])  # AUPRC
+                    interp_recall[0] = 1.0
+                    precisions.append(interp_recall)
+                scores = {  # TODO: change to other variable, cannot include fpr, tpr, etc.
+                    score: f'{np.mean(scores[score]):.3f} +- {np.std(scores[score]):.3f}'
+                    for score in self.verif_scoring
+                }  # compute mean +- std for all scores
+                mean_tpr = np.mean(tprs, axis=0)  # compute mean +- std for AUC plots
+                std_tpr = np.std(tprs, axis=0)
+                tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+                tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+                mean_precision = np.mean(precisions, axis=0)  # AUPRC
+                std_precision = np.std(precisions, axis=0)
+                precisions_upper = np.minimum(mean_precision + std_precision, 1)
+                precisions_lower = np.maximum(mean_precision - std_precision, 0)
+                ax_roc_models.plot(mean_x, mean_tpr, label=f'{model}, AUROC={scores["roc_auc_score"]}', alpha=0.7)
+                ax_roc_models.fill_between(mean_x, tprs_lower, tprs_upper, color='grey', alpha=0.2)
+                ax_prc_models.plot(
+                    mean_x, mean_precision, label=f'{model}, AUPRC={scores["average_precision_score"]}', alpha=0.7
+                )
+                ax_prc_models.fill_between(mean_x, precisions_lower, precisions_upper, color='grey', alpha=0.2)
+            # TODO: updated save_plots
+            self.save_plots(fig_roc_models, ax_roc_models, fig_prc_models, ax_prc_models, 'all_models.pdf')
+
+    def save_plots(self, fig_roc, ax_roc, fig_prc, ax_prc, pos_rate, out_dir, name: str) -> None:
+        ax_roc.set_title('Receiver-operator curve (ROC)')
+        ax_roc.set_xlabel('1 - Specificity')
+        ax_roc.set_ylabel('Sensitivity')
+        ax_roc.grid()
+        ax_roc.plot([0, 1], [0, 1], 'k--', label='Baseline, AUROC=0.5', alpha=0.7)  # baseline
+        ax_roc.legend()
+        fig_roc.savefig(os.path.join(out_dir, f'AUROC_{name}'))
+        fig_roc.clear()
+        ax_prc.set_title('Precision-recall curve (PRC)')
+        ax_prc.set_xlabel('Recall (Sensitivity)')
+        ax_prc.set_ylabel('Precision')
+        ax_prc.grid()
+        ax_prc.axhline(
+            y=pos_rate, color='k', linestyle='--', label=f'Baseline, AUPRC={pos_rate}', alpha=0.7
+        )  # baseline
+        ax_prc.legend()
+        fig_prc.savefig(os.path.join(out_dir, f'AUPRC_{name}'))
+        fig_prc.clear()
