@@ -17,7 +17,6 @@ meta:
 inspection:
   label_as_index: "ATTRAS_Redcap" # column string name or None
   export_cleaned_frame: True # for visual inspection of the cleaned data
-
   manual_clean: True # manual cleaning of data
   manual_strategy:
     drop_columns_regex: ["([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+"] # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
@@ -72,7 +71,7 @@ selection:
 # verification strategy and final model to train and evaluate
 verification:
   active: True # whether to perform verification analysis for each job
-  use_n_top_features: 4
+  use_n_top_features: 10
   scoring:
     binary_classification:
       accuracy_score: True
@@ -90,11 +89,11 @@ verification:
 
   models:
     logistic_regression: True
-    forest: False
-    extreme_forest: False
-    adaboost: False
-    xgboost: False
-    ensemble_voting: False
+    forest: True
+    extreme_forest: True
+    adaboost: True
+    xgboost: True
+    ensemble_voting: True
 
   param_grids:
     logistic_regression:

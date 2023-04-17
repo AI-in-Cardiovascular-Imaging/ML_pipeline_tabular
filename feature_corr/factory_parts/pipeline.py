@@ -41,7 +41,7 @@ class Pipeline(DataBorg):
         self.impute()
         self.data_split()
 
-        # self.verification('all_features')  # run only once per data split, not for every job
+        self.verification('all_features')  # run only once per data split, not for every job
 
         job_names = job_name_cleaner(self.jobs)
         for job, job_name in zip(self.jobs, job_names):

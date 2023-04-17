@@ -18,8 +18,8 @@ class Report(DataBorg):
         self.config = config
         experiment_name = config.meta.name
         self.seeds = config.meta.seed
-        self.output_dir = config.meta.output_dir
-        self.feature_file_path = os.path.join(self.output_dir, experiment_name, 'all_features.json')
+        self.output_dir = os.path.join(config.meta.output_dir, experiment_name)
+        self.feature_file_path = os.path.join(self.output_dir, 'all_features.json')
         self.jobs = config.selection.jobs
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
@@ -95,15 +95,19 @@ class Report(DataBorg):
         fig_roc_jobs, ax_roc_jobs = plt.subplots()
         fig_prc_jobs, ax_prc_jobs = plt.subplots()
         for job_name in job_names:
+            out_dir = os.path.join(self.output_dir, job_name)
+            os.makedirs(out_dir, exist_ok=True)
             fig_roc_models, ax_roc_models = plt.subplots()
             fig_prc_models, ax_prc_models = plt.subplots()
             for model in self.models + self.ensemble:
-                out_dir = os.path.join(self.output_dir, job_name, model)
+                averaged_scores = {score: [] for score in verif_scoring}
                 tprs = []
                 precisions = []
                 mean_x = np.linspace(0, 1, 100)
                 for seed in self.seeds:
-                    scores = self.get_store('score', str(seed), job_name)
+                    scores = self.get_store('score', str(seed), job_name)[model]
+                    for score in verif_scoring:
+                        averaged_scores[score].append(scores[score])
                     interp_tpr = np.interp(mean_x, scores['fpr'], scores['tpr'])  # AUROC
                     interp_tpr[0] = 0.0
                     tprs.append(interp_tpr)
@@ -111,7 +115,8 @@ class Report(DataBorg):
                     interp_recall[0] = 1.0
                     precisions.append(interp_recall)
                 averaged_scores = {
-                    score: f'{np.mean(scores[score]):.3f} +- {np.std(scores[score]):.3f}' for score in verif_scoring
+                    score: f'{np.mean(averaged_scores[score]):.3f} +- {np.std(averaged_scores[score]):.3f}'
+                    for score in verif_scoring
                 }  # compute mean +- std for all scores
                 mean_tpr = np.mean(tprs, axis=0)  # compute mean +- std for AUC plots
                 std_tpr = np.std(tprs, axis=0)

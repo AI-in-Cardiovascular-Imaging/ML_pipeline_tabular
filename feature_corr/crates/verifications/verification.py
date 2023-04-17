@@ -89,15 +89,14 @@ class Verification(DataBorg, Normalisers):
         self.config.impute.method = 'simple_impute'
         self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
 
-        self.top_features = self.get_store('feature', str(self.seed), job_name)[: self.n_top_features]
-        self.feature_sets = [[feature] for feature in self.top_features]
-        self.feature_sets.append(list(self.top_features))
-        self.feature_names = [feature for feature in self.top_features]
-        self.feature_names.append(f'{len(self.top_features)}-item score')
-        for top_feature, feature_name in zip(self.feature_sets, self.feature_names):
-            self.pre_process_frame()
-            self.train_test_split(top_feature)
-            self.train_models(feature_name)  # optimise all models
+        if job_name == 'all_features':
+            self.top_features = self.get_store('feature', str(self.seed), job_name)
+        else:
+            self.top_features = self.get_store('feature', str(self.seed), job_name)[: self.n_top_features]
+
+        self.pre_process_frame()
+        self.train_test_split()
+        self.train_models()  # optimise all models
         self.evaluate(job_name)  # evaluate all optimised models
 
     def pre_process_frame(self) -> None:
@@ -108,14 +107,14 @@ class Verification(DataBorg, Normalisers):
         frame = self.get_store('frame', 'verification', 'ephemeral')
         DataSplit(self.config).verification_mode(frame)
 
-    def train_test_split(self, top_feature) -> None:
+    def train_test_split(self) -> None:
         """Prepare data for training"""
         v_train = self.get_store('frame', 'verification', 'verification_train')
         v_test = self.get_store('frame', 'verification', 'verification_test')
-        self.x_train, self.y_train = self.split_frame(v_train, top_feature)
-        self.x_test, self.y_test = self.split_frame(v_test, top_feature)
+        self.x_train, self.y_train = self.split_frame(v_train)
+        self.x_test, self.y_test = self.split_frame(v_test)
 
-    def train_models(self, feature_name) -> None:
+    def train_models(self) -> None:
         """Train classifier to verify feature importance"""
         estimators = []
         for model in self.models:
@@ -140,7 +139,7 @@ class Verification(DataBorg, Normalisers):
             )
             best_estimator = optimiser()
             estimators.append((model, best_estimator))
-            self.best_estimators[model][feature_name] = best_estimator  # store for evaluation later
+            self.best_estimators[model] = best_estimator  # store for evaluation later
 
         for ensemble in self.ensemble:
             if 'voting' in ensemble:
@@ -160,33 +159,32 @@ class Verification(DataBorg, Normalisers):
                 logger.error(f'{ensemble} has not yet been implemented.')
                 raise NotImplementedError
 
-            self.best_estimators[ensemble][feature_name] = ens_estimator  # store for evaluation later
+            self.best_estimators[ensemble] = ens_estimator  # store for evaluation later
 
     def evaluate(self, job_name) -> None:
         """Evaluate all optimised models"""
         scores = NestedDefaultDict()
         for i, model in enumerate(self.models + self.ensemble):
             logger.info(f'Evaluating {model} model ({i+1}/{len(self.models + self.ensemble)})...')
-            for top_feature, feature_name in zip(self.feature_sets, self.feature_names):
-                scores[model][feature_name] = {}
-                estimator = self.best_estimators[model][feature_name]
-                y_pred = estimator.predict(self.x_test[top_feature])
-                probas, fpr, tpr, precision, recall = self.auc(estimator, top_feature)
-                for score in self.verif_scoring:  # calculate and store all requested scores
-                    try:
-                        scores[model][feature_name][score] = getattr(metrics, score)(self.y_test, probas)
-                    except ValueError:
-                        scores[model][feature_name][score] = getattr(metrics, score)(self.y_test, y_pred)
+            scores[model] = {}
+            estimator = self.best_estimators[model]
+            y_pred = estimator.predict(self.x_test[self.top_features])
+            probas, fpr, tpr, precision, recall = self.auc(estimator)
+            for score in self.verif_scoring:  # calculate and store all requested scores
+                try:
+                    scores[model][score] = getattr(metrics, score)(self.y_test, probas)
+                except ValueError:
+                    scores[model][score] = getattr(metrics, score)(self.y_test, y_pred)
 
-                scores[model][feature_name]['fpr'] = fpr
-                scores[model][feature_name]['tpr'] = tpr
-                scores[model][feature_name]['precision'] = precision
-                scores[model][feature_name]['recall'] = recall
-                scores[model][feature_name]['pos_rate'] = round(self.y_test.sum() / len(self.y_test), 3)
+            scores[model]['fpr'] = fpr
+            scores[model]['tpr'] = tpr
+            scores[model]['precision'] = precision
+            scores[model]['recall'] = recall
+            scores[model]['pos_rate'] = round(self.y_test.sum() / len(self.y_test), 3)
 
             if y_pred.sum() == 0:
                 logger.warning(
-                    f'0/{int(self.y_test.sum())} positive samples were predicted using top features {top_feature}.'
+                    f'0/{int(self.y_test.sum())} positive samples were predicted using top features {self.top_features}.'
                 )
 
         self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
@@ -222,21 +220,21 @@ class Verification(DataBorg, Normalisers):
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
 
-    def auc(self, best_estimator, top_feature):
+    def auc(self, best_estimator):
         try:  # for logistic regression
-            probas = best_estimator.decision_function(self.x_test[top_feature])
+            probas = best_estimator.decision_function(self.x_test[self.top_features])
         except AttributeError:  # other estimators
-            probas = best_estimator.predict_proba(self.x_test[top_feature])[:, 1]
+            probas = best_estimator.predict_proba(self.x_test[self.top_features])[:, 1]
         fpr, tpr, _ = metrics.roc_curve(self.y_test, probas, drop_intermediate=True)  # AUROC
         precision, recall, _ = metrics.precision_recall_curve(self.y_test, probas)  # AUPRC
 
         return probas, fpr, tpr, precision, recall
 
-    def split_frame(self, frame: pd.DataFrame, top_features) -> tuple:
+    def split_frame(self, frame: pd.DataFrame) -> tuple:
         """Prepare frame for verification"""
         frame, _ = self.z_score_norm(frame)  # todo: config
         y_frame = frame[self.target_label]
-        x_frame = frame[top_features]  # only keep top features
+        x_frame = frame[self.top_features]  # only keep top features
         if self.target_label in x_frame.columns:
             x_frame = x_frame.drop(self.target_label, axis=1)
             logger.warning(f'{self.target_label} was found in the top features for validation')
