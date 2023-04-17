@@ -73,7 +73,7 @@ class DataBorg:
             self._score_store[state_name][step_name] = data
             logger.trace(f'Score data set -> {type(data)}')
         else:
-            raise ValueError(f'Invalid data name to set store data -> {name}, allowed -> frame, feature')
+            raise ValueError(f'Invalid data name to set store data -> {name}, allowed -> frame, feature, score')
 
     def get_store(self, name: str, state_name: str, step_name: str) -> pd.DataFrame:
         """Returns the store value"""
@@ -86,7 +86,7 @@ class DataBorg:
         elif 'score' in name:
             logger.trace(f'Returning score -> {type(self._frame_store[state_name][step_name])}')
             return self._score_store[state_name][step_name]
-        raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature')
+        raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature, score')
 
     def get_all_features(self) -> dict:
         """Returns the store value"""

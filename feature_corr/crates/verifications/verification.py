@@ -1,7 +1,4 @@
-import os
-
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 import sklearn.metrics as metrics
@@ -60,8 +57,6 @@ class Verification(DataBorg, Normalisers):
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
-        self.out_dir = os.path.join(config.meta.output_dir, config.meta.name, str(config.meta.seed))
-        os.makedirs(self.out_dir, exist_ok=True)
         self.seed = config.meta.seed
         self.workers = config.meta.workers
         self.state_name = config.meta.state_name
@@ -179,9 +174,9 @@ class Verification(DataBorg, Normalisers):
                 probas, fpr, tpr, precision, recall = self.auc(estimator, top_feature)
                 for score in self.verif_scoring:  # calculate and store all requested scores
                     try:
-                        scores[model][top_feature][score] = getattr(metrics, score)(self.y_test, probas)
+                        scores[model][feature_name][score] = getattr(metrics, score)(self.y_test, probas)
                     except ValueError:
-                        scores[model][top_feature][score] = getattr(metrics, score)(self.y_test, y_pred)
+                        scores[model][feature_name][score] = getattr(metrics, score)(self.y_test, y_pred)
 
                 scores[model][feature_name]['fpr'] = fpr
                 scores[model][feature_name]['tpr'] = tpr
@@ -194,7 +189,7 @@ class Verification(DataBorg, Normalisers):
                     f'0/{int(self.y_test.sum())} positive samples were predicted using top features {top_feature}.'
                 )
 
-        self.set_store('score', str(self.seed), job_name)  # store results for summary in report
+        self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
 
     def performance_statistics(self, scores, y_pred: pd.DataFrame) -> None:
         """Print performance statistics"""

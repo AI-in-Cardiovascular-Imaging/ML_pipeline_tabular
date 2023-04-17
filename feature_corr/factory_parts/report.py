@@ -1,7 +1,7 @@
 import json
 import os
 
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import numpy as np
 from loguru import logger
 from omegaconf import DictConfig
@@ -16,8 +16,8 @@ class Report(DataBorg):
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
-        self.all_features = None
         experiment_name = config.meta.name
+        self.seeds = config.meta.seed
         self.output_dir = config.meta.output_dir
         self.feature_file_path = os.path.join(self.output_dir, experiment_name, 'all_features.json')
         self.jobs = config.selection.jobs
@@ -27,12 +27,14 @@ class Report(DataBorg):
         self.models = [model for model in self.models if model not in self.ensemble]
         if len(self.models) < 2:  # ensemble methods need at least two models two combine their results
             self.ensemble = []
+        self.all_features = None
 
     def __call__(self):
         """Run feature report"""
         all_features = self.get_all_features()
         if all_features:
             self.write_to_file(all_features)
+            self.summarise_verification()
         else:
             logger.warning('No features found to report')
 
@@ -86,6 +88,9 @@ class Report(DataBorg):
 
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds"""
+        v_scoring_dict = self.config.verification.scoring[self.config.meta.learn_task]
+        verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
+
         job_names = job_name_cleaner(self.jobs)
         fig_roc_jobs, ax_roc_jobs = plt.subplots()
         fig_prc_jobs, ax_prc_jobs = plt.subplots()
@@ -105,9 +110,8 @@ class Report(DataBorg):
                     interp_recall = np.interp(mean_x, scores['precision'], scores['recall'])  # AUPRC
                     interp_recall[0] = 1.0
                     precisions.append(interp_recall)
-                scores = {  # TODO: change to other variable, cannot include fpr, tpr, etc.
-                    score: f'{np.mean(scores[score]):.3f} +- {np.std(scores[score]):.3f}'
-                    for score in self.verif_scoring
+                averaged_scores = {
+                    score: f'{np.mean(scores[score]):.3f} +- {np.std(scores[score]):.3f}' for score in verif_scoring
                 }  # compute mean +- std for all scores
                 mean_tpr = np.mean(tprs, axis=0)  # compute mean +- std for AUC plots
                 std_tpr = np.std(tprs, axis=0)
@@ -117,14 +121,26 @@ class Report(DataBorg):
                 std_precision = np.std(precisions, axis=0)
                 precisions_upper = np.minimum(mean_precision + std_precision, 1)
                 precisions_lower = np.maximum(mean_precision - std_precision, 0)
-                ax_roc_models.plot(mean_x, mean_tpr, label=f'{model}, AUROC={scores["roc_auc_score"]}', alpha=0.7)
+                ax_roc_models.plot(
+                    mean_x, mean_tpr, label=f'{model}, AUROC={averaged_scores["roc_auc_score"]}', alpha=0.7
+                )
                 ax_roc_models.fill_between(mean_x, tprs_lower, tprs_upper, color='grey', alpha=0.2)
                 ax_prc_models.plot(
-                    mean_x, mean_precision, label=f'{model}, AUPRC={scores["average_precision_score"]}', alpha=0.7
+                    mean_x,
+                    mean_precision,
+                    label=f'{model}, AUPRC={averaged_scores["average_precision_score"]}',
+                    alpha=0.7,
                 )
                 ax_prc_models.fill_between(mean_x, precisions_lower, precisions_upper, color='grey', alpha=0.2)
-            # TODO: updated save_plots
-            self.save_plots(fig_roc_models, ax_roc_models, fig_prc_models, ax_prc_models, 'all_models.pdf')
+            self.save_plots(
+                fig_roc_models,
+                ax_roc_models,
+                fig_prc_models,
+                ax_prc_models,
+                scores['pos_rate'],
+                out_dir,
+                'all_models.pdf',
+            )
 
     def save_plots(self, fig_roc, ax_roc, fig_prc, ax_prc, pos_rate, out_dir, name: str) -> None:
         ax_roc.set_title('Receiver-operator curve (ROC)')
