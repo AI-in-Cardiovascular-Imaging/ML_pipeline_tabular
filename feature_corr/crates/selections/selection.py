@@ -1,5 +1,3 @@
-import os
-
 import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
@@ -44,9 +42,9 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.job_name = job_name
         self.job_dir = job_dir
 
+        frame = self.get_store('frame', self.state_name, 'selection_train')
         for step in job:
             logger.info(f'Running -> {step}')
-            frame = self.get_store('frame', self.state_name, 'selection_train')
             frame, features, error = self.process_job(step, frame)
             # logger.debug(
             #     f'\nStep outputs:'

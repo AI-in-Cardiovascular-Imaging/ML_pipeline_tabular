@@ -74,6 +74,8 @@ class DataSplit(DataBorg):
         self.set_store('frame', self.state_name, 'selection_train', s_train)
         self.set_store('frame', self.state_name, 'verification_train', v_train)
         self.set_store('frame', self.state_name, 'verification_test', v_test)
+        all_features = list(s_train.columns.drop(self.target_label))
+        self.set_store('feature', self.state_name, 'all_features', all_features)
 
     def show_stats(self, s_train: pd.DataFrame, v_train: pd.DataFrame, v_test: pd.DataFrame, head: str) -> None:
         """Show data split stats"""

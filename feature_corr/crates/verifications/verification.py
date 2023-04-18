@@ -83,17 +83,17 @@ class Verification(DataBorg, Normalisers):
 
     def __call__(self, job_name) -> None:
         """Train classifier to verify final feature importance"""
-        logger.info('Verifying final feature importance')
 
         # TODO: maybe there is a better way to do this
         self.config.impute.method = 'simple_impute'
         self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
 
         if job_name == 'all_features':
+            logger.info('Evaluating all feature baseline performance')
             self.top_features = self.get_store('feature', str(self.seed), job_name)
         else:
+            logger.info('Verifying final feature importance')
             self.top_features = self.get_store('feature', str(self.seed), job_name)[: self.n_top_features]
-
         self.pre_process_frame()
         self.train_test_split()
         self.train_models()  # optimise all models

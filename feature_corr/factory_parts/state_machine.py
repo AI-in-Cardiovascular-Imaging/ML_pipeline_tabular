@@ -38,7 +38,7 @@ class StateMachine:
     def __next__(self) -> DictConfig:
         """Return the next item"""
         self.update_state()
-        logger.info(f'State {self.count} -> {self.state}')
+        logger.info(f'State {self.count}/{self.max_count} -> {self.state[0]}')
         return self.get_state_config()
 
     def minor_setup(self) -> bool or ListConfig:

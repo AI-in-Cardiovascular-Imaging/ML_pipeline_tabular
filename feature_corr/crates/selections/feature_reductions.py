@@ -211,4 +211,4 @@ class FeatureReductions:
             f'number of remaining features: {len(x_frame.columns)}'
         )
         new_frame = pd.concat([x_frame, y_frame], axis=1)
-        return new_frame, None
+        return new_frame, list(x_frame.columns)

@@ -1,13 +1,15 @@
+import itertools
 import json
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 from loguru import logger
+from matplotlib import rcParams
 from omegaconf import DictConfig
 
 from feature_corr.crates.helpers import job_name_cleaner
-from feature_corr.data_borg import DataBorg
+from feature_corr.data_borg import DataBorg, NestedDefaultDict
 
 
 class Report(DataBorg):
@@ -21,6 +23,7 @@ class Report(DataBorg):
         self.output_dir = os.path.join(config.meta.output_dir, experiment_name)
         self.feature_file_path = os.path.join(self.output_dir, 'all_features.json')
         self.jobs = config.selection.jobs
+        self.n_top_features = self.config.verification.use_n_top_features
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
@@ -79,7 +82,7 @@ class Report(DataBorg):
 
         sorted_store = {k: v for k, v in sorted(store.items(), key=lambda item: item[1], reverse=True)}
         sorted_store = list(sorted_store.keys())
-        return_top = self.config.verification.use_n_top_features
+        return_top = self.n_top_features
         top_features = sorted_store[:return_top]
         logger.info(
             f'Rank frequency based top {min(return_top, len(top_features))} features -> {json.dumps(top_features, indent=4)}'
@@ -89,65 +92,92 @@ class Report(DataBorg):
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds"""
         v_scoring_dict = self.config.verification.scoring[self.config.meta.learn_task]
-        verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
+        self.verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
+        clist = rcParams['axes.prop_cycle']
+        self.cgen = itertools.cycle(clist)
 
         job_names = job_name_cleaner(self.jobs)
         fig_roc_jobs, ax_roc_jobs = plt.subplots()
         fig_prc_jobs, ax_prc_jobs = plt.subplots()
         for job_name in job_names:
             out_dir = os.path.join(self.output_dir, job_name)
-            os.makedirs(out_dir, exist_ok=True)
             fig_roc_models, ax_roc_models = plt.subplots()
             fig_prc_models, ax_prc_models = plt.subplots()
             for model in self.models + self.ensemble:
-                averaged_scores = {score: [] for score in verif_scoring}
-                tprs = []
-                precisions = []
-                mean_x = np.linspace(0, 1, 100)
-                for seed in self.seeds:
-                    scores = self.get_store('score', str(seed), job_name)[model]
-                    for score in verif_scoring:
-                        averaged_scores[score].append(scores[score])
-                    interp_tpr = np.interp(mean_x, scores['fpr'], scores['tpr'])  # AUROC
-                    interp_tpr[0] = 0.0
-                    tprs.append(interp_tpr)
-                    interp_recall = np.interp(mean_x, scores['precision'], scores['recall'])  # AUPRC
-                    interp_recall[0] = 1.0
-                    precisions.append(interp_recall)
-                averaged_scores = {
-                    score: f'{np.mean(averaged_scores[score]):.3f} +- {np.std(averaged_scores[score]):.3f}'
-                    for score in verif_scoring
-                }  # compute mean +- std for all scores
-                mean_tpr = np.mean(tprs, axis=0)  # compute mean +- std for AUC plots
-                std_tpr = np.std(tprs, axis=0)
-                tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
-                tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-                mean_precision = np.mean(precisions, axis=0)  # AUPRC
-                std_precision = np.std(precisions, axis=0)
-                precisions_upper = np.minimum(mean_precision + std_precision, 1)
-                precisions_lower = np.maximum(mean_precision - std_precision, 0)
-                ax_roc_models.plot(
-                    mean_x, mean_tpr, label=f'{model}, AUROC={averaged_scores["roc_auc_score"]}', alpha=0.7
+                fig_roc_baseline, ax_roc_baseline = plt.subplots()
+                fig_prc_baseline, ax_prc_baseline = plt.subplots()
+
+                self.average_scores(job_name, model)
+                self.plot_auc(ax_roc_models, ax_prc_models, label=f'{model}')
+                self.plot_auc(ax_roc_baseline, ax_prc_baseline, label=f'Top {self.n_top_features} features')
+                self.average_scores('all_features', model)
+                self.plot_auc(ax_roc_baseline, ax_prc_baseline, label=f'All features')
+                self.save_plots(
+                    fig_roc_baseline,
+                    ax_roc_baseline,
+                    fig_prc_baseline,
+                    ax_prc_baseline,
+                    self.pos_rate,
+                    os.path.join(out_dir, model),
+                    'baseline.pdf',
                 )
-                ax_roc_models.fill_between(mean_x, tprs_lower, tprs_upper, color='grey', alpha=0.2)
-                ax_prc_models.plot(
-                    mean_x,
-                    mean_precision,
-                    label=f'{model}, AUPRC={averaged_scores["average_precision_score"]}',
-                    alpha=0.7,
-                )
-                ax_prc_models.fill_between(mean_x, precisions_lower, precisions_upper, color='grey', alpha=0.2)
+
             self.save_plots(
                 fig_roc_models,
                 ax_roc_models,
                 fig_prc_models,
                 ax_prc_models,
-                scores['pos_rate'],
+                self.pos_rate,
                 out_dir,
                 'all_models.pdf',
             )
 
+    def average_scores(self, job_name, model) -> None:
+        tprs = []
+        precisions = []
+        self.mean_x = np.linspace(0, 1, 100)
+        self.averaged_scores = {score: [] for score in self.verif_scoring}
+        for seed in self.seeds:
+            scores = self.get_store('score', str(seed), job_name)[model]
+            for score in self.verif_scoring:
+                self.averaged_scores[score].append(scores[score])
+            interp_tpr = np.interp(self.mean_x, scores['fpr'], scores['tpr'])  # AUROC
+            interp_tpr[0] = 0.0
+            tprs.append(interp_tpr)
+            interp_precision = np.interp(self.mean_x, scores['precision'], scores['recall'])  # AUPRC
+            interp_precision[0] = 1.0
+            precisions.append(interp_precision)
+
+        self.averaged_scores = {
+            score: f'{np.mean(self.averaged_scores[score]):.3f} +- {np.std(self.averaged_scores[score]):.3f}'
+            for score in self.verif_scoring
+        }  # compute mean +- std for all scores
+        self.mean_tpr = np.mean(tprs, axis=0)  # compute mean +- std for AUC plots
+        self.std_tpr = np.std(tprs, axis=0)
+        self.mean_precision = np.mean(precisions, axis=0)  # AUPRC
+        self.std_precision = np.std(precisions, axis=0)
+        self.pos_rate = scores['pos_rate']
+
+        self.tprs_upper = np.minimum(self.mean_tpr + self.std_tpr, 1)
+        self.tprs_lower = np.maximum(self.mean_tpr - self.std_tpr, 0)
+        self.precisions_upper = np.minimum(self.mean_precision + self.std_precision, 1)
+        self.precisions_lower = np.maximum(self.mean_precision - self.std_precision, 0)
+
+    def plot_auc(self, ax_roc, ax_prc, label) -> None:
+        ax_roc.plot(
+            self.mean_x, self.mean_tpr, label=f'{label}, AUROC={self.averaged_scores["roc_auc_score"]}', alpha=0.7
+        )
+        ax_roc.fill_between(self.mean_x, self.tprs_lower, self.tprs_upper, alpha=0.1)
+        ax_prc.plot(
+            self.mean_x,
+            self.mean_precision,
+            label=f'{label}, AUPRC={self.averaged_scores["average_precision_score"]}',
+            alpha=0.7,
+        )
+        ax_prc.fill_between(self.mean_x, self.precisions_lower, self.precisions_upper, alpha=0.1)
+
     def save_plots(self, fig_roc, ax_roc, fig_prc, ax_prc, pos_rate, out_dir, name: str) -> None:
+        os.makedirs(out_dir, exist_ok=True)
         ax_roc.set_title('Receiver-operator curve (ROC)')
         ax_roc.set_xlabel('1 - Specificity')
         ax_roc.set_ylabel('Sensitivity')
