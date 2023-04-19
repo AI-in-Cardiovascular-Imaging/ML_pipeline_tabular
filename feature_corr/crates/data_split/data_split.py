@@ -41,9 +41,11 @@ class DataSplit(DataBorg):
 
     def verification_mode(self, frame: pd.DataFrame) -> None:
         """Split data in selection and verification"""
+        tmp_state = self.state_name
         self.state_name = 'verification'
         self.frame = frame
         self.split_frame()
+        self.state_name = tmp_state
 
     def split_frame(self) -> None:
         if self.frame.isnull().values.any():

@@ -47,9 +47,11 @@ class Imputer(DataBorg):
     def verification_mode(self, frame: pd.DataFrame, seed: int) -> None:
         """Impute missing data for verification mode"""
         self.seed = seed
+        tmp_state = self.state_name
         self.state_name = 'verification'
         if self._check_methods():
             return getattr(self, self.impute_method)(frame)
+        self.state_name = tmp_state
 
     def _check_methods(self) -> bool:
         """Check if the given method is valid"""

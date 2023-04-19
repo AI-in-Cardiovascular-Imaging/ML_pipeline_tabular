@@ -49,7 +49,7 @@ class RecursiveFeatureElimination:
         n_scores = len(selector.cv_results_['mean_test_score'])
         fig = plt.figure()
         plt.xlabel('Number of features selected')
-        plt.ylabel(f'Mean {self.scoring}')
+        plt.ylabel(f'Mean {scoring}')
         plt.xticks(range(0, n_scores + 1, 5))
         plt.grid(alpha=0.5)
         plt.errorbar(
@@ -80,7 +80,8 @@ class RecursiveFeatureElimination:
 
         ax = importances.plot.barh()
         fig = ax.get_figure()
-        plt.title(f'Feature importance (top {50})' f'\n{rfe_estimator} estimator for target: {self.target_label}')
+        plt.title(f'Feature importance' f'\n{rfe_estimator} estimator for target: {self.target_label}')
+        plt.xlabel('Feature importance')
         plt.tight_layout()
         plt.gca().legend_.remove()
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.pdf'), dpi=fig.dpi)

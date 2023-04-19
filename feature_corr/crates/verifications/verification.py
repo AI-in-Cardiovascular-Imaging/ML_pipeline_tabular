@@ -89,7 +89,7 @@ class Verification(DataBorg, Normalisers):
         self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
 
         if job_name == 'all_features':
-            logger.info('Evaluating all feature baseline performance')
+            logger.info('Evaluating baseline performance using all features')
             self.top_features = self.get_store('feature', str(self.seed), job_name)
         else:
             logger.info('Verifying final feature importance')

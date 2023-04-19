@@ -5,19 +5,23 @@ meta:
   # seed: [784, 125, 467, 822, 943]
   # seed: [784, 125]
   workers: 8 # number of workers for parallel processing
-  target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
   aggregated_jobs: False # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
-  output_dir: '/home/sebalzer/Documents/Mike_init/ATTRAS/'
-  input_file: '/home/sebalzer/Documents/Mike_init/ATTRAS/ATTRAS_amyloidose.xlsx'
+  target_label: 'mace'
+  output_dir: '/home/sebalzer/Documents/Mike_init/main/'
+  input_file: '/home/sebalzer/Documents/Mike_init/main/5_merged/phenomapping_imputed.xlsx'
+  # target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
+  # output_dir: '/home/sebalzer/Documents/Mike_init/ATTRAS/'
+  # input_file: '/home/sebalzer/Documents/Mike_init/ATTRAS/ATTRAS_amyloidose.xlsx'
 # specify the clean strategy
 inspection:
-  label_as_index: "ATTRAS_Redcap" # column string name or None
+  # label_as_index: "ATTRAS_Redcap" # column string name or None
+  label_as_index: "subject"
   export_cleaned_frame: True # for visual inspection of the cleaned data
-  manual_clean: True # manual cleaning of data
+  manual_clean: False # manual cleaning of data
   manual_strategy:
     drop_columns_regex: ["([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+"] # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
 
@@ -50,7 +54,7 @@ selection:
   corr_drop_features: True # whether to drop highly correlated features
 
   scoring:
-    binary_classification: "average_precision"
+    binary_classification: "roc_auc"
     multi_classification: "average_precision"
     regression: "neg_mean_absolute_error"
 
@@ -89,11 +93,11 @@ verification:
 
   models:
     logistic_regression: True
-    forest: False
-    extreme_forest: False
-    adaboost: False
-    xgboost: False
-    ensemble_voting: False
+    forest: True
+    extreme_forest: True
+    adaboost: True
+    xgboost: True
+    ensemble_voting: True
 
   param_grids:
     logistic_regression:
