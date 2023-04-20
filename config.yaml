@@ -11,11 +11,11 @@ meta:
   learn_task: "" # don't change this, will be set automatically by the pipeline
   aggregated_jobs: False # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
   target_label: 'mace'
-  output_dir: '/home/sebalzer/Documents/Mike_init/main/'
-  input_file: '/home/sebalzer/Documents/Mike_init/main/5_merged/phenomapping_imputed.xlsx'
+  output_dir: '/home/sebalzer/Documents/Myo_Flamber/'
+  input_file: '/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping_imputed.xlsx'
   # target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  # output_dir: '/home/sebalzer/Documents/Mike_init/ATTRAS/'
-  # input_file: '/home/sebalzer/Documents/Mike_init/ATTRAS/ATTRAS_amyloidose.xlsx'
+  # output_dir: '/home/sebalzer/Documents/ATTRAS_Amyloidose/'
+  # input_file: '/home/sebalzer/Documents/ATTRAS_Amyloidose/ATTRAS_amyloidose.xlsx'
 # specify the clean strategy
 inspection:
   # label_as_index: "ATTRAS_Redcap" # column string name or None
