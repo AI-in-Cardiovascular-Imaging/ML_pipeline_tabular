@@ -3,7 +3,7 @@ meta:
   name: "phenomapping" # experiment name
   seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125, 467, 822, 943]
-  # seed: [784, 125]
+  # seed: [784]
   workers: 8 # number of workers for parallel processing
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
@@ -12,7 +12,7 @@ meta:
   aggregated_jobs: False # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
   target_label: 'mace'
   output_dir: '/home/sebalzer/Documents/Myo_Flamber/'
-  input_file: '/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping_imputed.xlsx'
+  input_file: '/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx'
   # target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   # output_dir: '/home/sebalzer/Documents/ATTRAS_Amyloidose/'
   # input_file: '/home/sebalzer/Documents/ATTRAS_Amyloidose/ATTRAS_amyloidose.xlsx'
@@ -66,6 +66,7 @@ selection:
 
   jobs: [
     ["variance_threshold", "z_score_norm", "correlation", "fr_forest"], #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
+    # ["variance_threshold", "z_score_norm", "fr_forest"], 
     # ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
     # ["get_memory", "fr_adaboost" ],
     # ["get_memory", "fr_extreme_forest" ],
@@ -93,10 +94,10 @@ verification:
 
   models:
     logistic_regression: True
-    forest: True
-    extreme_forest: True
-    adaboost: True
-    xgboost: True
+    forest: False
+    extreme_forest: False
+    adaboost: False
+    xgboost: False
     ensemble_voting: True
 
   param_grids:
