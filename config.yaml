@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping_fixed999" # experiment name
+  name: "phenomapping" # experiment name
   seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125, 467, 822, 943]
   # seed: [784]
@@ -50,8 +50,8 @@ selection:
   class_weight: "balanced"
   corr_method: "pearson" # correlation method
   corr_thresh: 0.6 # threshold above which correlated features are removed
-  variance_thresh: 0.9 # remove binary features with same value in more than variance_thresh subjects
-  corr_drop_features: True # whether to drop highly correlated features
+  corr_ranking: "corr" # method with which feature importance is calculated
+  variance_thresh: 0.95 # remove binary features with same value in more than variance_thresh subjects
 
   scoring:
     binary_classification: "roc_auc"
@@ -65,9 +65,11 @@ selection:
     datatime: "z_score_norm"
 
   jobs: [
-    ["variance_threshold", "z_score_norm", "correlation", "fr_forest"], #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
+    # ["variance_threshold", "z_score_norm", "correlation", "fr_forest"], #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
     # ["variance_threshold", "z_score_norm", "fr_forest"],
-    # ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
+    ["variance_threshold", "z_score_norm", "correlation", "feature_wiz"],
+    # ["variance_threshold", "z_score_norm", "correlation", "set_memory"],
+    # ["get_memory", "fr_forest"],
     # ["get_memory", "fr_adaboost" ],
     # ["get_memory", "fr_extreme_forest" ],
     # ["get_memory", "fr_xgboost" ],

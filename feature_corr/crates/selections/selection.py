@@ -27,11 +27,11 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.target_label = config.meta.target_label
         self.corr_method = config.selection.corr_method
         self.corr_thresh = config.selection.corr_thresh
+        self.corr_ranking = config.selection.corr_ranking
         self.variance_thresh = config.selection.variance_thresh
         self.class_weight = config.selection.class_weight
         self.aggregated_jobs = config.meta.aggregated_jobs
         self.auto_norm_method = config.selection.auto_norm_method
-        self.corr_drop_features = config.selection.corr_drop_features
         self.job_name = ''
         self.job_dir = None
 
