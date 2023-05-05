@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping" # experiment name
+  name: "phenomapping_fixed999" # experiment name
   seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125, 467, 822, 943]
   # seed: [784]
@@ -10,9 +10,9 @@ meta:
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
   aggregated_jobs: False # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
-  target_label: 'mace'
-  output_dir: '/home/sebalzer/Documents/Myo_Flamber/'
-  input_file: '/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx'
+  target_label: "mace"
+  output_dir: "/home/sebalzer/Documents/Myo_Flamber/"
+  input_file: "/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx"
   # target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   # output_dir: '/home/sebalzer/Documents/ATTRAS_Amyloidose/'
   # input_file: '/home/sebalzer/Documents/ATTRAS_Amyloidose/ATTRAS_amyloidose.xlsx'
@@ -66,12 +66,12 @@ selection:
 
   jobs: [
     ["variance_threshold", "z_score_norm", "correlation", "fr_forest"], #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
-    # ["variance_threshold", "z_score_norm", "fr_forest"], 
+    # ["variance_threshold", "z_score_norm", "fr_forest"],
     # ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
     # ["get_memory", "fr_adaboost" ],
     # ["get_memory", "fr_extreme_forest" ],
     # ["get_memory", "fr_xgboost" ],
-  ]
+    ]
 
 # verification strategy and final model to train and evaluate
 verification:
@@ -93,12 +93,17 @@ verification:
       explained_variance_score: True
 
   models:
+    ensemble_voting: True
     logistic_regression: True
+    svm: False
     forest: False
     extreme_forest: False
     adaboost: False
     xgboost: False
-    ensemble_voting: True
+    lasso: False
+    lassolars: False
+    elastic_net: False
+    omp: False
 
   param_grids:
     logistic_regression:
@@ -106,7 +111,12 @@ verification:
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       solver: ["saga"] # supports both l1 and l2 penalties
       warm_start: [True, False]
-      max_iter: [100000]
+      max_iter: [10000]
+
+    svm:
+      C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+      kernel: ["poly", "rbf", "sigmoid"]
+      gamma: ["scale", "auto"]
 
     forest:
       n_estimators: [100, 500]
@@ -131,3 +141,21 @@ verification:
       learning_rate: [0.0001, 0.001, 0.01, 0.1, 1]
       max_depth: [10, 50, 100, 1000, null]
       max_features: ["sqrt", "log2", null]
+
+    lasso:
+      alpha: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+      warm_start: [True, False]
+      selection: ["cyclic", "random"]
+
+    lassolars:
+      alpha: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+
+    elastic_net:
+      alpha: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+      l1_ratio: [0.25, 0.5, 0.75]
+      warm_start: [True, False]
+      selection: ["cyclic", "random"]
+
+    omp:
+      n_nonzero_coefs: [5, 10, 20, 50, null]
+      

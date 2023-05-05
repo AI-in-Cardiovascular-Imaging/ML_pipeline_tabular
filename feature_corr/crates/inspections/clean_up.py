@@ -30,8 +30,8 @@ class CleanUp(DataBorg):
 
         self.frame = self.frame.apply(pd.to_numeric, errors='coerce')  # Replace non-numeric entries with NaN
         nunique = self.frame.nunique()
-        non_binary_cols = nunique[nunique != 2].index
-        self.frame[non_binary_cols] = self.frame[non_binary_cols].replace(0, np.nan)  # Replace 0 with NaN
+        non_categorical = nunique[nunique > 10].index
+        self.frame[non_categorical] = self.frame[non_categorical].replace(0, np.nan)  # Replace 0 with NaN
         self.frame = self.frame.dropna(how='all', axis=1)  # Drop columns with all NaN
 
         self.set_frame('ephemeral', self.frame)

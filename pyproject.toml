@@ -1,14 +1,11 @@
 [tool.poetry]
-name = "cardio_parsers"
+name = "feature_corr"
 version = "0.1.0"
 description = ""
-authors = ["melandur <account@qunit.ch>"]
+authors = ["cardionaut"]
 
 [tool.poetry.dependencies]
 python = "^3.9.13"
-dicom2nifti = "^2.4.2"
-pydicom = "^2.3.0"
-SimpleITK = "2.0.2"
 loguru = "^0.6.0"
 nibabel = "^4.0.1"
 openpyxl = "^3.0.10"

@@ -8,7 +8,8 @@ from sklearn.ensemble import (
     RandomForestClassifier,
     RandomForestRegressor,
 )
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, Lasso, LassoLars, ElasticNet, OrthogonalMatchingPursuit
+from sklearn.svm import SVC
 from sklearn.model_selection import KFold, StratifiedKFold
 
 
@@ -18,6 +19,10 @@ def init_estimator(
     """Initialise the estimator and cross-validation method"""
     estimator_name = f'{estimator_name}_{learn_task}'
     estimator_dict = {
+        'logistic_regression_binary_classification': LogisticRegression(
+            random_state=seed, class_weight=class_weight, n_jobs=workers
+        ),
+        'svm_binary_classification': SVC(random_state=seed, class_weight=class_weight, probability=True),
         'forest_binary_classification': RandomForestClassifier(
             random_state=seed, class_weight=class_weight, n_jobs=workers
         ),
@@ -25,14 +30,15 @@ def init_estimator(
             random_state=seed, class_weight=class_weight, n_jobs=workers
         ),
         'adaboost_binary_classification': AdaBoostClassifier(random_state=seed),
-        'logistic_regression_binary_classification': LogisticRegression(
-            random_state=seed, class_weight=class_weight, n_jobs=workers
-        ),
         'xgboost_binary_classification': GradientBoostingClassifier(random_state=seed),
         'forest_regression': RandomForestRegressor(random_state=seed, n_jobs=workers),
         'extreme_forest_regression': ExtraTreesRegressor(random_state=seed, n_jobs=workers),
         'adaboost_regression': AdaBoostRegressor(random_state=seed),
         'xgboost_regression': GradientBoostingRegressor(random_state=seed),
+        'lasso_regression': Lasso(random_state=seed),
+        'lassolars_regression': LassoLars(random_state=seed),
+        'elastic_net_regression': ElasticNet(random_state=seed),
+        'omp_regression': OrthogonalMatchingPursuit(),
     }
 
     if learn_task == 'binary_classification':
