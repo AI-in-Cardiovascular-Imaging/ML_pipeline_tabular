@@ -23,6 +23,7 @@ class Report(DataBorg):
         self.output_dir = os.path.join(config.meta.output_dir, experiment_name)
         self.feature_file_path = os.path.join(self.output_dir, 'all_features.json')
         self.jobs = config.selection.jobs
+        self.job_names = job_name_cleaner(self.jobs)
         self.n_top_features = self.config.verification.use_n_top_features
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
@@ -37,6 +38,7 @@ class Report(DataBorg):
         all_features = self.get_all_features()
         if all_features:
             self.write_to_file(all_features)
+            self.summarise_selection(all_features)
             self.summarise_verification()
         else:
             logger.warning('No features found to report')
@@ -88,18 +90,23 @@ class Report(DataBorg):
             f'Rank frequency based top {min(return_top, len(top_features))} features -> {json.dumps(top_features, indent=4)}'
         )
         return top_features
+    
+    def summarise_selection(self, all_features) -> None:
+        """Summarise selection results over all seeds"""
+        for job_name in self.job_names:
+            out_dir = os.path.join(self.output_dir, job_name)
+            for seed in self.seeds:
+                features = all_features[seed][job_name]
+                pass
 
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds"""
         v_scoring_dict = self.config.verification.scoring[self.config.meta.learn_task]
         self.verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
-        clist = rcParams['axes.prop_cycle']
-        self.cgen = itertools.cycle(clist)
 
-        job_names = job_name_cleaner(self.jobs)
         fig_roc_jobs, ax_roc_jobs = plt.subplots()
         fig_prc_jobs, ax_prc_jobs = plt.subplots()
-        for job_name in job_names:
+        for job_name in self.job_names:
             out_dir = os.path.join(self.output_dir, job_name)
             fig_roc_models, ax_roc_models = plt.subplots()
             fig_prc_models, ax_prc_models = plt.subplots()

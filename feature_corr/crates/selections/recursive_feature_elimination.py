@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from loguru import logger
-from sklearn.feature_selection import RFECV
+from sklearn.feature_selection import RFECV, RFE
 
 from feature_corr.crates.helpers import init_estimator
+from feature_corr.crates.verifications.verification import CrossValidation
 
 
 class RecursiveFeatureElimination:
@@ -24,6 +25,7 @@ class RecursiveFeatureElimination:
         self.scoring = None
         self.class_weight = None
         self.learn_task = None
+        self.param_grids = None
         np.random.seed(self.seed)
 
     def __reduction(self, frame: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
@@ -34,10 +36,21 @@ class RecursiveFeatureElimination:
 
         y = frame[self.target_label]
         x = frame.drop(self.target_label, axis=1)
-        min_features = 1  # todo: make this configurable?
+        min_features = 1
+        optimiser = CrossValidation(
+            x,
+            y,
+            estimator,
+            cross_validator,
+            self.param_grids[rfe_estimator],
+            scoring,
+            self.seed,
+            self.workers,
+        )
+        estimator = optimiser()  # find estimator with ideal parameters
 
         selector = RFECV(
-            estimator=estimator,
+            estimator=estimator.best_estimator_,
             min_features_to_select=min_features,
             cv=cross_validator,
             scoring=scoring,
@@ -71,7 +84,6 @@ class RecursiveFeatureElimination:
 
         importances = pd.DataFrame(importances, index=x.columns[selector.support_], columns=['importance'])
         importances = importances.sort_values(by='importance', ascending=True)
-        importances = importances.iloc[-50:, :]  # keep only the top 50 features
 
         logger.info(
             f'Removed {len(x.columns) + 1 - len(frame.columns)} features with RFE and {rfe_estimator} estimator, '
@@ -128,8 +140,6 @@ class RecursiveFeatureElimination:
             len(ada_features),
             len(ef_features),
         )  # take the minimum length
-        if min_len >= 10:
-            min_len = 10
 
         sub_f_features = f_features[:min_len]  # take the top features
         sub_xg_features = xg_features[:min_len]
