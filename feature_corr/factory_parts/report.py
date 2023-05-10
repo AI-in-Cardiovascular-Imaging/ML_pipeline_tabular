@@ -4,6 +4,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from loguru import logger
 from matplotlib import rcParams
 from omegaconf import DictConfig
@@ -90,14 +91,46 @@ class Report(DataBorg):
             f'Rank frequency based top {min(return_top, len(top_features))} features -> {json.dumps(top_features, indent=4)}'
         )
         return top_features
-    
+
     def summarise_selection(self, all_features) -> None:
         """Summarise selection results over all seeds"""
         for job_name in self.job_names:
             out_dir = os.path.join(self.output_dir, job_name)
+            job_scores = {}
             for seed in self.seeds:
-                features = all_features[seed][job_name]
-                pass
+                features = all_features[str(seed)][job_name]
+                scores = len(features) * [1]
+                scores[: min(10, len(features))] = range(
+                    10, 10 - min(10, len(features)), -1
+                )  # first min(10, len(features)) features get rank score, rest get score of 1
+                for i, feature in enumerate(features):
+                    if feature in job_scores.keys():
+                        job_scores[feature] += scores[i]
+                    else:
+                        job_scores[feature] = scores[i]
+
+            job_scores = pd.DataFrame(job_scores.items(), columns=['feature', 'score'])
+            job_scores = job_scores.sort_values(by='score', ascending=True).reset_index(drop=True)
+            job_scores['score'] = job_scores['score'] / job_scores['score'].sum()
+
+            ax = job_scores.plot.barh(x='feature', y='score', figsize=(10, 10))
+            fig = ax.get_figure()
+            plt.title(f'Feature importance over all random seeds')
+            plt.xlabel('Feature importance')
+            plt.tight_layout()
+            plt.gca().legend_.remove()
+            plt.savefig(os.path.join(out_dir, f'feature_importance.pdf'), dpi=fig.dpi)
+            plt.close(fig)
+
+            job_scores = job_scores.iloc[-self.n_top_features:, :]
+            ax = job_scores.plot.barh(x='feature', y='score')
+            fig = ax.get_figure()
+            plt.title(f'Feature importance over all random seeds (top {self.n_top_features})')
+            plt.xlabel('Feature importance')
+            plt.tight_layout()
+            plt.gca().legend_.remove()
+            plt.savefig(os.path.join(out_dir, f'feature_importance_top{self.n_top_features}.pdf'), dpi=fig.dpi)
+            plt.close(fig)
 
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds"""
