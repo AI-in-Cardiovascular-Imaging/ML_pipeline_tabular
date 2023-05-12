@@ -33,6 +33,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.aggregated_jobs = config.meta.aggregated_jobs
         self.auto_norm_method = config.selection.auto_norm_method
         self.param_grids = config.verification.param_grids
+        self.n_top_features = config.verification.use_n_top_features
         self.job_name = ''
         self.job_dir = None
 

@@ -1,4 +1,5 @@
 import os
+import mrmr
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,17 +27,8 @@ class FeatureReductions:
         self.variance_thresh = None
         self.scoring = None
         self.learn_task = None
+        self.n_top_features = None
         np.random.seed(self.seed)
-
-    def mrmr(self, frame: pd.DataFrame) -> tuple:
-        """Reduce the number of features using a simple method"""
-        y_frame = frame[self.target_label]
-        x_frame = frame.drop(self.target_label, axis=1)
-
-
-        new_frame = pd.concat([x_frame, y_frame], axis=1)
-        features = list(x_frame.columns)
-        return new_frame, features
 
     def variance_threshold(self, frame: pd.DataFrame) -> tuple:
         """Remove features with variance below threshold"""
@@ -101,6 +93,29 @@ class FeatureReductions:
 
         new_frame = pd.concat([x_frame, y_frame], axis=1)
         features = list(x_frame.columns)
+        return new_frame, features
+
+    def mrmr(self, frame: pd.DataFrame) -> tuple:
+        """Maximum relevance minimum redundancy to select features"""
+        y_frame = frame[self.target_label]
+        x_frame = frame.drop(self.target_label, axis=1)
+        nunique = self.frame.nunique()
+        categorical = nunique[nunique <= 10].index
+        if self.learn_task == 'classification':
+            features = mrmr.mrmr_classif(
+                x_frame,
+                y_frame,
+                K=self.n_top_features,
+                relevance='ks',
+                cat_features=categorical,
+                n_jobs=self.workers,
+                show_progress=False,
+            )
+        else:
+            features = mrmr.mrmr_regression(x_frame, y_frame, K=self.n_top_features, n_jobs=self.workers)
+
+        x_frame = x_frame[features]
+        new_frame = pd.concat([x_frame, y_frame], axis=1)
         return new_frame, features
 
     def feature_wiz(self, frame: pd.DataFrame) -> tuple:
