@@ -100,7 +100,7 @@ class FeatureReductions:
         y_frame = frame[self.target_label]
         x_frame = frame.drop(self.target_label, axis=1)
         nunique = x_frame.nunique()
-        categorical = nunique[nunique <= 5].index
+        categorical = list(nunique[nunique <= 5].index)
         if self.learn_task == 'binary_classification':
             features = mrmr.mrmr_classif(
                 x_frame,
