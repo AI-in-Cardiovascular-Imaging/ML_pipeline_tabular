@@ -99,9 +99,9 @@ class FeatureReductions:
         """Maximum relevance minimum redundancy to select features"""
         y_frame = frame[self.target_label]
         x_frame = frame.drop(self.target_label, axis=1)
-        nunique = self.frame.nunique()
-        categorical = nunique[nunique <= 10].index
-        if self.learn_task == 'classification':
+        nunique = x_frame.nunique()
+        categorical = nunique[nunique <= 5].index
+        if self.learn_task == 'binary_classification':
             features = mrmr.mrmr_classif(
                 x_frame,
                 y_frame,
@@ -110,7 +110,7 @@ class FeatureReductions:
                 n_jobs=self.workers,
                 show_progress=False,
             )
-        else:
+        elif self.learn_task == 'regression':
             features = mrmr.mrmr_regression(
                 x_frame,
                 y_frame,
@@ -119,6 +119,9 @@ class FeatureReductions:
                 n_jobs=self.workers,
                 show_progress=False,
             )
+        else:
+            logger.error(f'Learn task {self.learn_task} has not yet been implemented.')
+            raise NotImplementedError
 
         x_frame = x_frame[features]
         new_frame = pd.concat([x_frame, y_frame], axis=1)
