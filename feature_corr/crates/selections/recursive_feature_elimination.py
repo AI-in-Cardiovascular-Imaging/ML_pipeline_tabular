@@ -1,6 +1,7 @@
 import os
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -100,7 +101,9 @@ class RecursiveFeatureElimination:
         plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.{self.plot_format}'), dpi=fig.dpi)
         plt.close(fig)
 
-        return frame, importances.index.tolist()[::-1]
+        features = importances.index.tolist()[::-1]
+
+        return frame, features
 
     def fr_logistic_regression(self, frame: pd.DataFrame) -> tuple:
         """Feature reduction using logistic regression estimator"""

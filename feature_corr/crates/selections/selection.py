@@ -47,13 +47,8 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
 
         frame = self.get_store('frame', self.state_name, 'selection_train')
         for step in job:
-            logger.info(f'Running -> {step}')
+            logger.info(f'Running -> {step} for state {self.state_name}')
             frame, features, error = self.process_job(step, frame)
-            # logger.debug(
-            #     f'\nStep outputs:'
-            #     f'\n  Frame_specs -> {type(frame)}{frame.shape}'
-            #     f'\n  Features -> {type(features)}{features}'
-            # )
             if error:
                 logger.error(f'Step {step} is invalid')
                 break

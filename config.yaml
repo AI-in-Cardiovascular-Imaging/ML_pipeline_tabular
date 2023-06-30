@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping_corr_ranking_corr_image_based" # experiment name
+  name: "phenomapping_corr_ranking_corr" # experiment name
   plot_format: "png"
   seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125]
@@ -16,7 +16,7 @@ meta:
   # input_file: "/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx"
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   output_dir: '/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/'
-  input_file: '/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx'
+  input_file: '/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose.xlsx'
 # specify the clean strategy
 inspection:
   label_as_index: "ATTRAS_Redcap" # column string name or None
@@ -78,7 +78,7 @@ selection:
 
 # verification strategy and final model to train and evaluate
 verification:
-  active: True # whether to perform verification analysis for each job
+  active: False # whether to perform verification analysis for each job
   use_n_top_features: [20, 5] # list of n_features to use for verification
   scoring:
     binary_classification:

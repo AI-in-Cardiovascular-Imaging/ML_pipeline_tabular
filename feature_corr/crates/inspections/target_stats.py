@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 from loguru import logger
 from omegaconf import OmegaConf
@@ -21,7 +23,23 @@ class TargetStatistics(DataBorg):
         super().__init__()
         self.config = config
         self.target_label = config.meta.target_label
+        self.out_dir = config.meta.output_dir
+        self.corr_method = config.selection.corr_method
         self.ephemeral_frame = self.get_frame('ephemeral')
+        self.corr_to_target()
+
+    def corr_to_target(self) -> None:
+        y = self.ephemeral_frame[self.target_label]
+        x = self.ephemeral_frame.drop(self.target_label, axis=1)
+        corr_series = x.corrwith(y, axis=0, method=self.corr_method).round(2)
+        corr_df = pd.DataFrame({'correlation_to_target': corr_series.values, 'feature': corr_series.index})
+        corr_df = corr_df.sort_values(by='correlation_to_target')
+        corr_df.to_csv(
+            os.path.join(self.out_dir, f'feature_{self.corr_method}_corr_target_{self.target_label}.txt'),
+            sep='\t',
+            header=True,
+            index=False,
+        )
 
     def show_target_statistics(self) -> None:
         """Show target statistics"""
