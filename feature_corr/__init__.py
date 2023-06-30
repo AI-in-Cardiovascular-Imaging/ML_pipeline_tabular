@@ -26,7 +26,3 @@ def start(config_file: str = None) -> None:
     TargetStatistics(config).show_target_statistics()
 
     Factory(config, report)()
-
-    # if config.meta.run_verification:
-    #     top_features = report.get_rank_frequency_based_features()
-    #     Verification(config, top_features)()

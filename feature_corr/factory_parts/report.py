@@ -58,41 +58,6 @@ class Report(DataBorg):
         else:
             logger.info(f'Saved features to -> {self.feature_file_path}')
 
-    def load_features(self) -> None:
-        """Load features from file"""
-        if not os.path.exists(self.feature_file_path):
-            raise FileNotFoundError(f'Could not find features file -> {self.feature_file_path}')
-        logger.info(f'Loading features from -> {self.feature_file_path}')
-        with open(self.feature_file_path, 'r', encoding='utf-8') as file:
-            self.all_features = json.load(file)
-        logger.trace(f'Features -> {json.dumps(self.all_features, indent=4)}')
-
-    def get_rank_frequency_based_features(self) -> list:
-        """Get ranked features"""
-        if self.all_features is None:
-            self.load_features()
-
-        store = {}
-        for state_name in self.all_features.keys():
-            for job_name in self.all_features[state_name].keys():
-                rank_score = 1000
-                for features in self.all_features[state_name][job_name]:
-                    for feature in [features]:
-                        if feature not in store:
-                            store[feature] = rank_score
-                        else:
-                            store[feature] += rank_score
-                        rank_score -= 1
-
-        sorted_store = {k: v for k, v in sorted(store.items(), key=lambda item: item[1], reverse=True)}
-        sorted_store = list(sorted_store.keys())
-        return_top = self.n_top_features
-        top_features = sorted_store[:return_top]
-        logger.info(
-            f'Rank frequency based top {min(return_top, len(top_features))} features -> {json.dumps(top_features, indent=4)}'
-        )
-        return top_features
-
     def summarise_selection(self, all_features) -> None:
         """Summarise selection results over all seeds"""
         for job_name in self.job_names:
@@ -123,18 +88,19 @@ class Report(DataBorg):
             plt.savefig(os.path.join(out_dir, f'avg_feature_importance.{self.plot_format}'), dpi=fig.dpi)
             plt.close(fig)
 
-            job_scores = job_scores.iloc[-self.n_top_features :, :]
-            ax = job_scores.plot.barh(x='feature', y='score')
-            fig = ax.get_figure()
-            plt.title(f'Average feature importance (top {self.n_top_features})')
-            plt.xlabel('Average feature importance')
-            plt.tight_layout()
-            plt.gca().legend_.remove()
-            plt.savefig(
-                os.path.join(out_dir, f'avg_feature_importance_top{self.n_top_features}.{self.plot_format}'),
-                dpi=fig.dpi,
-            )
-            plt.close(fig)
+            for n_top in self.n_top_features:
+                job_scores = job_scores.iloc[-n_top:, :]
+                ax = job_scores.plot.barh(x='feature', y='score')
+                fig = ax.get_figure()
+                plt.title(f'Average feature importance (top {n_top})')
+                plt.xlabel('Average feature importance')
+                plt.tight_layout()
+                plt.gca().legend_.remove()
+                plt.savefig(
+                    os.path.join(out_dir, f'avg_feature_importance_top{n_top}.{self.plot_format}'),
+                    dpi=fig.dpi,
+                )
+                plt.close(fig)
 
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds"""
@@ -145,36 +111,43 @@ class Report(DataBorg):
         fig_prc_jobs, ax_prc_jobs = plt.subplots()
         for job_name in self.job_names:
             out_dir = os.path.join(self.output_dir, job_name)
-            fig_roc_models, ax_roc_models = plt.subplots()
-            fig_prc_models, ax_prc_models = plt.subplots()
-            for model in self.models + self.ensemble:
-                fig_roc_baseline, ax_roc_baseline = plt.subplots()
-                fig_prc_baseline, ax_prc_baseline = plt.subplots()
-
-                self.average_scores(job_name, model)
-                self.plot_auc(ax_roc_models, ax_prc_models, label=f'{model}')
-                self.plot_auc(ax_roc_baseline, ax_prc_baseline, label=f'Top {self.n_top_features} features')
+            fig_roc_baseline = {}
+            ax_roc_baseline = {}
+            fig_prc_baseline = {}
+            ax_prc_baseline = {}
+            for model in self.models + self.ensemble:  # initialise model plots
+                fig_roc_baseline[model], ax_roc_baseline[model] = plt.subplots()
+                fig_prc_baseline[model], ax_prc_baseline[model] = plt.subplots()
                 self.average_scores('all_features', model)
-                self.plot_auc(ax_roc_baseline, ax_prc_baseline, label=f'All features')
+                self.plot_auc(ax_roc_baseline[model], ax_prc_baseline[model], label=f'All features')
+            for n_top in self.n_top_features:  # compute average scores and populate plots
+                fig_prc_models, ax_prc_models = plt.subplots()
+                fig_roc_models, ax_roc_models = plt.subplots()
+                for model in self.models + self.ensemble:
+                    self.average_scores(f'job_name_{n_top}', model)
+                    self.plot_auc(ax_roc_models, ax_prc_models, label=f'{model}')
+                    self.plot_auc(ax_roc_baseline[model], ax_prc_baseline[model], label=f'Top {n_top} features')
+
                 self.save_plots(
-                    fig_roc_baseline,
-                    ax_roc_baseline,
-                    fig_prc_baseline,
-                    ax_prc_baseline,
+                    fig_roc_models,
+                    ax_roc_models,
+                    fig_prc_models,
+                    ax_prc_models,
+                    self.pos_rate,
+                    out_dir,
+                    f'all_models_top_{n_top}.{self.plot_format}',
+                )
+
+            for model in self.models + self.ensemble:
+                self.save_plots(
+                    fig_roc_baseline[model],
+                    ax_roc_baseline[model],
+                    fig_prc_baseline[model],
+                    ax_prc_baseline[model],
                     self.pos_rate,
                     os.path.join(out_dir, model),
                     f'baseline.{self.plot_format}',
                 )
-
-            self.save_plots(
-                fig_roc_models,
-                ax_roc_models,
-                fig_prc_models,
-                ax_prc_models,
-                self.pos_rate,
-                out_dir,
-                f'all_models.{self.plot_format}',
-            )
 
     def average_scores(self, job_name, model) -> None:
         tprs = []

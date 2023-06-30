@@ -91,13 +91,18 @@ class Verification(DataBorg, Normalisers):
         if job_name == 'all_features':
             logger.info('Evaluating baseline performance using all features')
             self.top_features = self.get_store('feature', str(self.seed), job_name)
+            self.pre_process_frame()
+            self.train_test_split()
+            self.train_models()  # optimise all models
+            self.evaluate(job_name)  # evaluate all optimised models
         else:
-            logger.info('Verifying final feature importance')
-            self.top_features = self.get_store('feature', str(self.seed), job_name)[: self.n_top_features]
-        self.pre_process_frame()
-        self.train_test_split()
-        self.train_models()  # optimise all models
-        self.evaluate(job_name)  # evaluate all optimised models
+            for n_top in self.n_top_features:
+                logger.info(f'Verifying final feature importance for top {n_top} features')
+                self.top_features = self.get_store('feature', str(self.seed), job_name)[:n_top]
+                self.pre_process_frame()
+                self.train_test_split()
+                self.train_models()  # optimise all models
+                self.evaluate(f'job_name_{n_top}')  # evaluate all optimised models
 
     def pre_process_frame(self) -> None:
         """Pre-process frame for verification"""
