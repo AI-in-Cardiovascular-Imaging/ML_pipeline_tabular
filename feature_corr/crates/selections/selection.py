@@ -18,6 +18,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
+        self.plot_format = config.meta.plot_format
         self.seed = config.meta.seed
         self.workers = config.meta.workers
         self.jobs = config.selection.jobs

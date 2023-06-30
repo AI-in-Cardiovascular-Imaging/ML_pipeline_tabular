@@ -1,9 +1,10 @@
 # meta specifies the experiment name and the random seed
 meta:
   name: "phenomapping" # experiment name
+  plot_format: "png"
   seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125, 467, 822, 943]
-  workers: 8 # number of workers for parallel processing
+  workers: 24 # number of workers for parallel processing
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   logging_level: "ERROR" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 

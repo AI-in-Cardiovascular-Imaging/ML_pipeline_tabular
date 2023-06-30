@@ -22,6 +22,7 @@ class Report(DataBorg):
         experiment_name = config.meta.name
         self.seeds = config.meta.seed
         self.output_dir = os.path.join(config.meta.output_dir, experiment_name)
+        self.plot_format = config.meta.plot_format
         self.feature_file_path = os.path.join(self.output_dir, 'all_features.json')
         self.jobs = config.selection.jobs
         self.job_names = job_name_cleaner(self.jobs)
@@ -115,21 +116,24 @@ class Report(DataBorg):
 
             ax = job_scores.plot.barh(x='feature', y='score', figsize=(10, 10))
             fig = ax.get_figure()
-            plt.title(f'Feature importance over all random seeds')
-            plt.xlabel('Feature importance')
+            plt.title(f'Average feature importance')
+            plt.xlabel('Average feature importance')
             plt.tight_layout()
             plt.gca().legend_.remove()
-            plt.savefig(os.path.join(out_dir, f'feature_importance.pdf'), dpi=fig.dpi)
+            plt.savefig(os.path.join(out_dir, f'avg_feature_importance.{self.plot_format}'), dpi=fig.dpi)
             plt.close(fig)
 
-            job_scores = job_scores.iloc[-self.n_top_features:, :]
+            job_scores = job_scores.iloc[-self.n_top_features :, :]
             ax = job_scores.plot.barh(x='feature', y='score')
             fig = ax.get_figure()
-            plt.title(f'Feature importance over all random seeds (top {self.n_top_features})')
-            plt.xlabel('Feature importance')
+            plt.title(f'Average feature importance (top {self.n_top_features})')
+            plt.xlabel('Average feature importance')
             plt.tight_layout()
             plt.gca().legend_.remove()
-            plt.savefig(os.path.join(out_dir, f'feature_importance_top{self.n_top_features}.pdf'), dpi=fig.dpi)
+            plt.savefig(
+                os.path.join(out_dir, f'avg_feature_importance_top{self.n_top_features}.{self.plot_format}'),
+                dpi=fig.dpi,
+            )
             plt.close(fig)
 
     def summarise_verification(self) -> None:
@@ -159,7 +163,7 @@ class Report(DataBorg):
                     ax_prc_baseline,
                     self.pos_rate,
                     os.path.join(out_dir, model),
-                    'baseline.pdf',
+                    f'baseline.{self.plot_format}',
                 )
 
             self.save_plots(
@@ -169,7 +173,7 @@ class Report(DataBorg):
                 ax_prc_models,
                 self.pos_rate,
                 out_dir,
-                'all_models.pdf',
+                f'all_models.{self.plot_format}',
             )
 
     def average_scores(self, job_name, model) -> None:
