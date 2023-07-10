@@ -9,7 +9,7 @@ from feature_corr.data_borg import DataBorg
 
 
 class CleanUp(DataBorg):
-    """ "Clean up data"""
+    """Clean up data"""
 
     def __init__(self, config) -> None:
         super().__init__()

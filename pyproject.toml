@@ -36,6 +36,7 @@ llvmlite = "^0.39.1"
 dictlib = "^1.1.5"
 mrmr-selection = "^0.2.6"
 alibi = "^0.9.3"
+shap = "*"
 
 [tool.poetry.group.dev.dependencies]
 autohooks = "^23.1.0"

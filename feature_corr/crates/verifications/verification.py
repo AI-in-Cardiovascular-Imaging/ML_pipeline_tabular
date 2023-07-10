@@ -1,4 +1,5 @@
 import os
+import shap
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -10,7 +11,8 @@ from omegaconf import DictConfig
 from sklearn.ensemble import VotingClassifier, VotingRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
-from alibi.explainers import ALE, plot_ale
+from alibi.explainers import ALE, plot_ale, PartialDependenceVariance, plot_pd_variance, TreeShap
+from alibi.utils import gen_category_map
 
 from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.helpers import init_estimator
@@ -197,13 +199,40 @@ class Verification(DataBorg, Normalisers):
                     f'0/{int(self.y_test.sum())} positive samples were predicted using top features {self.top_features}.'
                 )
 
-            if not job_name == 'all_features':  # no need to perform model on all features
+            if not job_name == 'all_features' and not model in self.ensemble:
+                # ALE (accumulated local effects)
                 ale_fig, ale_ax = plt.subplots()
                 target_names = [self.target_label] if self.learn_task == 'binary_classification' else None
                 ale = ALE(pred_func, feature_names=self.top_features, target_names=target_names)
                 ale_expl = ale.explain(self.x_train[self.top_features].values)
                 plot_ale(ale_expl, n_cols=n_top // 5, fig_kw={'figwidth': 12, 'figheight': 8}, sharey='all', ax=ale_ax)
                 ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}.{self.plot_format}'))
+
+                # PDV (partial dependence variance)
+                # pdv_fig, pdv_ax = plt.subplots()
+                # pdv = PartialDependenceVariance(pred_func, feature_names=self.top_features, target_names=target_names)
+                # pdv_expl = pdv.explain(self.x_train[self.top_features].values, method='interaction')
+                # plot_pd_variance(
+                #     pdv_expl, n_cols=n_top // 5, fig_kw={'figwidth': 12, 'figheight': 8}, ax=pdv_ax, top_k=n_top
+                # )
+                # pdv_fig.savefig(os.path.join(job_dir, f'PDV_interaction_{model}.{self.plot_format}'))
+
+                # tree SHAP (shapley additive explanations)
+                if model in ['forest', 'extreme_forest', 'adaboost', 'xgboost']:
+                    tshap_fig, tshap_ax = plt.subplots()
+                    tshap = TreeShap(estimator, model_output='raw')
+                    tshap.fit()
+                    tshap_expl = tshap.explain(self.x_test[self.top_features].values, feature_names=self.top_features)
+                    logger.debug(tshap_expl.shap_values)
+                    shap_values = tshap_expl.shap_values[0]
+                    shap.summary_plot(
+                        shap_values,
+                        self.x_test[self.top_features].values,
+                        feature_names=self.top_features,
+                        class_names=target_names,
+                        show=False
+                    )
+                    tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}.{self.plot_format}'))
 
         self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
 
