@@ -1,5 +1,8 @@
+import os
+
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import sklearn.metrics as metrics
 from loguru import logger
@@ -7,9 +10,11 @@ from omegaconf import DictConfig
 from sklearn.ensemble import VotingClassifier, VotingRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
+from alibi.explainers import ALE, plot_ale
 
 from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.helpers import init_estimator
+from feature_corr.crates.helpers import job_name_cleaner
 from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.normalisers import Normalisers
@@ -58,11 +63,11 @@ class Verification(DataBorg, Normalisers):
         super().__init__()
         self.config = config
         self.seed = config.meta.seed
+        self.plot_format = config.meta.plot_format
         self.workers = config.meta.workers
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
-        self.jobs = config.selection.jobs
         self.train_scoring = config.selection.scoring
         self.class_weight = config.selection.class_weight
         self.n_top_features = self.config.verification.use_n_top_features
@@ -81,7 +86,7 @@ class Verification(DataBorg, Normalisers):
         self.x_test = None
         self.y_test = None
 
-    def __call__(self, job_name) -> None:
+    def __call__(self, job_name, job_dir) -> None:
         """Train classifier to verify final feature importance"""
 
         # TODO: maybe there is a better way to do this
@@ -94,7 +99,7 @@ class Verification(DataBorg, Normalisers):
             self.pre_process_frame()
             self.train_test_split()
             self.train_models()  # optimise all models
-            self.evaluate(job_name)  # evaluate all optimised models
+            self.evaluate(job_name, job_dir, None)  # evaluate all optimised models
         else:
             for n_top in self.n_top_features:
                 logger.info(f'Verifying final feature importance for top {n_top} features')
@@ -102,7 +107,7 @@ class Verification(DataBorg, Normalisers):
                 self.pre_process_frame()
                 self.train_test_split()
                 self.train_models()  # optimise all models
-                self.evaluate(f'job_name_{n_top}')  # evaluate all optimised models
+                self.evaluate(f'job_name_{n_top}', job_dir, n_top)  # evaluate all optimised models
 
     def pre_process_frame(self) -> None:
         """Pre-process frame for verification"""
@@ -166,7 +171,7 @@ class Verification(DataBorg, Normalisers):
 
             self.best_estimators[ensemble] = ens_estimator  # store for evaluation later
 
-    def evaluate(self, job_name) -> None:
+    def evaluate(self, job_name, job_dir, n_top) -> None:
         """Evaluate all optimised models"""
         scores = NestedDefaultDict()
         for i, model in enumerate(self.models + self.ensemble):
@@ -174,7 +179,7 @@ class Verification(DataBorg, Normalisers):
             scores[model] = {}
             estimator = self.best_estimators[model]
             y_pred = estimator.predict(self.x_test[self.top_features])
-            probas, fpr, tpr, precision, recall = self.auc(estimator)
+            pred_func, probas, fpr, tpr, precision, recall = self.get_predictions(estimator)
             for score in self.verif_scoring:  # calculate and store all requested scores
                 try:
                     scores[model][score] = getattr(metrics, score)(self.y_test, probas)
@@ -191,6 +196,14 @@ class Verification(DataBorg, Normalisers):
                 logger.warning(
                     f'0/{int(self.y_test.sum())} positive samples were predicted using top features {self.top_features}.'
                 )
+
+            if not job_name == 'all_features':  # no need to perform model on all features
+                ale_fig, ale_ax = plt.subplots()
+                target_names = [self.target_label] if self.learn_task == 'binary_classification' else None
+                ale = ALE(pred_func, feature_names=self.top_features, target_names=target_names)
+                ale_expl = ale.explain(self.x_train[self.top_features].values)
+                plot_ale(ale_expl, n_cols=n_top // 5, fig_kw={'figwidth': 12, 'figheight': 8}, sharey='all', ax=ale_ax)
+                ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}.{self.plot_format}'))
 
         self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
 
@@ -225,15 +238,17 @@ class Verification(DataBorg, Normalisers):
         else:
             NotImplementedError(f'{self.learn_task} has not yet been implemented.')
 
-    def auc(self, best_estimator):
-        try:  # for logistic regression
+    def get_predictions(self, best_estimator):
+        try:  # e.g. for logistic regression
+            pred_func = best_estimator.decision_function
             probas = best_estimator.decision_function(self.x_test[self.top_features])
         except AttributeError:  # other estimators
+            pred_func = best_estimator.predict_proba
             probas = best_estimator.predict_proba(self.x_test[self.top_features])[:, 1]
         fpr, tpr, _ = metrics.roc_curve(self.y_test, probas, drop_intermediate=True)  # AUROC
         precision, recall, _ = metrics.precision_recall_curve(self.y_test, probas)  # AUPRC
 
-        return probas, fpr, tpr, precision, recall
+        return pred_func, probas, fpr, tpr, precision, recall
 
     def split_frame(self, frame: pd.DataFrame) -> tuple:
         """Prepare frame for verification"""

@@ -41,7 +41,7 @@ class Pipeline(DataBorg):
         self.impute()
         self.data_split()
 
-        self.verification('all_features')  # run only once per data split, not for every job
+        self.verification('all_features', None)  # run only once per data split, not for every job
 
         job_names = job_name_cleaner(self.jobs)
         for job, job_name in zip(self.jobs, job_names):
@@ -49,7 +49,7 @@ class Pipeline(DataBorg):
             job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, self.state_name)
             os.makedirs(job_dir, exist_ok=True)
             self.selection(job, job_name, job_dir)
-            self.verification(job_name)
+            self.verification(job_name, job_dir)
 
     def __del__(self):
         """Delete assigned state data store"""
@@ -74,6 +74,6 @@ class Pipeline(DataBorg):
         Selection(self.config)(job, job_name, job_dir)
 
     @run_when_active
-    def verification(self, job_name) -> None:
+    def verification(self, job_name, job_dir) -> None:
         """Verify selected features"""
-        Verification(self.config)(job_name)
+        Verification(self.config)(job_name, job_dir)
