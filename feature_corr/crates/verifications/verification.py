@@ -195,17 +195,27 @@ class Verification(DataBorg, Normalisers):
             scores[model]['pos_rate'] = round(self.y_test.sum() / len(self.y_test), 3)
 
             if y_pred.sum() == 0:
-                logger.warning(
-                    f'0/{int(self.y_test.sum())} positive samples were predicted using top features {self.top_features}.'
-                )
+                logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
 
             if not job_name == 'all_features' and not model in self.ensemble:
                 # ALE (accumulated local effects)
                 ale_fig, ale_ax = plt.subplots()
-                target_names = [self.target_label] if self.learn_task == 'binary_classification' else None
+                if self.learn_task == 'binary_classification':
+                    target_names = (
+                        ['0', self.target_label] if model in ['forest', 'extreme_forest'] else [self.target_label]
+                    )
+                else:
+                    target_names = None
                 ale = ALE(pred_func, feature_names=self.top_features, target_names=target_names)
                 ale_expl = ale.explain(self.x_train[self.top_features].values)
-                plot_ale(ale_expl, n_cols=n_top // 5, fig_kw={'figwidth': 12, 'figheight': 8}, sharey='all', ax=ale_ax)
+                plot_ale(
+                    ale_expl,
+                    n_cols=n_top // 5 + 1,
+                    targets=[target_names[-1]],
+                    fig_kw={'figwidth': 8, 'figheight': 8},
+                    sharey='all',
+                    ax=ale_ax,
+                )
                 ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}.{self.plot_format}'))
 
                 # PDV (partial dependence variance)
@@ -213,24 +223,23 @@ class Verification(DataBorg, Normalisers):
                 # pdv = PartialDependenceVariance(pred_func, feature_names=self.top_features, target_names=target_names)
                 # pdv_expl = pdv.explain(self.x_train[self.top_features].values, method='interaction')
                 # plot_pd_variance(
-                #     pdv_expl, n_cols=n_top // 5, fig_kw={'figwidth': 12, 'figheight': 8}, ax=pdv_ax, top_k=n_top
+                #     pdv_expl, n_cols=n_top // 5 + 1, fig_kw={'figwidth': 8, 'figheight': 8}, ax=pdv_ax, top_k=n_top
                 # )
                 # pdv_fig.savefig(os.path.join(job_dir, f'PDV_interaction_{model}.{self.plot_format}'))
 
                 # tree SHAP (shapley additive explanations)
-                if model in ['forest', 'extreme_forest', 'adaboost', 'xgboost']:
+                if model in ['forest', 'extreme_forest', 'xgboost']:
                     tshap_fig, tshap_ax = plt.subplots()
-                    tshap = TreeShap(estimator, model_output='raw')
+                    tshap = TreeShap(estimator.best_estimator_, model_output='raw')
                     tshap.fit()
                     tshap_expl = tshap.explain(self.x_test[self.top_features].values, feature_names=self.top_features)
-                    logger.debug(tshap_expl.shap_values)
-                    shap_values = tshap_expl.shap_values[0]
+                    shap_values = tshap_expl.shap_values[-1]  # display values for positive class
                     shap.summary_plot(
                         shap_values,
                         self.x_test[self.top_features].values,
                         feature_names=self.top_features,
                         class_names=target_names,
-                        show=False
+                        show=False,
                     )
                     tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}.{self.plot_format}'))
 
