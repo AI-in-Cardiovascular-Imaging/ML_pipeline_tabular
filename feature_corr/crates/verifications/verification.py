@@ -12,11 +12,9 @@ from sklearn.ensemble import VotingClassifier, VotingRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 from alibi.explainers import ALE, plot_ale, PartialDependenceVariance, plot_pd_variance, TreeShap
-from alibi.utils import gen_category_map
 
 from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.helpers import init_estimator
-from feature_corr.crates.helpers import job_name_cleaner
 from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.normalisers import Normalisers
@@ -124,7 +122,7 @@ class Verification(DataBorg, Normalisers):
         v_train = self.get_store('frame', 'verification', 'verification_train')
         v_test = self.get_store('frame', 'verification', 'verification_test')
         self.x_train, self.y_train = self.split_frame(v_train)
-        self.x_test, self.y_test = self.split_frame(v_test)
+        self.x_test, self.y_test = self.split_frame(v_test, normalise=True)  # test data not yet normalised
 
     def train_models(self) -> None:
         """Train classifier to verify feature importance"""
@@ -288,12 +286,21 @@ class Verification(DataBorg, Normalisers):
 
         return pred_func, probas, fpr, tpr, precision, recall
 
-    def split_frame(self, frame: pd.DataFrame) -> tuple:
+    def split_frame(self, frame: pd.DataFrame, normalise=False) -> tuple:
         """Prepare frame for verification"""
-        frame, _ = self.z_score_norm(frame)  # todo: config
+        if normalise:
+            frame = self.normalise_test(frame)
         y_frame = frame[self.target_label]
         x_frame = frame[self.top_features]  # only keep top features
         if self.target_label in x_frame.columns:
             x_frame = x_frame.drop(self.target_label, axis=1)
             logger.warning(f'{self.target_label} was found in the top features for validation')
         return x_frame, y_frame
+    
+    def normalise_test(self, frame: pd.DataFrame) -> pd.DataFrame:
+        tmp_label = frame[self.target_label]  # keep label col as is
+        arr_frame = frame.values  # returns a numpy array
+        norm_frame = self.scaler.transform(arr_frame)
+        norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns)
+        norm_frame[self.target_label] = tmp_label
+        return norm_frame

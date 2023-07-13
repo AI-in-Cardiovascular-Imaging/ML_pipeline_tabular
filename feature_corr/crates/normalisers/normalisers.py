@@ -4,7 +4,6 @@ import pandas as pd
 from loguru import logger
 from sklearn import preprocessing
 
-
 def data_bubble(func):
     """Pre and post processing for normalisation methods"""
 
@@ -29,6 +28,7 @@ class Normalisers:
     def __init__(self, target_label=None) -> None:
         self.target_label = target_label
         self.auto_norm_method = None
+        self.scaler = None
 
     @data_bubble
     def l1_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
@@ -43,7 +43,8 @@ class Normalisers:
     @data_bubble
     def z_score_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Z score frame"""
-        return preprocessing.StandardScaler().fit_transform(frame)
+        self.scaler = preprocessing.StandardScaler()
+        return self.scaler.fit_transform(frame)
 
     @data_bubble
     def min_max_norm(self, frame: pd.DataFrame) -> pd.DataFrame:

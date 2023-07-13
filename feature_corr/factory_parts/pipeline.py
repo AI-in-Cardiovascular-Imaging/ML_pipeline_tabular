@@ -6,9 +6,10 @@ from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.helpers import job_name_cleaner
 from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.inspections import TargetStatistics
+from feature_corr.crates.normalisers import Normalisers
 from feature_corr.crates.selections import Selection
 from feature_corr.crates.verifications import Verification
-from feature_corr.data_borg import DataBorg
+from feature_corr.data_borg.data_borg import DataBorg
 
 
 def run_when_active(func):
@@ -23,7 +24,7 @@ def run_when_active(func):
     return wrapper
 
 
-class Pipeline(DataBorg):
+class Pipeline(DataBorg, Normalisers):
     """Pipeline definition"""
 
     def __init__(self, config) -> None:
@@ -40,7 +41,9 @@ class Pipeline(DataBorg):
         """Iterate over pipeline steps"""
         self.impute()
         self.data_split()
-
+        norm = [step for step in self.jobs[0] if 'norm' in step][0]  # need to init first normalisation for verification
+        train_frame = self.get_store('frame', self.state_name, 'selection_train')
+        _ = getattr(self, norm)(train_frame)
         self.verification('all_features', None)  # run only once per data split, not for every job
 
         job_names = job_name_cleaner(self.jobs)
