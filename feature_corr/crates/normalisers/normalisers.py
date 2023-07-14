@@ -33,12 +33,14 @@ class Normalisers:
     @data_bubble
     def l1_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """L1 normalise frame"""
-        return preprocessing.Normalizer(norm='l1').fit_transform(frame.T).T  # l1 normalisation with transposed frame
+        self.scaler = preprocessing.Normalizer(norm='l1')
+        return self.scaler.fit_transform(frame.T).T  # l1 normalisation with transposed frame
 
     @data_bubble
     def l2_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """L2 normalise frame"""
-        return preprocessing.Normalizer(norm='l2').fit_transform(frame.T).T  # l2 normalisation with transposed frame
+        self.scaler = preprocessing.Normalizer(norm='l2')
+        return self.scaler.fit_transform(frame.T).T  # l2 normalisation with transposed frame
 
     @data_bubble
     def z_score_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
@@ -49,27 +51,32 @@ class Normalisers:
     @data_bubble
     def min_max_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Min max scale frame"""
-        return preprocessing.MinMaxScaler().fit_transform(frame)  # default is 0-1
+        self.scaler = preprocessing.MinMaxScaler()
+        return self.scaler.fit_transform(frame)  # default is 0-1
 
     @data_bubble
     def max_abs_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Max abs scale frame"""
-        return preprocessing.MaxAbsScaler().fit_transform(frame)  # default is 0-1
+        self.scaler = preprocessing.MaxAbsScaler()
+        return self.scaler.fit_transform(frame)  # default is 0-1
 
     @data_bubble
     def robust_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Robust scale frame"""
-        return preprocessing.RobustScaler().fit_transform(frame)
+        self.scaler = preprocessing.RobustScaler()
+        return self.scaler.fit_transform(frame)
 
     @data_bubble
     def quantile_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Quantile transform frame"""
-        return preprocessing.QuantileTransformer().fit_transform(frame)
+        self.scaler = preprocessing.QuantileTransformer()
+        return self.scaler.fit_transform(frame)
 
     @data_bubble
     def power_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """Power transform frame"""
-        return preprocessing.PowerTransformer().fit_transform(frame)
+        self.scaler = preprocessing.PowerTransformer()
+        return self.scaler.fit_transform(frame)
 
     def auto_norm(self, frame: pd.DataFrame) -> tuple:
         """Auto normalise frame based on data type per column"""
