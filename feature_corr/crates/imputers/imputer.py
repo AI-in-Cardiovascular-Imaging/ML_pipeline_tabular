@@ -14,8 +14,8 @@ def data_bubble(func):
 
     def wrapper(self, *args) -> None:
         frame = args[0]
-        impute = func(self)
-        imp_frame = impute.fit_transform(frame)
+        imputer = func(self)
+        imp_frame = imputer.fit_transform(frame)
         imp_frame = pd.DataFrame(imp_frame, index=frame.index, columns=frame.columns)
         if len(frame.columns) != len(imp_frame.columns):
             logger.info(
@@ -24,7 +24,7 @@ def data_bubble(func):
         self.set_store('frame', self.state_name, 'ephemeral', imp_frame)
         if len(imp_frame) == 0:
             raise ValueError('No cases left after dropping NaN values, use another imputation method or clean data')
-
+        return imputer
     return wrapper
 
 
@@ -37,21 +37,13 @@ class Imputer(DataBorg):
         self.seed = config.meta.seed
         self.state_name = config.meta.state_name
         self.impute_method = config.impute.method
+        self.imputer = None
 
     def __call__(self) -> None:
         """Impute missing data"""
         ephemeral_frame = self.get_store('frame', self.state_name, 'ephemeral')
         if self._check_methods():
             return getattr(self, self.impute_method)(ephemeral_frame)
-
-    def verification_mode(self, frame: pd.DataFrame, seed: int) -> None:
-        """Impute missing data for verification mode"""
-        self.seed = seed
-        tmp_state = self.state_name
-        self.state_name = 'verification'
-        if self._check_methods():
-            return getattr(self, self.impute_method)(frame)
-        self.state_name = tmp_state
 
     def _check_methods(self) -> bool:
         """Check if the given method is valid"""
@@ -72,33 +64,37 @@ class Imputer(DataBorg):
     @data_bubble
     def iterative_impute(self) -> IterativeImputer:
         """Iterative impute"""
-        return IterativeImputer(
+        self.imputer = IterativeImputer(
             initial_strategy='median',
             max_iter=100,
             random_state=self.seed,
             keep_empty_features=True,
         )
+        return self.imputer
 
     @data_bubble
     def simple_impute(self) -> SimpleImputer:
         """Simple impute"""
-        return SimpleImputer(
+        self.imputer = SimpleImputer(
             strategy='median',
             keep_empty_features=True,
         )
+        return self.imputer
 
     @data_bubble
     def missing_indicator_impute(self) -> MissingIndicator:
         """Missing indicator impute"""
-        return MissingIndicator(
+        self.imputer = MissingIndicator(
             missing_values=np.nan,
             features='all',
         )
+        return self.imputer
 
     @data_bubble
     def knn_impute(self) -> KNNImputer:
         """KNN impute"""
-        return KNNImputer(
+        self.imputer = KNNImputer(
             n_neighbors=5,
             keep_empty_features=True,
         )
+        return self.imputer

@@ -19,7 +19,7 @@ def run_when_active(func):
         func_name = func.__name__
         if self.config[func_name]['active']:
             logger.info(f'Running -> {func_name}')
-            func(self, *args, **kwargs)
+            return func(self, *args, **kwargs)
 
     return wrapper
 
@@ -39,12 +39,12 @@ class Pipeline(DataBorg, Normalisers):
 
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
-        self.impute()
+        imputer = self.impute()
         self.data_split()
         norm = [step for step in self.jobs[0] if 'norm' in step][0]  # need to init first normalisation for verification
         train_frame = self.get_store('frame', self.state_name, 'selection_train')
         _ = getattr(self, norm)(train_frame)
-        self.verification('all_features', None)  # run only once per data split, not for every job
+        self.verification('all_features', None, imputer)  # run only once per data split, not for every job
 
         job_names = job_name_cleaner(self.jobs)
         for job, job_name in zip(self.jobs, job_names):
@@ -52,7 +52,7 @@ class Pipeline(DataBorg, Normalisers):
             job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, self.state_name)
             os.makedirs(job_dir, exist_ok=True)
             self.selection(job, job_name, job_dir)
-            self.verification(job_name, job_dir)
+            self.verification(job_name, job_dir, imputer)
 
     def __del__(self):
         """Delete assigned state data store"""
@@ -65,7 +65,8 @@ class Pipeline(DataBorg, Normalisers):
     @run_when_active
     def impute(self) -> None:
         """Impute data"""
-        Imputer(self.config)()
+        imputer = Imputer(self.config)()
+        return imputer
 
     def data_split(self) -> None:
         """Split data"""
@@ -77,6 +78,6 @@ class Pipeline(DataBorg, Normalisers):
         Selection(self.config)(job, job_name, job_dir)
 
     @run_when_active
-    def verification(self, job_name, job_dir) -> None:
+    def verification(self, job_name, job_dir, imputer) -> None:
         """Verify selected features"""
-        Verification(self.config)(job_name, job_dir)
+        Verification(self.config)(job_name, job_dir, imputer)

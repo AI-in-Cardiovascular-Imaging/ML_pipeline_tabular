@@ -86,12 +86,13 @@ class Verification(DataBorg, Normalisers):
         self.x_test = None
         self.y_test = None
 
-    def __call__(self, job_name, job_dir) -> None:
+    def __call__(self, job_name, job_dir, imputer) -> None:
         """Train classifier to verify final feature importance"""
 
         # TODO: maybe there is a better way to do this
         self.config.impute.method = 'simple_impute'
         self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
+        self.imputer = imputer
 
         if job_name == 'all_features':
             logger.info('Evaluating baseline performance using all features')
@@ -113,8 +114,9 @@ class Verification(DataBorg, Normalisers):
         """Pre-process frame for verification"""
         frame = self.get_frame('ephemeral')
         TargetStatistics(self.config).verification_mode(frame)
-        Imputer(self.config).verification_mode(frame, self.seed)
-        frame = self.get_store('frame', 'verification', 'ephemeral')
+        imp_frame = self.imputer.transform(frame)
+        frame = pd.DataFrame(imp_frame, index=frame.index, columns=frame.columns)
+        self.set_store('frame', 'verification', 'ephemeral', frame)
         DataSplit(self.config).verification_mode(frame)
 
     def train_test_split(self) -> None:
