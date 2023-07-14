@@ -21,7 +21,7 @@ def data_bubble(func):
             logger.info(
                 f'{self.impute_method} reduced features from {len(frame.columns)-1} -> {len(imp_frame.columns)-1}'
             )
-        self.set_store('frame', self.state_name, 'ephemeral', imp_frame)
+        self.set_store('frame', self.state_name, 'selection_train', imp_frame)
         if len(imp_frame) == 0:
             raise ValueError('No cases left after dropping NaN values, use another imputation method or clean data')
         return imputer
@@ -41,7 +41,7 @@ class Imputer(DataBorg):
 
     def __call__(self) -> None:
         """Impute missing data"""
-        ephemeral_frame = self.get_store('frame', self.state_name, 'ephemeral')
+        ephemeral_frame = self.get_store('frame', self.state_name, 'selection_train')
         if self._check_methods():
             return getattr(self, self.impute_method)(ephemeral_frame)
 

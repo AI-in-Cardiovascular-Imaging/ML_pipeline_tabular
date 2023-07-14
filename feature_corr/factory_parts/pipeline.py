@@ -39,8 +39,8 @@ class Pipeline(DataBorg, Normalisers):
 
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
-        imputer = self.impute()
         self.data_split()
+        imputer = self.impute()
         norm = [step for step in self.jobs[0] if 'norm' in step][0]  # need to init first normalisation for verification
         train_frame = self.get_store('frame', self.state_name, 'selection_train')
         _ = getattr(self, norm)(train_frame)

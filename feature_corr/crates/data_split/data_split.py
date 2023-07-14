@@ -48,8 +48,8 @@ class DataSplit(DataBorg):
         self.state_name = tmp_state
 
     def split_frame(self) -> None:
-        if self.frame.isnull().values.any():
-            raise ValueError('Data contains NaN values, clean up or impute data first')
+        # if self.frame.isnull().values.any():
+        #     raise ValueError('Data contains NaN values, clean up or impute data first')
 
         self.set_stratification(self.frame)
         s_frame, v_frame = self.create_selection_verification_set()
@@ -65,10 +65,10 @@ class DataSplit(DataBorg):
 
         # self.show_stats(s_train, v_train, v_test, 'Data split stats')
 
-        if self.over_sample_selection:
-            s_train = self.over_sampling(s_train)
-        if self.over_sample_verification:
-            v_train = self.over_sampling(v_train)
+        # if self.over_sample_selection:
+        #     s_train = self.over_sampling(s_train)
+        # if self.over_sample_verification:
+        #     v_train = self.over_sampling(v_train)
 
         # if self.over_sample_selection or self.over_sample_verification:
         #     self.show_stats(s_train, v_train, v_test, 'Data split stats after over sampling')
