@@ -1,6 +1,17 @@
 import os
 
+import pandas as pd
 from loguru import logger
+from imblearn.over_sampling import (
+    ADASYN,
+    SMOTE,
+    SMOTEN,
+    SMOTENC,
+    SVMSMOTE,
+    BorderlineSMOTE,
+    KMeansSMOTE,
+    RandomOverSampler,
+)
 
 from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.helpers import job_name_cleaner
@@ -31,9 +42,14 @@ class Pipeline(DataBorg, Normalisers):
         super().__init__()
         self.config = config
         self.experiment_name = config.meta.name
+        self.seed = config.meta.seed
         self.state_name = config.meta.state_name
         self.out_dir = config.meta.output_dir
+        self.learn_task = config.meta.learn_task
         self.jobs = config.selection.jobs
+        self.over_sample_selection = config.data_split.over_sample_selection
+        self.over_sample_verification = config.data_split.over_sample_verification
+        self.over_sample_method = config.data_split.over_sample_method
         self.add_state_name(self.state_name)
         self.sync_ephemeral_data_to_data_store(self.state_name, 'ephemeral')
 
@@ -41,6 +57,15 @@ class Pipeline(DataBorg, Normalisers):
         """Iterate over pipeline steps"""
         self.data_split()
         imputer = self.impute()
+        if self.over_sample_selection:
+            s_train = self.over_sampling(self.get_store('frame', self.state_name, 'selection_train'))
+            self.set_store('frame', self.state_name, 'selection_train', s_train)
+        if self.over_sample_verification:
+            v_train = self.get_store('frame', self.state_name, 'verification_train')
+            v_train_imp = imputer.transform(v_train)
+            v_train = pd.DataFrame(v_train_imp, index=v_train.index, columns=v_train.columns)
+            v_train = self.over_sampling(v_train)
+            self.set_store('frame', self.state_name, 'verification_train', v_train)
         norm = [step for step in self.jobs[0] if 'norm' in step][0]  # need to init first normalisation for verification
         train_frame = self.get_store('frame', self.state_name, 'selection_train')
         _ = getattr(self, norm)(train_frame)
@@ -81,3 +106,27 @@ class Pipeline(DataBorg, Normalisers):
     def verification(self, job_name, job_dir, imputer) -> None:
         """Verify selected features"""
         Verification(self.config)(job_name, job_dir, imputer)
+
+    def over_sampling(self, x_frame: pd.DataFrame) -> pd.DataFrame:
+        """Over sample data"""
+        method = self.over_sample_method[self.learn_task]
+        over_sampler_name = f'{self.learn_task}_{method}'.lower()
+        over_sampler_dict = {
+            'binary_classification_smoten': SMOTEN(random_state=self.seed),
+            'binary_classification_smotenc': SMOTENC(categorical_features=2, random_state=self.seed),
+            'binary_classification_svmsmote': SVMSMOTE(random_state=self.seed),
+            'binary_classification_borderlinesmote': BorderlineSMOTE(random_state=self.seed),
+            'binary_classification_randomoversampler': RandomOverSampler(random_state=self.seed),
+            'regression_adasyn': ADASYN(random_state=self.seed),
+            'regression_smote': SMOTE(random_state=self.seed),
+            'regression_kmeanssmote': KMeansSMOTE(random_state=self.seed),
+            'regression_randomoversampler': RandomOverSampler(random_state=self.seed),
+        }
+
+        if over_sampler_name not in over_sampler_dict:
+            raise ValueError(f'Unknown over sampler: {over_sampler_name}')
+
+        over_sampler = over_sampler_dict[over_sampler_name]
+        y_frame = x_frame[self.target_label]
+        new_x_frame, _ = over_sampler.fit_resample(x_frame, y_frame)
+        return new_x_frame

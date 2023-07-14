@@ -1,14 +1,4 @@
 import pandas as pd
-from imblearn.over_sampling import (
-    ADASYN,
-    SMOTE,
-    SMOTEN,
-    SMOTENC,
-    SVMSMOTE,
-    BorderlineSMOTE,
-    KMeansSMOTE,
-    RandomOverSampler,
-)
 from loguru import logger
 from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
@@ -27,10 +17,7 @@ class DataSplit(DataBorg):
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
         self.selection_frac = config.data_split.selection_frac
-        self.over_sample_method = config.data_split.over_sample_method
-        self.over_sample_selection = config.data_split.over_sample_selection
         self.verification_test_frac = config.data_split.verification_test_frac
-        self.over_sample_verification = config.data_split.over_sample_verification
 
         self.stratify = None
         self.frame = self.get_store('frame', self.state_name, 'ephemeral')
@@ -62,16 +49,6 @@ class DataSplit(DataBorg):
             s_train = s_frame
         else:
             s_train, v_train, v_test = s_frame, s_frame, v_frame
-
-        # self.show_stats(s_train, v_train, v_test, 'Data split stats')
-
-        # if self.over_sample_selection:
-        #     s_train = self.over_sampling(s_train)
-        # if self.over_sample_verification:
-        #     v_train = self.over_sampling(v_train)
-
-        # if self.over_sample_selection or self.over_sample_verification:
-        #     self.show_stats(s_train, v_train, v_test, 'Data split stats after over sampling')
 
         self.set_store('frame', self.state_name, 'selection_train', s_train)
         self.set_store('frame', self.state_name, 'verification_train', v_train)
@@ -129,27 +106,3 @@ class DataSplit(DataBorg):
             random_state=self.seed,
         )
         return v_train, v_test
-
-    def over_sampling(self, x_frame: pd.DataFrame) -> pd.DataFrame:
-        """Over sample data"""
-        method = self.over_sample_method[self.learn_task]
-        over_sampler_name = f'{self.learn_task}_{method}'.lower()
-        over_sampler_dict = {
-            'binary_classification_smoten': SMOTEN(random_state=self.seed),
-            'binary_classification_smotenc': SMOTENC(categorical_features=2, random_state=self.seed),
-            'binary_classification_svmsmote': SVMSMOTE(random_state=self.seed),
-            'binary_classification_borderlinesmote': BorderlineSMOTE(random_state=self.seed),
-            'binary_classification_randomoversampler': RandomOverSampler(random_state=self.seed),
-            'regression_adasyn': ADASYN(random_state=self.seed),
-            'regression_smote': SMOTE(random_state=self.seed),
-            'regression_kmeanssmote': KMeansSMOTE(random_state=self.seed),
-            'regression_randomoversampler': RandomOverSampler(random_state=self.seed),
-        }
-
-        if over_sampler_name not in over_sampler_dict:
-            raise ValueError(f'Unknown over sampler: {over_sampler_name}')
-
-        over_sampler = over_sampler_dict[over_sampler_name]
-        y_frame = x_frame[self.target_label]
-        new_x_frame, _ = over_sampler.fit_resample(x_frame, y_frame)
-        return new_x_frame

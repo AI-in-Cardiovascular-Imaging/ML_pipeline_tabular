@@ -102,11 +102,12 @@ class Verification(DataBorg, Normalisers):
             self.train_models()  # optimise all models
             self.evaluate(job_name, job_dir, None)  # evaluate all optimised models
         else:
+            self.pre_process_frame()
+            self.train_test_split()
+            top_features = self.get_store('feature', str(self.seed), job_name)
             for n_top in self.n_top_features:
                 logger.info(f'Verifying final feature importance for top {n_top} features')
-                self.top_features = self.get_store('feature', str(self.seed), job_name)[:n_top]
-                self.pre_process_frame()
-                self.train_test_split()
+                self.top_features = top_features[:n_top]
                 self.train_models()  # optimise all models
                 self.evaluate(f'job_name_{n_top}', job_dir, n_top)  # evaluate all optimised models
 
@@ -130,6 +131,7 @@ class Verification(DataBorg, Normalisers):
         """Train classifier to verify feature importance"""
         estimators = []
         for model in self.models:
+            logger.info(f'Training {model} model...')
             param_grid = self.param_grids[model]
             estimator, cross_validator, scoring = init_estimator(
                 model,
@@ -140,7 +142,7 @@ class Verification(DataBorg, Normalisers):
                 self.workers,
             )
             optimiser = CrossValidation(
-                self.x_train,
+                self.x_train[self.top_features],
                 self.y_train,
                 estimator,
                 cross_validator,
@@ -154,6 +156,7 @@ class Verification(DataBorg, Normalisers):
             self.best_estimators[model] = best_estimator  # store for evaluation later
 
         for ensemble in self.ensemble:
+            logger.info(f'Training {ensemble} ensemble model...')
             if 'voting' in ensemble:
                 if self.learn_task == 'binary_classification':
                     ens_estimator = VotingClassifier(estimators=estimators, voting='soft', n_jobs=self.workers)
@@ -293,12 +296,9 @@ class Verification(DataBorg, Normalisers):
         if normalise:
             frame = self.normalise_test(frame)
         y_frame = frame[self.target_label]
-        x_frame = frame[self.top_features]  # only keep top features
-        if self.target_label in x_frame.columns:
-            x_frame = x_frame.drop(self.target_label, axis=1)
-            logger.warning(f'{self.target_label} was found in the top features for validation')
+        x_frame = frame.drop(self.target_label, axis=1)
         return x_frame, y_frame
-    
+
     def normalise_test(self, frame: pd.DataFrame) -> pd.DataFrame:
         tmp_label = frame[self.target_label]  # keep label col as is
         arr_frame = frame.values  # returns a numpy array
