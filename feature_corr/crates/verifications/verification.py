@@ -95,7 +95,7 @@ class Verification(DataBorg, Normalisers):
         self.imputer = imputer
 
         if job_name == 'all_features':
-            logger.info('Evaluating baseline performance using all features')
+            logger.info('Evaluating baseline performance using all features...')
             self.top_features = self.get_store('feature', str(self.seed), job_name)
             self.pre_process_frame()
             self.train_test_split()
@@ -106,7 +106,7 @@ class Verification(DataBorg, Normalisers):
             self.train_test_split()
             top_features = self.get_store('feature', str(self.seed), job_name)
             for n_top in self.n_top_features:
-                logger.info(f'Verifying final feature importance for top {n_top} features')
+                logger.info(f'Verifying final feature importance for top {n_top} features...')
                 self.top_features = top_features[:n_top]
                 self.train_models()  # optimise all models
                 self.evaluate(f'job_name_{n_top}', job_dir, n_top)  # evaluate all optimised models
@@ -122,8 +122,8 @@ class Verification(DataBorg, Normalisers):
 
     def train_test_split(self) -> None:
         """Prepare data for training"""
-        v_train = self.get_store('frame', 'verification', 'verification_train')
-        v_test = self.get_store('frame', 'verification', 'verification_test')
+        v_train = self.get_store('frame', 'verification', 'train')
+        v_test = self.get_store('frame', 'verification', 'test')
         self.x_train, self.y_train = self.split_frame(v_train)
         self.x_test, self.y_test = self.split_frame(v_test, normalise=True)  # test data not yet normalised
 

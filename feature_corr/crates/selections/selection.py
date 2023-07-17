@@ -45,7 +45,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.job_name = job_name
         self.job_dir = job_dir
 
-        frame = self.get_store('frame', self.state_name, 'selection_train')
+        frame = self.get_store('frame', self.state_name, 'train')
         for step in job:
             logger.info(f'Running -> {step} for state {self.state_name}')
             frame, features, error = self.process_job(step, frame)

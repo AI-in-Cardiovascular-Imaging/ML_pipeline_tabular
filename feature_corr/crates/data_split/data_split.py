@@ -2,6 +2,7 @@ import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
+from sklearn.utils import resample
 
 from feature_corr.data_borg import DataBorg
 
@@ -16,8 +17,8 @@ class DataSplit(DataBorg):
         self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
-        self.selection_frac = config.data_split.selection_frac
-        self.verification_test_frac = config.data_split.verification_test_frac
+        self.n_bootstraps = config.data_split.n_bootstraps
+        self.test_frac = config.data_split.test_frac
 
         self.stratify = None
         self.frame = self.get_store('frame', self.state_name, 'ephemeral')
@@ -35,25 +36,15 @@ class DataSplit(DataBorg):
         self.state_name = tmp_state
 
     def split_frame(self) -> None:
-        # if self.frame.isnull().values.any():
-        #     raise ValueError('Data contains NaN values, clean up or impute data first')
-
         self.set_stratification(self.frame)
         s_frame, v_frame = self.create_selection_verification_set()
 
-        if self.verification_test_frac <= 0.0 or self.verification_test_frac >= 1.0:
-            raise ValueError('"verification_test_frac" is invalid, must be float between (0.0, 1.0)')
+        if self.test_frac <= 0.0 or self.test_frac >= 1.0:
+            raise ValueError('"test_frac" is invalid, must be float between (0.0, 1.0)')
 
-        if self.selection_frac < 1.0:
-            v_train, v_test = self.create_verification_split(v_frame)
-            s_train = s_frame
-        else:
-            s_train, v_train, v_test = s_frame, s_frame, v_frame
-
-        self.set_store('frame', self.state_name, 'selection_train', s_train)
-        self.set_store('frame', self.state_name, 'verification_train', v_train)
-        self.set_store('frame', self.state_name, 'verification_test', v_test)
-        all_features = list(s_train.columns.drop(self.target_label))
+        self.set_store('frame', self.state_name, 'train', s_frame)
+        self.set_store('frame', self.state_name, 'test', v_frame)
+        all_features = list(s_frame.columns.drop(self.target_label))
         self.set_store('feature', self.state_name, 'all_features', all_features)
 
     def show_stats(self, s_train: pd.DataFrame, v_train: pd.DataFrame, v_test: pd.DataFrame, head: str) -> None:
@@ -81,28 +72,21 @@ class DataSplit(DataBorg):
 
     def create_selection_verification_set(self) -> tuple:
         """Split in selection and verification set"""
-        if 0.0 < self.selection_frac < 1.0:
-            test_size = 1.0 - self.selection_frac
-        elif self.selection_frac == 1.0:  # entire train data is used for selection and verification
-            test_size = self.verification_test_frac
+        if self.n_bootstraps == 1:
+            s_frame, v_frame = train_test_split(
+                self.frame,
+                stratify=self.stratify,
+                test_size=self.test_frac,
+                random_state=self.seed,
+            )
         else:
-            raise ValueError('Invalid "selection_frac" must be in range -> 0.0 < x <= 1.0')
+            s_frame = resample(
+                self.frame,
+                replace=True,
+                n_samples=(1 - self.test_frac) * len(self.frame.index),
+                stratify=self.stratify,
+                random_state=None,
+            )
+            v_frame = self.frame.drop(s_frame.index, axis=0)
 
-        s_frame, v_frame = train_test_split(
-            self.frame,
-            stratify=self.stratify,
-            test_size=test_size,
-            random_state=self.seed,
-        )
         return s_frame, v_frame
-
-    def create_verification_split(self, v_frame: pd.DataFrame) -> tuple:
-        """Create verification split if needed"""
-        self.set_stratification(v_frame)
-        v_train, v_test = train_test_split(
-            v_frame,
-            stratify=self.stratify,
-            test_size=self.verification_test_frac,
-            random_state=self.seed,
-        )
-        return v_train, v_test

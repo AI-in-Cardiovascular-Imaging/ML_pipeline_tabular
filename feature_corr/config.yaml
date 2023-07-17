@@ -34,7 +34,7 @@ data_split:
   seed: 0 # random seed for data split
 
   selection_frac: 1.0 # fraction of data to use for feature selection
-  verification_test_frac: 0.3 # fraction of data to use for testing verification models
+  test_frac: 0.3 # fraction of data to use for testing verification models
 
   over_sample_selection: True # oversample minority class to balance feature selection set
   over_sample_verification: False # oversample minority class to balance verification set

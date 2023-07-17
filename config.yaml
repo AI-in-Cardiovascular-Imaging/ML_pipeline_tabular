@@ -1,10 +1,10 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping_corr_ranking_corr_image_based_high_thresh" # experiment name
+  name: "phenomapping_bootstrap" # experiment name
   plot_format: "png"
-  seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
+  # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125]
-  # seed: [784]
+  seed: [784]
   workers: 24 # number of workers for parallel processing
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
@@ -33,11 +33,11 @@ impute:
 
 # data split definitions
 data_split:
-  selection_frac: 1.0 # fraction of data to use for feature selection
-  verification_test_frac: 0.3 # fraction of data to use for testing verification models
+  n_bootstraps: 10
+  test_frac: 0.3 # fraction of data to use for testing verification models
 
   over_sample_selection: True # oversample minority class to balance feature selection set
-  over_sample_verification: False # oversample minority class to balance verification set
+  over_sample_verification: True # oversample minority class to balance verification set
 
   over_sample_method:
     binary_classification: "BorderlineSMOTE" #: ADASYN, SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
@@ -79,7 +79,7 @@ selection:
 # verification strategy and final model to train and evaluate
 verification:
   active: True # whether to perform verification analysis for each job
-  use_n_top_features: [10] # list of n_features to use for verification
+  use_n_top_features: [20, 15, 10, 5] # list of n_features to use for verification
   scoring:
     binary_classification:
       accuracy_score: True
@@ -96,7 +96,7 @@ verification:
       explained_variance_score: True
 
   models:
-    ensemble_voting: True
+    ensemble_voting: False
     logistic_regression: True
     svm: False
     forest: False

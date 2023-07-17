@@ -26,7 +26,7 @@ def data_split():
                 'over_sample_selection': False,
                 'over_sample_verification': False,
                 'selection_frac': 0.4,
-                'verification_test_frac': 0.4,
+                'test_frac': 0.4,
                 'over_sample_method': {
                     "binary_classification": "RandomOverSampler",
                     "multi_classification": "RandomOverSampler",

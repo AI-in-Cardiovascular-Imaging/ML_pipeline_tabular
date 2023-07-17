@@ -47,6 +47,7 @@ class Pipeline(DataBorg, Normalisers):
         self.out_dir = config.meta.output_dir
         self.learn_task = config.meta.learn_task
         self.jobs = config.selection.jobs
+        self.n_bootstraps = config.data_split.n_bootstraps
         self.over_sample_selection = config.data_split.over_sample_selection
         self.over_sample_verification = config.data_split.over_sample_verification
         self.over_sample_method = config.data_split.over_sample_method
@@ -55,29 +56,31 @@ class Pipeline(DataBorg, Normalisers):
 
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
-        self.data_split()
-        imputer = self.impute()
-        if self.over_sample_selection:
-            s_train = self.over_sampling(self.get_store('frame', self.state_name, 'selection_train'))
-            self.set_store('frame', self.state_name, 'selection_train', s_train)
-        if self.over_sample_verification:
-            v_train = self.get_store('frame', self.state_name, 'verification_train')
-            v_train_imp = imputer.transform(v_train)
-            v_train = pd.DataFrame(v_train_imp, index=v_train.index, columns=v_train.columns)
-            v_train = self.over_sampling(v_train)
-            self.set_store('frame', self.state_name, 'verification_train', v_train)
-        norm = [step for step in self.jobs[0] if 'norm' in step][0]  # need to init first normalisation for verification
-        train_frame = self.get_store('frame', self.state_name, 'selection_train')
-        _ = getattr(self, norm)(train_frame)
-        self.verification('all_features', None, imputer)  # run only once per data split, not for every job
+        for boot_iter in range(self.n_bootstraps):
+            # potentially need to generate new random seed for each iter?
+            self.data_split()
+            imputer = self.impute()
+            if self.over_sample_selection:
+                s_train = self.over_sampling(self.get_store('frame', self.state_name, 'train'))
+                self.set_store('frame', self.state_name, 'train', s_train)
+            if self.over_sample_verification:
+                v_train = self.get_store('frame', self.state_name, 'train')
+                v_train_imp = imputer.transform(v_train)
+                v_train = pd.DataFrame(v_train_imp, index=v_train.index, columns=v_train.columns)
+                v_train = self.over_sampling(v_train)
+                self.set_store('frame', self.state_name, 'train', v_train)
+            norm = [step for step in self.jobs[0] if 'norm' in step][0]  # need to init first normalisation for verification
+            train_frame = self.get_store('frame', self.state_name, 'train')
+            _ = getattr(self, norm)(train_frame)
+            self.verification('all_features', None, imputer)  # run only once per data split, not for every job
 
-        job_names = job_name_cleaner(self.jobs)
-        for job, job_name in zip(self.jobs, job_names):
-            logger.info(f'Running -> {job_name}')
-            job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, self.state_name)
-            os.makedirs(job_dir, exist_ok=True)
-            self.selection(job, job_name, job_dir)
-            self.verification(job_name, job_dir, imputer)
+            job_names = job_name_cleaner(self.jobs)
+            for job, job_name in zip(self.jobs, job_names):
+                logger.info(f'Running -> {job_name}')
+                job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, self.state_name)
+                os.makedirs(job_dir, exist_ok=True)
+                self.selection(job, job_name, job_dir)
+                self.verification(job_name, job_dir, imputer)
 
     def __del__(self):
         """Delete assigned state data store"""
