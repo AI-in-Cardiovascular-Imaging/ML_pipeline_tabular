@@ -33,7 +33,7 @@ impute:
 
 # data split definitions
 data_split:
-  n_bootstraps: 10
+  n_bootstraps: 2
   test_frac: 0.3 # fraction of data to use for testing verification models
 
   over_sample_selection: True # oversample minority class to balance feature selection set
@@ -79,14 +79,14 @@ selection:
 # verification strategy and final model to train and evaluate
 verification:
   active: True # whether to perform verification analysis for each job
-  use_n_top_features: [20, 15, 10, 5] # list of n_features to use for verification
+  use_n_top_features: [20, 10] # list of n_features to use for verification
   scoring:
     binary_classification:
       accuracy_score: True
       roc_auc_score: True
       average_precision_score: True
-      recall_score: False
-      precision_score: False
+      recall_score: True
+      precision_score: True
       f1_score: True
     multi_classification: {}
     regression:

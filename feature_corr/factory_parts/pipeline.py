@@ -69,7 +69,9 @@ class Pipeline(DataBorg, Normalisers):
                 v_train = pd.DataFrame(v_train_imp, index=v_train.index, columns=v_train.columns)
                 v_train = self.over_sampling(v_train)
                 self.set_store('frame', self.state_name, 'train', v_train)
-            norm = [step for step in self.jobs[0] if 'norm' in step][0]  # need to init first normalisation for verification
+            norm = [step for step in self.jobs[0] if 'norm' in step][
+                0
+            ]  # need to init first normalisation for verification
             train_frame = self.get_store('frame', self.state_name, 'train')
             _ = getattr(self, norm)(train_frame)
             self.verification('all_features', None, imputer)  # run only once per data split, not for every job
@@ -81,6 +83,8 @@ class Pipeline(DataBorg, Normalisers):
                 os.makedirs(job_dir, exist_ok=True)
                 self.selection(job, job_name, job_dir)
                 self.verification(job_name, job_dir, imputer)
+
+            self.config.plot_first_iter = False  # minimise work by producing certain plots only for the first iteration
 
     def __del__(self):
         """Delete assigned state data store"""

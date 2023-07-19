@@ -15,7 +15,6 @@ from alibi.explainers import ALE, plot_ale, PartialDependenceVariance, plot_pd_v
 
 from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.helpers import init_estimator
-from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.normalisers import Normalisers
 from feature_corr.data_borg import DataBorg, NestedDefaultDict
@@ -88,10 +87,6 @@ class Verification(DataBorg, Normalisers):
 
     def __call__(self, job_name, job_dir, imputer) -> None:
         """Train classifier to verify final feature importance"""
-
-        # TODO: maybe there is a better way to do this
-        self.config.impute.method = 'simple_impute'
-        self.config.data_split.over_sample_method.binary_classification = 'SMOTEN'
         self.imputer = imputer
 
         if job_name == 'all_features':
@@ -109,7 +104,7 @@ class Verification(DataBorg, Normalisers):
                 logger.info(f'Verifying final feature importance for top {n_top} features...')
                 self.top_features = top_features[:n_top]
                 self.train_models()  # optimise all models
-                self.evaluate(f'job_name_{n_top}', job_dir, n_top)  # evaluate all optimised models
+                self.evaluate(f'{job_name}_{n_top}', job_dir, n_top)  # evaluate all optimised models
 
     def pre_process_frame(self) -> None:
         """Pre-process frame for verification"""
@@ -178,29 +173,25 @@ class Verification(DataBorg, Normalisers):
 
     def evaluate(self, job_name, job_dir, n_top) -> None:
         """Evaluate all optimised models"""
-        scores = NestedDefaultDict()
+        scores = self.get_store('score', str(self.seed), job_name)
         for i, model in enumerate(self.models + self.ensemble):
             logger.info(f'Evaluating {model} model ({i+1}/{len(self.models + self.ensemble)})...')
-            scores[model] = {}
             estimator = self.best_estimators[model]
             y_pred = estimator.predict(self.x_test[self.top_features])
-            pred_func, probas, fpr, tpr, precision, recall = self.get_predictions(estimator)
+            pred_func, probas = self.get_predictions(estimator)
             for score in self.verif_scoring:  # calculate and store all requested scores
                 try:
-                    scores[model][score] = getattr(metrics, score)(self.y_test, probas)
+                    # logger.debug(scores)
+                    scores[model][score].append(getattr(metrics, score)(self.y_test, probas))
                 except ValueError:
-                    scores[model][score] = getattr(metrics, score)(self.y_test, y_pred)
+                    scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
 
-            scores[model]['fpr'] = fpr
-            scores[model]['tpr'] = tpr
-            scores[model]['precision'] = precision
-            scores[model]['recall'] = recall
             scores[model]['pos_rate'] = round(self.y_test.sum() / len(self.y_test), 3)
 
             if y_pred.sum() == 0:
                 logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
 
-            if not job_name == 'all_features' and not model in self.ensemble:
+            if self.config.plot_first_iter and not job_name == 'all_features' and not model in self.ensemble:
                 # ALE (accumulated local effects)
                 ale_fig, ale_ax = plt.subplots()
                 if self.learn_task == 'binary_classification':
@@ -286,10 +277,8 @@ class Verification(DataBorg, Normalisers):
         except AttributeError:  # other estimators
             pred_func = best_estimator.predict_proba
             probas = best_estimator.predict_proba(self.x_test[self.top_features])[:, 1]
-        fpr, tpr, _ = metrics.roc_curve(self.y_test, probas, drop_intermediate=True)  # AUROC
-        precision, recall, _ = metrics.precision_recall_curve(self.y_test, probas)  # AUPRC
 
-        return pred_func, probas, fpr, tpr, precision, recall
+        return pred_func, probas
 
     def split_frame(self, frame: pd.DataFrame, normalise=False) -> tuple:
         """Prepare frame for verification"""

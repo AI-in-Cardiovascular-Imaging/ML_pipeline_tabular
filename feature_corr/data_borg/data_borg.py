@@ -20,6 +20,7 @@ class DataBorg:
     shared_state = {
         '_frame_store': NestedDefaultDict(),
         '_feature_store': NestedDefaultDict(),
+        '_feature_score_store': NestedDefaultDict(),
         '_score_store': NestedDefaultDict(),
         '_original_frame': None,
         '_ephemeral_frame': None,
@@ -28,6 +29,7 @@ class DataBorg:
     def __init__(self) -> None:
         self._frame_store = NestedDefaultDict()
         self._feature_store = NestedDefaultDict()
+        self._feature_score_store = NestedDefaultDict()
         self._score_store = NestedDefaultDict()
         self._original_frame = None
         self._ephemeral_frame = None
@@ -37,7 +39,6 @@ class DataBorg:
         """Sets the state name"""
         self._frame_store[state_name] = NestedDefaultDict()
         self._feature_store[state_name] = NestedDefaultDict()
-        self._score_store[state_name] = NestedDefaultDict()
         logger.trace(f'State name set -> {state_name}')
 
     def set_frame(self, name: str, frame: pd.DataFrame) -> None:
@@ -69,6 +70,15 @@ class DataBorg:
         elif 'feature' in name:
             self._feature_store[state_name][step_name] = data
             logger.trace(f'Feature data set -> {type(data)}')
+            scores = len(data) * [1]
+            scores[: min(10, len(data))] = range(
+                10, 10 - min(10, len(data)), -1
+            )  # first min(10, len(features)) features get rank score, rest get score of 1
+            for i, feature in enumerate(data):  # calculate feature importance scores on the fly
+                if feature in self._feature_score_store[step_name].keys():
+                    self._feature_score_store[step_name][feature] += scores[i]
+                else:
+                    self._feature_score_store[step_name][feature] = scores[i]
         elif 'score' in name:
             self._score_store[state_name][step_name] = data
             logger.trace(f'Score data set -> {type(data)}')
@@ -77,13 +87,16 @@ class DataBorg:
 
     def get_store(self, name: str, state_name: str, step_name: str) -> pd.DataFrame:
         """Returns the store value"""
-        if 'frame' in name:
+        if name == 'frame':
             logger.trace(f'Returning frame -> {type(self._frame_store[state_name][step_name])}')
             return self._frame_store[state_name][step_name]
-        elif 'feature' in name:
+        elif name == 'feature':
             logger.trace(f'Returning feature -> {type(self._feature_store[state_name][step_name])}')
             return self._feature_store[state_name][step_name]
-        elif 'score' in name:
+        elif name == 'feature_score':
+            logger.trace(f'Returning feature scores -> {type(self._feature_score_store[step_name])}')
+            return self._feature_score_store[step_name]
+        elif name == 'score':
             logger.trace(f'Returning score -> {type(self._frame_store[state_name][step_name])}')
             return self._score_store[state_name][step_name]
         raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature, score')

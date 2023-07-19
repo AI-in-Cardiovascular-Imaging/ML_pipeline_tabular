@@ -20,6 +20,7 @@ class Factory:
     def __call__(self) -> None:
         """Run factory"""
         logger.info('Factory started')
+        self.config.plot_first_iter = True
         for config in self.state_machine:
             self.produce_pipeline(config)
         self.report()

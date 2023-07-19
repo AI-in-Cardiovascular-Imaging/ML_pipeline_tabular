@@ -86,11 +86,12 @@ class FeatureReductions:
         abs_corr = abs_corr.drop(cols_to_drop, axis=1)
 
         # plot correlation heatmap
-        fig = plt.figure(figsize=(20, 20))
-        sns.heatmap(abs_corr, annot=False, xticklabels=True, yticklabels=True, cmap='viridis')
-        plt.xticks(rotation=90)
-        plt.savefig(os.path.join(self.job_dir, f'corr_plot.{self.plot_format}'))
-        plt.close(fig)
+        if self.config.plot_first_iter:
+            fig = plt.figure(figsize=(20, 20))
+            sns.heatmap(abs_corr, annot=False, xticklabels=True, yticklabels=True, cmap='viridis')
+            plt.xticks(rotation=90)
+            plt.savefig(os.path.join(self.job_dir, f'corr_plot.{self.plot_format}'))
+            plt.close(fig)
 
         new_frame = pd.concat([x_frame, y_frame], axis=1)
         features = list(x_frame.columns)

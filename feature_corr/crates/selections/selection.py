@@ -73,9 +73,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         if features:
             if isinstance(features, list):
                 if len(features) > 0:
-                    logger.info('Found top features')
-                    if self.get_store('feature', self.state_name, self.job_name):
-                        logger.warning(f'Overwriting previous features with {step}')
                     self.set_store('feature', self.state_name, self.job_name, features)
                 else:
                     logger.warning(f'No features found for {self.job_name}')
@@ -90,47 +87,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
                 f'\nThe previous step does not seem to produce any output.'
             )
             return None, None, True
-        frame, features = self.run_job_planner(step, frame)
+        frame, features = getattr(self, step)(frame)
         return frame, features, False
 
-    def run_job_aggregated(self, step: str, frame: pd.DataFrame) -> tuple:
-        """Run certain jobs in an aggregated manner"""
-        tmp_seed = self.seed
-        feature_store = {}
-        y_frame = frame[self.target_label]
-        for aggregated_seed in self.config.meta.aggregated_seeds:
-            logger.info(f'Running aggregated job -> {aggregated_seed}')
-            self.seed = aggregated_seed
-            _, features = getattr(self, step)(frame)
-            feature_store[aggregated_seed] = features
-
-        self.seed = tmp_seed
-        features = self.get_rank_frequency_based_features(feature_store)
-        new_frame = frame[features]
-        new_frame = pd.concat([new_frame, y_frame], axis=1)
-        return new_frame, features
-
-    def run_job_planner(self, step: str, frame: pd.DataFrame) -> tuple:
-        """Check if the given job is valid for aggregation"""
-        if self.aggregated_jobs:
-            if 'corr' in step or 'fr_' in step:
-                return self.run_job_aggregated(step, frame)
-        return getattr(self, step)(frame)
-
-    def get_rank_frequency_based_features(self, feature_store: dict) -> list:
-        """Get ranked features"""
-        scores = {}
-        for seed in feature_store.keys():
-            rank_score = 1000
-            for features in feature_store[seed]:
-                for feature in [features]:
-                    if feature not in scores:
-                        scores[feature] = rank_score
-                    else:
-                        scores[feature] += rank_score
-                    rank_score -= 1
-
-        sorted_store = {k: v for k, v in sorted(scores.items(), key=lambda item: item[1], reverse=True)}
-        top_features = list(sorted_store.keys())
-        logger.debug(f'Aggregated features -> {top_features}')
-        return top_features

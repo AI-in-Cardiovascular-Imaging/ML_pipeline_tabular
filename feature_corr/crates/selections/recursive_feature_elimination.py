@@ -15,6 +15,7 @@ class RecursiveFeatureElimination:
     """Recursive feature elimination"""
 
     def __init__(self) -> None:
+        self.config = None
         self.job_dir = None
         self.plot_format = None
         self.metadata = None
@@ -61,20 +62,21 @@ class RecursiveFeatureElimination:
         selector.fit(x, y)
 
         # Plot performance for increasing number of features
-        n_scores = len(selector.cv_results_['mean_test_score'])
-        fig = plt.figure()
-        plt.xlabel('Number of features selected')
-        plt.ylabel(f'Mean {scoring}')
-        plt.xticks(range(0, n_scores + 1, 5))
-        plt.grid(alpha=0.5)
-        plt.errorbar(
-            range(min_features, n_scores + min_features),
-            selector.cv_results_['mean_test_score'],
-            yerr=selector.cv_results_['std_test_score'],
-        )
-        plt.title(f'Recursive Feature Elimination for {rfe_estimator} estimator')
-        plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.{self.plot_format}'))
-        plt.close(fig)
+        if self.config.plot_first_iter:
+            n_scores = len(selector.cv_results_['mean_test_score'])
+            fig = plt.figure()
+            plt.xlabel('Number of features selected')
+            plt.ylabel(f'Mean {scoring}')
+            plt.xticks(range(0, n_scores + 1, 5))
+            plt.grid(alpha=0.5)
+            plt.errorbar(
+                range(min_features, n_scores + min_features),
+                selector.cv_results_['mean_test_score'],
+                yerr=selector.cv_results_['std_test_score'],
+            )
+            plt.title(f'Recursive Feature Elimination for {rfe_estimator} estimator')
+            plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.{self.plot_format}'))
+            plt.close(fig)
 
         frame = pd.concat((x.loc[:, selector.support_], frame[self.target_label]), axis=1)  # concat with target label
 
@@ -91,15 +93,15 @@ class RecursiveFeatureElimination:
             f'Removed {len(x.columns) + 1 - len(frame.columns)} features with RFE and {rfe_estimator} estimator, '
             f'number of remaining features: {len(frame.columns) - 1}'
         )
-
-        ax = importances.plot.barh()
-        fig = ax.get_figure()
-        plt.title(f'Feature importance' f'\n{rfe_estimator} estimator for target: {self.target_label}')
-        plt.xlabel('Feature importance')
-        plt.tight_layout()
-        plt.gca().legend_.remove()
-        plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.{self.plot_format}'), dpi=fig.dpi)
-        plt.close(fig)
+        if self.config.plot_first_iter:
+            ax = importances.plot.barh()
+            fig = ax.get_figure()
+            plt.title(f'Feature importance' f'\n{rfe_estimator} estimator for target: {self.target_label}')
+            plt.xlabel('Feature importance')
+            plt.tight_layout()
+            plt.gca().legend_.remove()
+            plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.{self.plot_format}'), dpi=fig.dpi)
+            plt.close(fig)
 
         features = importances.index.tolist()[::-1]
 
@@ -165,22 +167,22 @@ class RecursiveFeatureElimination:
         feature_scores['all'] = feature_scores.iloc[:, 1:].sum(axis=1)
         feature_scores = feature_scores.sort_values(by='all', ascending=True)
 
-        ax = feature_scores.plot(
-            x='feature',
-            y=estimators,
-            kind='barh',
-            stacked=True,
-            colormap='viridis',
-        )
-
-        fig = ax.get_figure()
-        fig.legend(loc='lower right', borderaxespad=4.5)
-        plt.title(f'Feature importance\nAll estimators for target: {self.target_label}')
-        plt.xlabel(f'Summed importance (max {len(estimators)*min_len})')
-        plt.tight_layout()
-        plt.gca().legend_.remove()
-        plt.savefig(os.path.join(self.job_dir, f'feature_importance_all.{self.plot_format}'), dpi=fig.dpi)
-        plt.close(fig)
+        if self.config.plot_first_iter:
+            ax = feature_scores.plot(
+                x='feature',
+                y=estimators,
+                kind='barh',
+                stacked=True,
+                colormap='viridis',
+            )
+            fig = ax.get_figure()
+            fig.legend(loc='lower right', borderaxespad=4.5)
+            plt.title(f'Feature importance\nAll estimators for target: {self.target_label}')
+            plt.xlabel(f'Summed importance (max {len(estimators)*min_len})')
+            plt.tight_layout()
+            plt.gca().legend_.remove()
+            plt.savefig(os.path.join(self.job_dir, f'feature_importance_all.{self.plot_format}'), dpi=fig.dpi)
+            plt.close(fig)
 
         logger.info(f'Top features: {list(feature_scores["feature"])}')
         features_to_keep = list(feature_scores['feature']) + list(self.target_label)
