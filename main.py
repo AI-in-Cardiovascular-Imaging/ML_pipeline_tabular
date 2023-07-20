@@ -5,7 +5,6 @@ from loguru import logger
 
 from feature_corr.config_manager import ConfigManager
 from feature_corr.crates.inspections import CleanUp, TargetStatistics
-from feature_corr.crates.verifications import Verification
 from feature_corr.factory_parts.data_reader import DataReader
 from feature_corr.factory_parts.factory import Factory
 from feature_corr.factory_parts.report import Report

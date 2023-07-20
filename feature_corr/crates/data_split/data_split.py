@@ -23,40 +23,22 @@ class DataSplit(DataBorg):
         self.stratify = None
         self.frame = self.get_store('frame', self.state_name, 'ephemeral')
 
-    def __call__(self):
+    def __call__(self, boot_seed):
         """Split data"""
+        self.boot_seed = boot_seed
         self.split_frame()
-
-    def verification_mode(self, frame: pd.DataFrame) -> None:
-        """Split data in selection and verification"""
-        tmp_state = self.state_name
-        self.state_name = 'verification'
-        self.frame = frame
-        self.split_frame()
-        self.state_name = tmp_state
 
     def split_frame(self) -> None:
         self.set_stratification(self.frame)
-        s_frame, v_frame = self.create_selection_verification_set()
+        train, test = self.create_split()
 
         if self.test_frac <= 0.0 or self.test_frac >= 1.0:
             raise ValueError('"test_frac" is invalid, must be float between (0.0, 1.0)')
 
-        self.set_store('frame', self.state_name, 'train', s_frame)
-        self.set_store('frame', self.state_name, 'test', v_frame)
-        all_features = list(s_frame.columns.drop(self.target_label))
+        self.set_store('frame', self.state_name, 'train', train)
+        self.set_store('frame', self.state_name, 'test', test)
+        all_features = list(train.columns.drop(self.target_label))
         self.set_store('feature', self.state_name, 'all_features', all_features)
-
-    def show_stats(self, s_train: pd.DataFrame, v_train: pd.DataFrame, v_test: pd.DataFrame, head: str) -> None:
-        """Show data split stats"""
-        logger.info(
-            f'\n{head}\n'
-            f'{"Set":<24}{"rows":<7}{"cols"}\n'
-            f'{"Original data:":<24}{len(self.frame):<7}{len(self.frame.columns)}\n'
-            f'{"Selection train:":<24}{len(s_train):<7}{len(s_train.columns)}\n'
-            f'{"Verification train:":<24}{len(v_train):<7}{len(v_train.columns)}\n'
-            f'{"Verification test:":<24}{len(v_test):<7}{len(v_test.columns)}'
-        )
 
     def set_stratification(self, frame: pd.DataFrame = None) -> None:
         """Set stratification"""
@@ -70,23 +52,23 @@ class DataSplit(DataBorg):
         else:
             raise ValueError(f'Unknown learn task: {self.learn_task}')
 
-    def create_selection_verification_set(self) -> tuple:
-        """Split in selection and verification set"""
+    def create_split(self) -> tuple:
+        """Split in train and test set"""
         if self.n_bootstraps == 1:
-            s_frame, v_frame = train_test_split(
+            train, test = train_test_split(
                 self.frame,
                 stratify=self.stratify,
                 test_size=self.test_frac,
                 random_state=self.seed,
             )
         else:
-            s_frame = resample(
+            train = resample(
                 self.frame,
                 replace=True,
                 n_samples=(1 - self.test_frac) * len(self.frame.index),
                 stratify=self.stratify,
-                random_state=None,
+                random_state=self.boot_seed,
             )
-            v_frame = self.frame.drop(s_frame.index, axis=0)
+            test = self.frame.drop(train.index, axis=0)
 
-        return s_frame, v_frame
+        return train, test

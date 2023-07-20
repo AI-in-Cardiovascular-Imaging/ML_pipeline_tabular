@@ -92,12 +92,10 @@ class Verification(DataBorg, Normalisers):
         if job_name == 'all_features':
             logger.info('Evaluating baseline performance using all features...')
             self.top_features = self.get_store('feature', str(self.seed), job_name)
-            self.pre_process_frame()
             self.train_test_split()
             self.train_models()  # optimise all models
             self.evaluate(job_name, job_dir, None)  # evaluate all optimised models
         else:
-            self.pre_process_frame()
             self.train_test_split()
             top_features = self.get_store('feature', str(self.seed), job_name)
             for n_top in self.n_top_features:
@@ -106,19 +104,10 @@ class Verification(DataBorg, Normalisers):
                 self.train_models()  # optimise all models
                 self.evaluate(f'{job_name}_{n_top}', job_dir, n_top)  # evaluate all optimised models
 
-    def pre_process_frame(self) -> None:
-        """Pre-process frame for verification"""
-        frame = self.get_frame('ephemeral')
-        TargetStatistics(self.config).verification_mode(frame)
-        imp_frame = self.imputer.transform(frame)
-        frame = pd.DataFrame(imp_frame, index=frame.index, columns=frame.columns)
-        self.set_store('frame', 'verification', 'ephemeral', frame)
-        DataSplit(self.config).verification_mode(frame)
-
     def train_test_split(self) -> None:
         """Prepare data for training"""
-        v_train = self.get_store('frame', 'verification', 'train')
-        v_test = self.get_store('frame', 'verification', 'test')
+        v_train = self.get_store('frame', self.state_name, 'train')
+        v_test = self.get_store('frame', self.state_name, 'test')
         self.x_train, self.y_train = self.split_frame(v_train)
         self.x_test, self.y_test = self.split_frame(v_test, normalise=True)  # test data not yet normalised
 
@@ -181,13 +170,11 @@ class Verification(DataBorg, Normalisers):
             pred_func, probas = self.get_predictions(estimator)
             for score in self.verif_scoring:  # calculate and store all requested scores
                 try:
-                    # logger.debug(scores)
                     scores[model][score].append(getattr(metrics, score)(self.y_test, probas))
                 except ValueError:
                     scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
 
-            scores[model]['pos_rate'] = round(self.y_test.sum() / len(self.y_test), 3)
-
+            scores[model]['pos_rate'].append(round(self.y_test.sum() / len(self.y_test), 3))
             if y_pred.sum() == 0:
                 logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
 

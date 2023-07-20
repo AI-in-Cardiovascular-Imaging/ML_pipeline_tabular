@@ -97,7 +97,7 @@ class DataBorg:
             logger.trace(f'Returning feature scores -> {type(self._feature_score_store[step_name])}')
             return self._feature_score_store[step_name]
         elif name == 'score':
-            logger.trace(f'Returning score -> {type(self._frame_store[state_name][step_name])}')
+            logger.trace(f'Returning score -> {type(self._score_store[state_name][step_name])}')
             return self._score_store[state_name][step_name]
         raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature, score')
 

@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 from loguru import logger
 from imblearn.over_sampling import (
@@ -48,27 +49,22 @@ class Pipeline(DataBorg, Normalisers):
         self.learn_task = config.meta.learn_task
         self.jobs = config.selection.jobs
         self.n_bootstraps = config.data_split.n_bootstraps
-        self.over_sample_selection = config.data_split.over_sample_selection
-        self.over_sample_verification = config.data_split.over_sample_verification
-        self.over_sample_method = config.data_split.over_sample_method
+        self.oversample = config.data_split.oversample
+        self.oversample_method = config.data_split.oversample_method
         self.add_state_name(self.state_name)
         self.sync_ephemeral_data_to_data_store(self.state_name, 'ephemeral')
 
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
-        for boot_iter in range(self.n_bootstraps):
+        np.random.seed(self.seed)
+        boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)
+        for i in range(self.n_bootstraps):
             # potentially need to generate new random seed for each iter?
-            self.data_split()
+            self.data_split(boot_seeds[i])
             imputer = self.impute()
-            if self.over_sample_selection:
+            if self.oversample:
                 s_train = self.over_sampling(self.get_store('frame', self.state_name, 'train'))
                 self.set_store('frame', self.state_name, 'train', s_train)
-            if self.over_sample_verification:
-                v_train = self.get_store('frame', self.state_name, 'train')
-                v_train_imp = imputer.transform(v_train)
-                v_train = pd.DataFrame(v_train_imp, index=v_train.index, columns=v_train.columns)
-                v_train = self.over_sampling(v_train)
-                self.set_store('frame', self.state_name, 'train', v_train)
             norm = [step for step in self.jobs[0] if 'norm' in step][
                 0
             ]  # need to init first normalisation for verification
@@ -100,9 +96,9 @@ class Pipeline(DataBorg, Normalisers):
         imputer = Imputer(self.config)()
         return imputer
 
-    def data_split(self) -> None:
+    def data_split(self, boot_seed: int) -> None:
         """Split data"""
-        DataSplit(self.config)()
+        DataSplit(self.config)(boot_seed)
 
     @run_when_active
     def selection(self, job, job_name, job_dir):
@@ -116,7 +112,7 @@ class Pipeline(DataBorg, Normalisers):
 
     def over_sampling(self, x_frame: pd.DataFrame) -> pd.DataFrame:
         """Over sample data"""
-        method = self.over_sample_method[self.learn_task]
+        method = self.oversample_method[self.learn_task]
         over_sampler_name = f'{self.learn_task}_{method}'.lower()
         over_sampler_dict = {
             'binary_classification_smoten': SMOTEN(random_state=self.seed),

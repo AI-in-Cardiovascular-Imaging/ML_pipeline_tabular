@@ -33,13 +33,12 @@ impute:
 
 # data split definitions
 data_split:
-  n_bootstraps: 2
+  n_bootstraps: 10
   test_frac: 0.3 # fraction of data to use for testing verification models
 
-  over_sample_selection: True # oversample minority class to balance feature selection set
-  over_sample_verification: True # oversample minority class to balance verification set
+  oversample: True # oversample minority class to balance training set
 
-  over_sample_method:
+  oversample_method:
     binary_classification: "BorderlineSMOTE" #: ADASYN, SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
     multi_classification: "RandomOverSampler" # Not implemented yet
     regression: "RandomOverSampler" #: ADASYN, SMOTE, KMeansSMOTE, RandomOverSampler
@@ -79,7 +78,7 @@ selection:
 # verification strategy and final model to train and evaluate
 verification:
   active: True # whether to perform verification analysis for each job
-  use_n_top_features: [20, 10] # list of n_features to use for verification
+  use_n_top_features: [20, 15, 10, 5] # list of n_features to use for verification
   scoring:
     binary_classification:
       accuracy_score: True

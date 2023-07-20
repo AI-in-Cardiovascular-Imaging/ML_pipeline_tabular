@@ -9,25 +9,6 @@ from feature_corr.data_borg import DataBorg
 logger.trace(enable_iterative_imputer)  # to avoid auto import removal
 
 
-def data_bubble(func):
-    """Apply imputation method to frame"""
-
-    def wrapper(self, *args) -> None:
-        frame = args[0]
-        imputer = func(self)
-        imp_frame = imputer.fit_transform(frame)
-        imp_frame = pd.DataFrame(imp_frame, index=frame.index, columns=frame.columns)
-        if len(frame.columns) != len(imp_frame.columns):
-            logger.info(
-                f'{self.impute_method} reduced features from {len(frame.columns)-1} -> {len(imp_frame.columns)-1}'
-            )
-        self.set_store('frame', self.state_name, 'train', imp_frame)
-        if len(imp_frame) == 0:
-            raise ValueError('No cases left after dropping NaN values, use another imputation method or clean data')
-        return imputer
-    return wrapper
-
-
 class Imputer(DataBorg):
     """Impute missing data"""
 
@@ -41,9 +22,16 @@ class Imputer(DataBorg):
 
     def __call__(self) -> None:
         """Impute missing data"""
-        ephemeral_frame = self.get_store('frame', self.state_name, 'train')
+        train_frame = self.get_store('frame', self.state_name, 'train')
+        test_frame = self.get_store('frame', self.state_name, 'test')
         if self._check_methods():
-            return getattr(self, self.impute_method)(ephemeral_frame)
+            imputer = getattr(self, self.impute_method)()
+            imp_train = imputer.fit_transform(train_frame)
+            imp_train = pd.DataFrame(imp_train, index=train_frame.index, columns=train_frame.columns)
+            imp_test = imputer.transform(test_frame)
+            imp_test = pd.DataFrame(imp_test, index=test_frame.index, columns=test_frame.columns)
+            self.set_store('frame', self.state_name, 'train', imp_train)
+            self.set_store('frame', self.state_name, 'test', imp_test)
 
     def _check_methods(self) -> bool:
         """Check if the given method is valid"""
@@ -61,40 +49,32 @@ class Imputer(DataBorg):
             raise ValueError('No cases left after dropping NaN values, use another imputation method or clean data')
         self.set_store('frame', self.state_name, 'ephemeral', imp_frame)
 
-    @data_bubble
     def iterative_impute(self) -> IterativeImputer:
         """Iterative impute"""
-        self.imputer = IterativeImputer(
+        return IterativeImputer(
             initial_strategy='median',
             max_iter=100,
             random_state=self.seed,
             keep_empty_features=True,
         )
-        return self.imputer
 
-    @data_bubble
     def simple_impute(self) -> SimpleImputer:
         """Simple impute"""
-        self.imputer = SimpleImputer(
+        return SimpleImputer(
             strategy='median',
             keep_empty_features=True,
         )
-        return self.imputer
 
-    @data_bubble
     def missing_indicator_impute(self) -> MissingIndicator:
         """Missing indicator impute"""
-        self.imputer = MissingIndicator(
+        return MissingIndicator(
             missing_values=np.nan,
             features='all',
         )
-        return self.imputer
 
-    @data_bubble
     def knn_impute(self) -> KNNImputer:
         """KNN impute"""
-        self.imputer = KNNImputer(
+        return KNNImputer(
             n_neighbors=5,
             keep_empty_features=True,
         )
-        return self.imputer

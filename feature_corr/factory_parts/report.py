@@ -1,11 +1,10 @@
-import json
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from loguru import logger
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from feature_corr.crates.helpers import job_name_cleaner
 from feature_corr.data_borg import DataBorg, NestedDefaultDict
@@ -20,6 +19,9 @@ class Report(DataBorg):
         experiment_name = config.meta.name
         self.seeds = config.meta.seed
         self.output_dir = os.path.join(config.meta.output_dir, experiment_name)
+        OmegaConf.save(
+            config, os.path.join(self.output_dir, 'job_config.yaml')
+        )  # save copy of config for future reference
         self.plot_format = config.meta.plot_format
         self.n_bootstraps = config.data_split.n_bootstraps
         self.jobs = config.selection.jobs
@@ -28,16 +30,21 @@ class Report(DataBorg):
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
         self.learn_task = config.meta.learn_task
-        v_scoring_dict = config.verification.scoring[self.learn_task]
-        verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
-        scores = NestedDefaultDict()
+        scoring_dict = config.verification.scoring[self.learn_task]
+        self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
+        self.rep_scoring.append('pos_rate')
         for seed in self.seeds:  # initialise empty score containers to be filled during verification
             for job_name in self.job_names:
                 for n_top in self.n_top_features:
+                    scores = NestedDefaultDict()
                     for model in self.models:
-                        scores[model] = {score: [] for score in verif_scoring}
-                self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
+                        scores[model] = {score: [] for score in self.rep_scoring}
+                    self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
+            scores = NestedDefaultDict()
+            for model in self.models:
+                scores[model] = {score: [] for score in self.rep_scoring}
             self.set_store('score', str(seed), 'all_features', scores)
+
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]
         if len(self.models) < 2:  # ensemble methods need at least two models two combine their results
@@ -83,25 +90,26 @@ class Report(DataBorg):
 
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds"""
-        v_scoring_dict = self.config.verification.scoring[self.config.meta.learn_task]
-        self.verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
         for job_name in self.job_names:
             out_dir = os.path.join(self.output_dir, job_name)
-            for model in self.models + self.ensemble:
-                self.average_scores('all_features', model)
-            for n_top in self.n_top_features:  # compute average scores and populate plots
+            with open(os.path.join(out_dir, 'results.txt'), 'w') as file:
                 for model in self.models + self.ensemble:
-                    self.average_scores(f'{job_name}_{n_top}', model)
+                    file.write(f'Results for {model} model:\n' 'All features:\n')
+                    avg_scores= self.average_scores('all_features', model)
+                    [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
+                    for n_top in self.n_top_features:  # compute average scores and populate plots
+                        file.write(f'Top {n_top} features:\n')
+                        avg_scores= self.average_scores(f'{job_name}_{n_top}', model)
+                        [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
 
     def average_scores(self, job_name, model) -> None:
-        self.mean_x = np.linspace(0, 1, 100)
-        self.averaged_scores = {score: [] for score in self.verif_scoring}
+        averaged_scores = {score: [] for score in self.rep_scoring}
         for seed in self.seeds:
             scores = self.get_store('score', str(seed), job_name)[model]
-            for score in self.verif_scoring:
-                self.averaged_scores[score].append(scores[score])
-        self.averaged_scores = {
-            score: f'{np.mean(self.averaged_scores[score]):.3f} +- {np.std(self.averaged_scores[score]):.3f}'
-            for score in self.verif_scoring
+            for score in self.rep_scoring:
+                averaged_scores[score].append(scores[score])
+        averaged_scores = {
+            score: f'{np.mean(averaged_scores[score]):.3f} +- {np.std(averaged_scores[score]):.3f}'
+            for score in self.rep_scoring
         }  # compute mean +- std for all scores
-        self.pos_rate = scores['pos_rate']
+        return averaged_scores
