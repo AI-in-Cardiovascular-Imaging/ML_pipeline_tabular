@@ -59,7 +59,7 @@ class Pipeline(DataBorg, Normalisers):
         np.random.seed(self.seed)
         boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)
         for i in range(self.n_bootstraps):
-            # potentially need to generate new random seed for each iter?
+            logger.info(f'Running bootstrap iteration {i+1}/{self.n_bootstraps}...')
             self.data_split(boot_seeds[i])
             imputer = self.impute()
             if self.oversample:

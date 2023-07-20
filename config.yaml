@@ -81,12 +81,12 @@ verification:
   use_n_top_features: [20, 15, 10, 5] # list of n_features to use for verification
   scoring:
     binary_classification:
-      accuracy_score: True
       roc_auc_score: True
       average_precision_score: True
       recall_score: True
       precision_score: True
       f1_score: True
+      accuracy_score: True
     multi_classification: {}
     regression:
       r2_score: True
