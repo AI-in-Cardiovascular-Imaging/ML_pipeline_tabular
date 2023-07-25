@@ -63,8 +63,8 @@ class Pipeline(DataBorg, Normalisers):
             self.data_split(boot_seeds[i])
             imputer = self.impute()
             if self.oversample:
-                s_train = self.over_sampling(self.get_store('frame', self.state_name, 'train'))
-                self.set_store('frame', self.state_name, 'train', s_train)
+                train = self.over_sampling(self.get_store('frame', self.state_name, 'train'))
+                self.set_store('frame', self.state_name, 'train', train)
             norm = [step for step in self.jobs[0] if 'norm' in step][
                 0
             ]  # need to init first normalisation for verification

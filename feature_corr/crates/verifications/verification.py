@@ -84,6 +84,7 @@ class Verification(DataBorg, Normalisers):
         self.y_train = None
         self.x_test = None
         self.y_test = None
+        self.x_test_raw = None
 
     def __call__(self, job_name, job_dir, imputer) -> None:
         """Train classifier to verify final feature importance"""
@@ -108,8 +109,10 @@ class Verification(DataBorg, Normalisers):
         """Prepare data for training"""
         v_train = self.get_store('frame', self.state_name, 'train')
         v_test = self.get_store('frame', self.state_name, 'test')
-        self.x_train, self.y_train = self.split_frame(v_train)
-        self.x_test, self.y_test = self.split_frame(v_test, normalise=True)  # test data not yet normalised
+        self.x_train, self.y_train, _ = self.split_frame(v_train)
+        self.x_test, self.y_test, self.x_test_raw = self.split_frame(
+            v_test, normalise=True
+        )  # test data not yet normalised
 
     def train_models(self) -> None:
         """Train classifier to verify feature importance"""
@@ -179,6 +182,11 @@ class Verification(DataBorg, Normalisers):
                 logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
 
             if self.config.plot_first_iter and not job_name == 'all_features' and not model in self.ensemble:
+                x_train_raw = self.scaler.inverse_transform(self.x_train)
+                x_train_raw = pd.DataFrame(x_train_raw, index=self.x_train.index, columns=self.x_train.columns)[
+                    self.top_features
+                ]
+
                 # ALE (accumulated local effects)
                 ale_fig, ale_ax = plt.subplots()
                 if self.learn_task == 'binary_classification':
@@ -188,7 +196,7 @@ class Verification(DataBorg, Normalisers):
                 else:
                     target_names = None
                 ale = ALE(pred_func, feature_names=self.top_features, target_names=target_names)
-                ale_expl = ale.explain(self.x_train[self.top_features].values)
+                ale_expl = ale.explain(x_train_raw.values)
                 plot_ale(
                     ale_expl,
                     n_cols=n_top // 5 + 1,
@@ -202,7 +210,7 @@ class Verification(DataBorg, Normalisers):
                 # PDV (partial dependence variance)
                 # pdv_fig, pdv_ax = plt.subplots()
                 # pdv = PartialDependenceVariance(pred_func, feature_names=self.top_features, target_names=target_names)
-                # pdv_expl = pdv.explain(self.x_train[self.top_features].values, method='interaction')
+                # pdv_expl = pdv.explain(x_train_raw.values, method='interaction')
                 # plot_pd_variance(
                 #     pdv_expl, n_cols=n_top // 5 + 1, fig_kw={'figwidth': 8, 'figheight': 8}, ax=pdv_ax, top_k=n_top
                 # )
@@ -213,16 +221,20 @@ class Verification(DataBorg, Normalisers):
                     tshap_fig, tshap_ax = plt.subplots()
                     tshap = TreeShap(estimator.best_estimator_, model_output='raw')
                     tshap.fit()
-                    tshap_expl = tshap.explain(self.x_test[self.top_features].values, feature_names=self.top_features)
+                    tshap_expl = tshap.explain(
+                        self.x_test_raw[self.top_features].values, feature_names=self.top_features
+                    )
                     shap_values = tshap_expl.shap_values[-1]  # display values for positive class
                     shap.summary_plot(
                         shap_values,
-                        self.x_test[self.top_features].values,
+                        self.x_test_raw[self.top_features].values,
                         feature_names=self.top_features,
                         class_names=target_names,
                         show=False,
                     )
                     tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}.{self.plot_format}'))
+
+                #
 
         self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
 
@@ -269,16 +281,18 @@ class Verification(DataBorg, Normalisers):
 
     def split_frame(self, frame: pd.DataFrame, normalise=False) -> tuple:
         """Prepare frame for verification"""
+        x_frame_raw = None
         if normalise:
+            x_frame_raw = frame.drop(self.target_label, axis=1)
             frame = self.normalise_test(frame)
         y_frame = frame[self.target_label]
         x_frame = frame.drop(self.target_label, axis=1)
-        return x_frame, y_frame
+        return x_frame, y_frame, x_frame_raw
 
     def normalise_test(self, frame: pd.DataFrame) -> pd.DataFrame:
         tmp_label = frame[self.target_label]  # keep label col as is
-        arr_frame = frame.values  # returns a numpy array
+        arr_frame = frame.drop(self.target_label, axis=1).values  # returns a numpy array
         norm_frame = self.scaler.transform(arr_frame)
-        norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns)
+        norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns.drop(self.target_label))
         norm_frame[self.target_label] = tmp_label
         return norm_frame

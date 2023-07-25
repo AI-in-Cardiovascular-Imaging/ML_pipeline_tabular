@@ -13,9 +13,9 @@ def data_bubble(func):
         if frame.isna().any(axis=None):
             raise ValueError('Data contains NaN values, consider imputing data')
         tmp_label = frame[self.target_label]  # keep label col as is
-        arr_frame = frame.values  # returns a numpy array
+        arr_frame = frame.drop(self.target_label, axis=1).values  # returns a numpy array
         norm_frame = func(self, arr_frame)
-        norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns)
+        norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns.drop(self.target_label))
         norm_frame[self.target_label] = tmp_label
         return norm_frame, None
 
