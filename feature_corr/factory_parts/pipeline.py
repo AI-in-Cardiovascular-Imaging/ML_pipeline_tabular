@@ -17,7 +17,6 @@ from imblearn.over_sampling import (
 from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.helpers import job_name_cleaner
 from feature_corr.crates.imputers import Imputer
-from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.normalisers import Normalisers
 from feature_corr.crates.selections import Selection
 from feature_corr.crates.verifications import Verification
@@ -54,13 +53,30 @@ class Pipeline(DataBorg, Normalisers):
         self.add_state_name(self.state_name)
         self.sync_ephemeral_data_to_data_store(self.state_name, 'ephemeral')
 
+        self.imputer_pipeline = Imputer(self.config)
+        self.data_splitter = DataSplit(self.config)
+        self.selector = Selection(self.config)
+        self.verifier = Verification(self.config)
+
+        self.over_sampler_dict = {
+            'binary_classification_smoten': SMOTEN(random_state=self.seed),
+            'binary_classification_smotenc': SMOTENC(categorical_features=2, random_state=self.seed),
+            'binary_classification_svmsmote': SVMSMOTE(random_state=self.seed),
+            'binary_classification_borderlinesmote': BorderlineSMOTE(random_state=self.seed),
+            'binary_classification_randomoversampler': RandomOverSampler(random_state=self.seed),
+            'regression_adasyn': ADASYN(random_state=self.seed),
+            'regression_smote': SMOTE(random_state=self.seed),
+            'regression_kmeanssmote': KMeansSMOTE(random_state=self.seed),
+            'regression_randomoversampler': RandomOverSampler(random_state=self.seed),
+        }
+
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
         np.random.seed(self.seed)
         boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)
         for i in range(self.n_bootstraps):
             logger.info(f'Running bootstrap iteration {i+1}/{self.n_bootstraps}...')
-            self.data_split(boot_seeds[i])
+            self.data_splitter(boot_seeds[i])
             imputer = self.impute()
             if self.oversample:
                 train = self.over_sampling(self.get_store('frame', self.state_name, 'train'))
@@ -86,50 +102,29 @@ class Pipeline(DataBorg, Normalisers):
         """Delete assigned state data store"""
         self.remove_state_data_store(self.state_name)
 
-    def inspection(self) -> None:
-        """Inspect data"""
-        TargetStatistics(self.config).set_target_task()
-
     @run_when_active
     def impute(self) -> None:
         """Impute data"""
-        imputer = Imputer(self.config)()
-        return imputer
-
-    def data_split(self, boot_seed: int) -> None:
-        """Split data"""
-        DataSplit(self.config)(boot_seed)
+        self.imputer_pipeline()
 
     @run_when_active
     def selection(self, job, job_name, job_dir):
         """Explore data"""
-        Selection(self.config)(job, job_name, job_dir)
+        self.selector(job, job_name, job_dir)
 
     @run_when_active
     def verification(self, job_name, job_dir, imputer) -> None:
         """Verify selected features"""
-        Verification(self.config)(job_name, job_dir, imputer)
+        self.verifier(job_name, job_dir, imputer)
 
     def over_sampling(self, x_frame: pd.DataFrame) -> pd.DataFrame:
         """Over sample data"""
         method = self.oversample_method[self.learn_task]
         over_sampler_name = f'{self.learn_task}_{method}'.lower()
-        over_sampler_dict = {
-            'binary_classification_smoten': SMOTEN(random_state=self.seed),
-            'binary_classification_smotenc': SMOTENC(categorical_features=2, random_state=self.seed),
-            'binary_classification_svmsmote': SVMSMOTE(random_state=self.seed),
-            'binary_classification_borderlinesmote': BorderlineSMOTE(random_state=self.seed),
-            'binary_classification_randomoversampler': RandomOverSampler(random_state=self.seed),
-            'regression_adasyn': ADASYN(random_state=self.seed),
-            'regression_smote': SMOTE(random_state=self.seed),
-            'regression_kmeanssmote': KMeansSMOTE(random_state=self.seed),
-            'regression_randomoversampler': RandomOverSampler(random_state=self.seed),
-        }
-
-        if over_sampler_name not in over_sampler_dict:
+        if over_sampler_name not in self.over_sampler_dict:
             raise ValueError(f'Unknown over sampler: {over_sampler_name}')
 
-        over_sampler = over_sampler_dict[over_sampler_name]
+        over_sampler = self.over_sampler_dict[over_sampler_name]
         y_frame = x_frame[self.target_label]
         new_x_frame, _ = over_sampler.fit_resample(x_frame, y_frame)
         return new_x_frame
