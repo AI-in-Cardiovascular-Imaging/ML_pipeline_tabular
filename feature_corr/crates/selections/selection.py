@@ -32,7 +32,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.variance_thresh = config.selection.variance_thresh
         self.class_weight = config.selection.class_weight
         self.aggregated_jobs = config.meta.aggregated_jobs
-        self.auto_norm_method = config.selection.auto_norm_method
         self.param_grids = config.verification.param_grids
         self.n_top_features = config.verification.use_n_top_features
         self.job_name = ''
@@ -41,7 +40,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
     def __call__(self, job, job_name, job_dir) -> None:
         """Run all jobs"""
         self.__check_jobs()
-        self.__check_auto_norm_methods()
         self.job_name = job_name
         self.job_dir = job_dir
 
@@ -60,13 +58,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         jobs = set([x for sublist in self.jobs for x in sublist])
         if not jobs.issubset(valid_methods):
             raise ValueError(f'Invalid job, check -> {str(jobs - valid_methods)}')
-
-    def __check_auto_norm_methods(self) -> None:
-        """Check if auto_norm_method keys are valid"""
-        valid_methods = set([x for x in dir(self) if not x.startswith('_') and x.endswith('norm')])
-        selected_methods = set(self.auto_norm_method.values())
-        if not selected_methods.issubset(valid_methods):
-            raise ValueError(f'Invalid auto norm method, check -> {str(selected_methods - valid_methods)}')
 
     def __store_features(self, features: list, step: str) -> None:
         """Store features"""

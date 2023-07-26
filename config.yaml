@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping_bootstrap" # experiment name
+  name: "phenomapping_bootstrap_fixed_norm" # experiment name
   plot_format: "png"
   # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125]
@@ -33,10 +33,10 @@ impute:
 
 # data split definitions
 data_split:
-  n_bootstraps: 10
+  n_bootstraps: 5
   test_frac: 0.3 # fraction of data to use for testing verification models
 
-  oversample: True # oversample minority class to balance training set
+  oversample: False # oversample minority class to balance training set
 
   oversample_method:
     binary_classification: "BorderlineSMOTE" #: ADASYN, SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
@@ -58,27 +58,23 @@ selection:
     multi_classification: "average_precision"
     regression: "neg_mean_absolute_error"
 
-  auto_norm_method: # method for data type dependent normalization
-    binary: "min_max_norm"
-    continuous: "z_score_norm"
-    object: "z_score_norm"
-    datatime: "z_score_norm"
-
   jobs: [
-    ["variance_threshold", "z_score_norm", "correlation", "fr_forest"], #: variance_threshold, umap, tsne, pca, z_score_norm, l1_norm, l2_norm, auto_norm
+    ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
+    # ["variance_threshold", "min_max_norm", "correlation", "fr_forest"],
     # ["variance_threshold", "z_score_norm", "mrmr"],
     # ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
     # ["variance_threshold", "z_score_norm", "correlation", "set_memory"],
     # ["get_memory", "fr_forest"],
+    # ["get_memory", "fr_xgboost" ],
     # ["get_memory", "fr_adaboost" ],
     # ["get_memory", "fr_extreme_forest" ],
-    # ["get_memory", "fr_xgboost" ],
     ]
 
 # verification strategy and final model to train and evaluate
 verification:
   active: True # whether to perform verification analysis for each job
-  use_n_top_features: [20, 15, 10, 5] # list of n_features to use for verification
+  use_n_top_features: [30, 20, 15, 10, 5, 3] # list of n_features to use for verification
+  # use_n_top_features: [10]
   scoring:
     binary_classification:
       roc_auc_score: True
@@ -95,7 +91,7 @@ verification:
       explained_variance_score: True
 
   models:
-    ensemble_voting: False
+    ensemble_voting: True
     logistic_regression: True
     svm: False
     forest: False
@@ -109,40 +105,40 @@ verification:
 
   param_grids:
     logistic_regression:
-      penalty: ["l1", "l2"]
+      penalty: ["l1", "l2", "elasticnet"]
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       solver: ["saga"] # supports both l1 and l2 penalties
       warm_start: [True, False]
-      max_iter: [10000]
+      max_iter: [50000]
 
     svm:
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       kernel: ["poly", "rbf", "sigmoid"]
       gamma: ["scale", "auto"]
-      max_iter: [10000]
+      max_iter: [50000]
 
     forest:
-      n_estimators: [100, 500]
+      n_estimators: [10, 100, 500]
       criterion: ["gini", "entropy"]
       max_depth: [10, 50, 100, null]
       max_features: ["sqrt", "log2", null]
       bootstrap: [True, False]
 
     extreme_forest:
-      n_estimators: [100, 500]
+      n_estimators: [10, 100, 500]
       criterion: ["gini", "entropy"]
       max_depth: [10, 50, 100, null]
       max_features: ["sqrt", "log2", null]
       bootstrap: [True, False]
 
     adaboost:
-      n_estimators: [100, 500]
+      n_estimators: [10, 100, 500]
       learning_rate: [0.0001, 0.001, 0.01, 0.1, 1]
 
     xgboost:
-      n_estimators: [100, 500]
+      n_estimators: [10, 100, 500]
       learning_rate: [0.0001, 0.001, 0.01, 0.1, 1]
-      max_depth: [10, 50, 100, 1000, null]
+      max_depth: [10, 50, 100, null]
       max_features: ["sqrt", "log2", null]
 
     lasso:

@@ -8,7 +8,6 @@ from feature_corr.data_borg import DataBorg
 
 logger.trace(enable_iterative_imputer)  # to avoid auto import removal
 
-
 class Imputer(DataBorg):
     """Impute missing data"""
 
@@ -25,11 +24,14 @@ class Imputer(DataBorg):
         train_frame = self.get_store('frame', self.state_name, 'train')
         test_frame = self.get_store('frame', self.state_name, 'test')
         if self._check_methods():
-            imputer = getattr(self, self.impute_method)()
-            imp_train = imputer.fit_transform(train_frame)
-            imp_train = pd.DataFrame(imp_train, index=train_frame.index, columns=train_frame.columns)
-            imp_test = imputer.transform(test_frame)
-            imp_test = pd.DataFrame(imp_test, index=test_frame.index, columns=test_frame.columns)
+            if self.impute_method == 'drop_nan_impute':
+                raise NotImplementedError
+            else:
+                imputer = getattr(self, self.impute_method)()
+                imp_train = imputer.fit_transform(train_frame)
+                imp_train = pd.DataFrame(imp_train, index=train_frame.index, columns=train_frame.columns)
+                imp_test = imputer.transform(test_frame)
+                imp_test = pd.DataFrame(imp_test, index=test_frame.index, columns=test_frame.columns)
             self.set_store('frame', self.state_name, 'train', imp_train)
             self.set_store('frame', self.state_name, 'test', imp_test)
 

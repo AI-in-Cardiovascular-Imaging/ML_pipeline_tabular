@@ -4,6 +4,7 @@ import pandas as pd
 from loguru import logger
 from sklearn import preprocessing
 
+
 def data_bubble(func):
     """Pre and post processing for normalisation methods"""
 
@@ -12,12 +13,20 @@ def data_bubble(func):
         frame = args[0]
         if frame.isna().any(axis=None):
             raise ValueError('Data contains NaN values, consider imputing data')
+        nunique = frame.nunique()
+        non_categorical = list(nunique[nunique > 5].index)
+        to_normalise = frame[non_categorical]
         tmp_label = frame[self.target_label]  # keep label col as is
-        arr_frame = frame.drop(self.target_label, axis=1).values  # returns a numpy array
+        try:
+            arr_frame = to_normalise.drop(self.target_label, axis=1).values
+            cols = to_normalise.columns.drop(self.target_label)
+        except KeyError:  # target label is categorical -> already removed
+            arr_frame = to_normalise.values
+            cols = to_normalise.columns
         norm_frame = func(self, arr_frame)
-        norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns.drop(self.target_label))
-        norm_frame[self.target_label] = tmp_label
-        return norm_frame, None
+        frame[non_categorical] = pd.DataFrame(norm_frame, index=to_normalise.index, columns=cols)
+        frame[self.target_label] = tmp_label
+        return frame, None
 
     return wrapper
 
@@ -27,7 +36,6 @@ class Normalisers:
 
     def __init__(self, target_label=None) -> None:
         self.target_label = target_label
-        self.auto_norm_method = None
         self.scaler = None
 
     @data_bubble
@@ -77,60 +85,3 @@ class Normalisers:
         """Power transform frame"""
         self.scaler = preprocessing.PowerTransformer()
         return self.scaler.fit_transform(frame)
-
-    def auto_norm(self, frame: pd.DataFrame) -> tuple:
-        """Auto normalise frame based on data type per column"""
-        if frame.isna().any(axis=None):
-            raise ValueError('Data contains NaN values, consider imputing data')
-        tmp_label = frame[self.target_label]  # keep label col as i
-        for col_name in frame.columns:  # iterate over columns
-            col_type = str(frame[col_name].dtype)
-            col_unique_vals = frame[col_name].nunique()
-            frame = self.__binary_norm(frame, col_name, col_type, col_unique_vals)
-            frame = self.__continuous_norm(frame, col_name, col_type, col_unique_vals)
-            frame = self.__object_norm(frame, col_name, col_type)
-            frame = self.__datatime_norm(frame, col_name, col_type)
-        frame[self.target_label] = tmp_label
-        return frame, None
-
-    def __normalise_accordingly(self, frame: pd.DataFrame, col_name: str, data_type_name: str) -> pd.DataFrame:
-        """Normalise frame according to data type"""
-        logger.trace(f'{data_type_name.capitalize()} data detected in {col_name}')
-        col_data = frame[col_name]
-        col_values = col_data.values.reshape(-1, 1)
-        norm_method = self.auto_norm_method[data_type_name]
-        norm = getattr(self, norm_method)
-        ori_norm = norm.__wrapped__  # get original unwrapped function
-        norm_col_values = ori_norm(self, col_values)
-        col_data = pd.Series(norm_col_values.reshape(-1), index=col_data.index)
-        frame[col_name] = col_data
-        return frame
-
-    def __binary_norm(self, frame: pd.DataFrame, col_name: str, col_type: str, col_unique_vals: int) -> pd.DataFrame:
-        """Normalise binary data if present"""
-        if ('int' in col_type or 'float' in col_type) and col_unique_vals == 2:
-            frame = self.__normalise_accordingly(frame, col_name, data_type_name='binary')
-        return frame
-
-    def __continuous_norm(
-        self, frame: pd.DataFrame, col_name: str, col_type: str, col_unique_vals: int
-    ) -> pd.DataFrame:
-        """Normalise continuous data if present"""
-        if ('int' in col_type or 'float' in col_type) and col_unique_vals > 2:
-            frame = self.__normalise_accordingly(frame, col_name, data_type_name='continuous')
-        return frame
-
-    def __object_norm(self, frame: pd.DataFrame, col_name: str, col_type: str) -> pd.DataFrame:
-        """Normalise object data if present"""
-        if 'object' in col_type:
-            # frame = self.__normalise_accordingly(frame, col_name, data_type_name='object')
-            logger.warning('Object normalisation is not implemented yet')
-            raise NotImplementedError('Object normalisation is not implemented yet')
-        return frame
-
-    def __datatime_norm(self, frame: pd.DataFrame, col_name: str, col_type: str) -> pd.DataFrame:
-        """Normalise datetime data if present"""
-        if 'datetime' in col_type:
-            # frame = self.__normalise_accordingly(frame, col_name, data_type_name='datetime')
-            raise NotImplementedError('Datetime normalisation is not implemented yet')
-        return frame

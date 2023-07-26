@@ -182,6 +182,7 @@ class Verification(DataBorg, Normalisers):
                 logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
 
             if self.config.plot_first_iter and not job_name == 'all_features' and not model in self.ensemble:
+                continue
                 x_train_raw = self.scaler.inverse_transform(self.x_train)
                 x_train_raw = pd.DataFrame(x_train_raw, index=self.x_train.index, columns=self.x_train.columns)[
                     self.top_features
@@ -291,9 +292,17 @@ class Verification(DataBorg, Normalisers):
         return x_frame, y_frame, x_frame_raw
 
     def normalise_test(self, frame: pd.DataFrame) -> pd.DataFrame:
+        nunique = frame.nunique()
+        non_categorical = list(nunique[nunique > 5].index)
+        to_normalise = frame[non_categorical]
         tmp_label = frame[self.target_label]  # keep label col as is
-        arr_frame = frame.drop(self.target_label, axis=1).values  # returns a numpy array
+        try:
+            arr_frame = to_normalise.drop(self.target_label, axis=1).values
+            cols = to_normalise.columns.drop(self.target_label)
+        except KeyError:  # target label is categorical -> already removed
+            arr_frame = to_normalise.values
+            cols = to_normalise.columns
         norm_frame = self.scaler.transform(arr_frame)
-        norm_frame = pd.DataFrame(norm_frame, index=frame.index, columns=frame.columns.drop(self.target_label))
-        norm_frame[self.target_label] = tmp_label
-        return norm_frame
+        frame[non_categorical] = pd.DataFrame(norm_frame, index=to_normalise.index, columns=cols)
+        frame[self.target_label] = tmp_label
+        return frame
