@@ -205,7 +205,7 @@ class Verification(DataBorg, Normalisers):
                     sharey='all',
                     ax=ale_ax,
                 )
-                ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}.{self.plot_format}'))
+                ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}_top_{n_top}.{self.plot_format}'))
 
                 # PDV (partial dependence variance)
                 # pdv_fig, pdv_ax = plt.subplots()
@@ -214,7 +214,7 @@ class Verification(DataBorg, Normalisers):
                 # plot_pd_variance(
                 #     pdv_expl, n_cols=n_top // 5 + 1, fig_kw={'figwidth': 8, 'figheight': 8}, ax=pdv_ax, top_k=n_top
                 # )
-                # pdv_fig.savefig(os.path.join(job_dir, f'PDV_interaction_{model}.{self.plot_format}'))
+                # pdv_fig.savefig(os.path.join(job_dir, f'PDV_interaction_{model}_top_{n_top}.{self.plot_format}'))
 
                 # tree SHAP (shapley additive explanations)
                 if model in ['forest', 'extreme_forest', 'xgboost']:
@@ -232,9 +232,10 @@ class Verification(DataBorg, Normalisers):
                         class_names=target_names,
                         show=False,
                     )
-                    tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}.{self.plot_format}'))
+                    tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}_top_{n_top}.{self.plot_format}'))
 
-                #
+                # local method
+                # TODO
 
         self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
 

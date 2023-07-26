@@ -10,7 +10,7 @@ from sklearn.ensemble import (
 )
 from sklearn.linear_model import LogisticRegression, Lasso, LassoLars, ElasticNet, OrthogonalMatchingPursuit
 from sklearn.svm import SVC
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import KFold, RepeatedStratifiedKFold
 
 
 def init_estimator(
@@ -42,7 +42,7 @@ def init_estimator(
     }
 
     if learn_task == 'binary_classification':
-        cross_fold = StratifiedKFold(shuffle=True, random_state=seed)
+        cross_fold = RepeatedStratifiedKFold(n_splits=3, n_repeats=10, random_state=seed)
     elif learn_task == 'multi_classification':
         raise NotImplementedError('Multi-classification not implemented')
     elif learn_task == 'regression':

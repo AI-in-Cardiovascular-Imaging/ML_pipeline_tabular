@@ -107,7 +107,7 @@ class FeatureReductions:
             features = mrmr.mrmr_classif(
                 x_frame,
                 y_frame,
-                K=self.n_top_features,
+                K=max(self.n_top_features),
                 cat_features=categorical,
                 n_jobs=self.workers,
                 show_progress=False,
@@ -116,7 +116,7 @@ class FeatureReductions:
             features = mrmr.mrmr_regression(
                 x_frame,
                 y_frame,
-                K=self.n_top_features,
+                K=max(self.n_top_features),
                 cat_features=categorical,
                 n_jobs=self.workers,
                 show_progress=False,

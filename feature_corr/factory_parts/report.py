@@ -92,7 +92,7 @@ class Report(DataBorg):
         """Summarise verification results over all seeds"""
         for job_name in self.job_names:
             out_dir = os.path.join(self.output_dir, job_name)
-            with open(os.path.join(out_dir, 'results.txt'), 'w') as file:
+            with open(os.path.join(out_dir, f'results_{self.n_bootstraps}_bootstraps.txt'), 'w') as file:
                 for model in self.models + self.ensemble:
                     file.write(f'Results for {model} model:\n' 'All features:\n')
                     avg_scores= self.average_scores('all_features', model)
