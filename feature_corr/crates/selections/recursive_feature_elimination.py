@@ -31,7 +31,7 @@ class RecursiveFeatureElimination:
         self.param_grids = None
         np.random.seed(self.seed)
 
-    def __reduction(self, frame: pd.DataFrame, rfe_estimator: str) -> (pd.DataFrame, pd.DataFrame):
+    def __reduction(self, frame: pd.DataFrame, rfe_estimator: str) -> tuple:
         """Reduce the number of features using recursive feature elimination"""
         estimator, cross_validator, scoring = init_estimator(
             rfe_estimator, self.learn_task, self.seed, self.scoring, self.class_weight, self.workers

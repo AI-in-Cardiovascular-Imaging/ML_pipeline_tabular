@@ -13,9 +13,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 from alibi.explainers import ALE, plot_ale, PartialDependenceVariance, plot_pd_variance, TreeShap
 
-from feature_corr.crates.data_split import DataSplit
 from feature_corr.crates.helpers import init_estimator
-from feature_corr.crates.inspections import TargetStatistics
 from feature_corr.crates.normalisers import Normalisers
 from feature_corr.data_borg import DataBorg, NestedDefaultDict
 

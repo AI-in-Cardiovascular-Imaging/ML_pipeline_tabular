@@ -10,6 +10,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.inspection import permutation_importance
 
+from feature_corr.crates.helpers import init_estimator
+from feature_corr.crates.verifications.verification import CrossValidation
+
 
 class FeatureReductions:
     """Simple feature reduction methods"""
@@ -26,8 +29,10 @@ class FeatureReductions:
         self.corr_thresh = None
         self.corr_ranking = None
         self.variance_thresh = None
-        self.scoring = None
         self.learn_task = None
+        self.scoring = None
+        self.class_weight = None
+        self.param_grids = None
         self.n_top_features = None
         np.random.seed(self.seed)
 
@@ -148,6 +153,38 @@ class FeatureReductions:
         new_frame = pd.concat([selected_features, y_frame], axis=1)
         features = selected_features.columns.tolist()
         return new_frame, features
+
+    def univariate_ranking(self, frame: pd.DataFrame, model: str = 'logistic_regression') -> tuple:
+        """Rank features according to univariate logistic regression model"""
+        y_frame = frame[self.target_label]
+        x_frame = frame.drop(self.target_label, axis=1)
+
+        estimator, cross_validator, scoring = init_estimator(
+            model,
+            self.learn_task,
+            self.seed,
+            self.scoring,
+            self.class_weight,
+            self.workers,
+        )
+        scores = {}
+        for feature in x_frame.columns:
+            optimiser = CrossValidation(
+                x_frame[[feature]],
+                y_frame,
+                estimator,
+                cross_validator,
+                self.param_grids[model],
+                scoring,
+                self.seed,
+                self.workers,
+            )
+            scores[feature] = optimiser().best_score_
+        scores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
+        features = list(scores.keys())
+
+        return frame, features
+
 
     def univariate_analysis(self, frame: pd.DataFrame) -> tuple:
         """Perform univariate analysis (box plots and distributions)"""

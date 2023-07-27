@@ -61,10 +61,10 @@ selection:
   jobs: [
       # ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
       # ["variance_threshold", "min_max_norm", "correlation", "fr_forest"],
-      # ["variance_threshold", "z_score_norm", "mrmr"],
+      ["variance_threshold", "z_score_norm", "univariate_ranking"],
       # ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
-      ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
-      ["get_memory", "fr_xgboost"],
+      # ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
+      # ["get_memory", "fr_xgboost"],
       # ["get_memory", "fr_adaboost" ],
       # ["get_memory", "fr_extreme_forest" ],
     ]
@@ -72,8 +72,8 @@ selection:
 # verification strategy and final model to train and evaluate
 verification:
   active: True # whether to perform verification analysis for each job
-  use_n_top_features: [30, 20, 15, 10, 5, 3] # list or range of n_features to use for verification
-  # use_n_top_features: "range(1, 10, 1)"
+  # use_n_top_features: [40, 20, 10, 5] # list or range of n_features to use for verification
+  use_n_top_features: "range(1, 50, 1)"
   scoring:
     binary_classification:
       roc_auc_score: True
