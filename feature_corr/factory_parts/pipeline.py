@@ -29,7 +29,7 @@ def run_when_active(func):
     def wrapper(self, *args, **kwargs):
         func_name = func.__name__
         if self.config[func_name]['active']:
-            logger.info(f'Running -> {func_name}')
+            logger.info(f'Running {func_name}...')
             return func(self, *args, **kwargs)
 
     return wrapper
@@ -90,7 +90,7 @@ class Pipeline(DataBorg, Normalisers):
 
             job_names = job_name_cleaner(self.jobs)
             for job, job_name in zip(self.jobs, job_names):
-                logger.info(f'Running -> {job_name}')
+                logger.info(f'Running {job_name}...')
                 job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, self.state_name)
                 os.makedirs(job_dir, exist_ok=True)
                 self.selection(job, job_name, job_dir)

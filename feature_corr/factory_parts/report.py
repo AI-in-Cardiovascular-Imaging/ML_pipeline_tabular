@@ -26,7 +26,10 @@ class Report(DataBorg):
         self.n_bootstraps = config.data_split.n_bootstraps
         self.jobs = config.selection.jobs
         self.job_names = job_name_cleaner(self.jobs)
-        self.n_top_features = self.config.verification.use_n_top_features
+        self.n_top_features = config.verification.use_n_top_features
+        if isinstance(self.n_top_features, str):  # turn range provided as string into list
+            self.n_top_features = list(eval(self.n_top_features))
+            config.verification.use_n_top_features = self.n_top_features
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
         self.learn_task = config.meta.learn_task

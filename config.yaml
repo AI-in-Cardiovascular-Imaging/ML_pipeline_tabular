@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping_bootstrap_fixed_norm" # experiment name
+  name: "phenomapping_bootstrap_corr_95" # experiment name
   plot_format: "png"
   # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125]
@@ -15,8 +15,8 @@ meta:
   # output_dir: "/home/sebalzer/Documents/Myo_Flamber/"
   # input_file: "/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx"
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  output_dir: '/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/'
-  input_file: '/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx'
+  output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
+  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
 # specify the clean strategy
 inspection:
   label_as_index: "ATTRAS_Redcap" # column string name or None
@@ -33,7 +33,7 @@ impute:
 
 # data split definitions
 data_split:
-  n_bootstraps: 5
+  n_bootstraps: 10
   test_frac: 0.3 # fraction of data to use for testing verification models
 
   oversample: False # oversample minority class to balance training set
@@ -49,7 +49,7 @@ selection:
 
   class_weight: "balanced"
   corr_method: "pearson" # correlation method
-  corr_thresh: 0.99 # threshold above which correlated features are removed
+  corr_thresh: 0.95 # threshold above which correlated features are removed
   corr_ranking: "corr" # method with which feature importance is calculated
   variance_thresh: 0.99 # remove binary features with same value in more than variance_thresh subjects
 
@@ -59,22 +59,21 @@ selection:
     regression: "neg_mean_absolute_error"
 
   jobs: [
-    ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
-    # ["variance_threshold", "min_max_norm", "correlation", "fr_forest"],
-    # ["variance_threshold", "z_score_norm", "mrmr"],
-    # ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
-    # ["variance_threshold", "z_score_norm", "correlation", "set_memory"],
-    # ["get_memory", "fr_forest"],
-    # ["get_memory", "fr_xgboost" ],
-    # ["get_memory", "fr_adaboost" ],
-    # ["get_memory", "fr_extreme_forest" ],
+      # ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
+      # ["variance_threshold", "min_max_norm", "correlation", "fr_forest"],
+      # ["variance_threshold", "z_score_norm", "mrmr"],
+      # ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
+      ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
+      ["get_memory", "fr_xgboost"],
+      # ["get_memory", "fr_adaboost" ],
+      # ["get_memory", "fr_extreme_forest" ],
     ]
 
 # verification strategy and final model to train and evaluate
 verification:
   active: True # whether to perform verification analysis for each job
-  use_n_top_features: [30, 20, 15, 10, 5, 3] # list of n_features to use for verification
-  # use_n_top_features: [10]
+  use_n_top_features: [30, 20, 15, 10, 5, 3] # list or range of n_features to use for verification
+  # use_n_top_features: "range(1, 10, 1)"
   scoring:
     binary_classification:
       roc_auc_score: True
@@ -107,9 +106,9 @@ verification:
     logistic_regression:
       penalty: ["l1", "l2", "elasticnet"]
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
-      solver: ["saga"] # supports both l1 and l2 penalties
+      solver: ["saga"] # only solver that supports all penalties
       warm_start: [True, False]
-      max_iter: [50000]
+      max_iter: [1000000]
 
     svm:
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
@@ -157,4 +156,3 @@ verification:
 
     omp:
       n_nonzero_coefs: [5, 10, 20, 50, null]
-      
