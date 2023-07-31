@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping_bootstrap_corr_95" # experiment name
+  name: "phenomapping_bootstrap_univariate_thresh_70" # experiment name
   plot_format: "png"
   # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125]
@@ -10,13 +10,13 @@ meta:
 
   state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
-  aggregated_jobs: False # if true gets copy of seed, set own seed or deactivate with false, average corr/feature reduction results
   # target_label: "mace"
   # output_dir: "/home/sebalzer/Documents/Myo_Flamber/"
   # input_file: "/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx"
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
   input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
+
 # specify the clean strategy
 inspection:
   label_as_index: "ATTRAS_Redcap" # column string name or None
@@ -37,7 +37,6 @@ data_split:
   test_frac: 0.3 # fraction of data to use for testing verification models
 
   oversample: False # oversample minority class to balance training set
-
   oversample_method:
     binary_classification: "BorderlineSMOTE" #: ADASYN, SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
     multi_classification: "RandomOverSampler" # Not implemented yet
@@ -46,16 +45,16 @@ data_split:
 # feature reduction strategy
 selection:
   active: True # whether to perform feature selections
-
   class_weight: "balanced"
   corr_method: "pearson" # correlation method
   corr_thresh: 0.95 # threshold above which correlated features are removed
   corr_ranking: "corr" # method with which feature importance is calculated
   variance_thresh: 0.99 # remove binary features with same value in more than variance_thresh subjects
+  univariate_thresh: 0.00 # use only features with univariate score above this threshold
 
   scoring:
     binary_classification: "roc_auc"
-    multi_classification: "average_precision"
+    multi_classification: "roc_auc"
     regression: "neg_mean_absolute_error"
 
   jobs: [
@@ -73,7 +72,7 @@ selection:
 verification:
   active: True # whether to perform verification analysis for each job
   # use_n_top_features: [40, 20, 10, 5] # list or range of n_features to use for verification
-  use_n_top_features: "range(1, 50, 1)"
+  use_n_top_features: "range(1, 61, 1)"
   scoring:
     binary_classification:
       roc_auc_score: True

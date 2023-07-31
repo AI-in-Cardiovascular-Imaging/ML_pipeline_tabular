@@ -30,6 +30,7 @@ class FeatureReductions:
         self.corr_ranking = None
         self.variance_thresh = None
         self.learn_task = None
+        self.univariate_thresh = None
         self.scoring = None
         self.class_weight = None
         self.param_grids = None
@@ -180,6 +181,8 @@ class FeatureReductions:
                 self.workers,
             )
             scores[feature] = optimiser().best_score_
+        if self.univariate_thresh > 0:
+            scores = {key: value for key, value in scores.items() if value > self.univariate_thresh}
         scores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
         features = list(scores.keys())
 

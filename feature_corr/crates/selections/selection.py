@@ -24,6 +24,7 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.jobs = config.selection.jobs
         self.task = config.meta.learn_task
         self.scoring = config.selection.scoring
+        self.univariate_thresh = config.selection.univariate_thresh
         self.state_name = config.meta.state_name
         self.target_label = config.meta.target_label
         self.corr_method = config.selection.corr_method
@@ -31,7 +32,6 @@ class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, 
         self.corr_ranking = config.selection.corr_ranking
         self.variance_thresh = config.selection.variance_thresh
         self.class_weight = config.selection.class_weight
-        self.aggregated_jobs = config.meta.aggregated_jobs
         self.param_grids = config.verification.param_grids
         self.n_top_features = config.verification.use_n_top_features
         self.job_name = ''

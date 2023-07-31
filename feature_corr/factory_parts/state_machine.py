@@ -21,13 +21,6 @@ class StateMachine:
             'meta.seed',
         ]  # define state names to branch on
 
-        if config.meta.aggregated_jobs:  # one aggregated_jobs run covers all random seeds
-            try:
-                self.state_names.remove('meta.seed')
-            except ValueError:
-                pass  # meta.seed not in state_names
-
-        self.config.meta.aggregated_seeds = self.minor_setup()
         self.check_state_names()
         self.create_state_tree()
 
