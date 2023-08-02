@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping_bootstrap_univariate_thresh_70" # experiment name
+  name: "phenomapping_bootstrap_hand_picked" # experiment name
   plot_format: "png"
   # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125]
@@ -15,7 +15,7 @@ meta:
   # input_file: "/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx"
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
-  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
+  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_hand_picked.xlsx"
 
 # specify the clean strategy
 inspection:
@@ -59,11 +59,10 @@ selection:
 
   jobs: [
       # ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
-      # ["variance_threshold", "min_max_norm", "correlation", "fr_forest"],
       ["variance_threshold", "z_score_norm", "univariate_ranking"],
       # ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
-      # ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
-      # ["get_memory", "fr_xgboost"],
+      ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
+      ["get_memory", "fr_xgboost"],
       # ["get_memory", "fr_adaboost" ],
       # ["get_memory", "fr_extreme_forest" ],
     ]
@@ -107,13 +106,13 @@ verification:
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       solver: ["saga"] # only solver that supports all penalties
       warm_start: [True, False]
-      max_iter: [1000000]
+      max_iter: [10000]
 
     svm:
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       kernel: ["poly", "rbf", "sigmoid"]
       gamma: ["scale", "auto"]
-      max_iter: [50000]
+      max_iter: [10000]
 
     forest:
       n_estimators: [10, 100, 500]

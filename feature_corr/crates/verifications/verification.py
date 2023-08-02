@@ -67,7 +67,7 @@ class Verification(DataBorg, Normalisers):
         self.target_label = config.meta.target_label
         self.train_scoring = config.selection.scoring
         self.class_weight = config.selection.class_weight
-        self.n_top_features = self.config.verification.use_n_top_features
+        self.n_top_features = config.verification.use_n_top_features
         v_scoring_dict = config.verification.scoring[self.learn_task]
         self.verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
         models_dict = config.verification.models
@@ -97,6 +97,7 @@ class Verification(DataBorg, Normalisers):
         else:
             self.train_test_split()
             top_features = self.get_store('feature', str(self.seed), job_name)
+            self.n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
             for n_top in self.n_top_features:
                 logger.info(f'Verifying final feature importance for top {n_top} features...')
                 self.top_features = top_features[:n_top]

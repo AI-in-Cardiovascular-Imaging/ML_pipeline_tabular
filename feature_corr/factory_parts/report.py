@@ -79,8 +79,8 @@ class Report(DataBorg):
             plt.close(fig)
 
             for n_top in range(5, max(self.n_top_features), 10):
-                job_scores = job_scores.iloc[-n_top:, :]
-                ax = job_scores.plot.barh(x='feature', y='score')
+                job_scores_n_top = job_scores.iloc[-n_top:, :]
+                ax = job_scores_n_top.plot.barh(x='feature', y='score')
                 fig = ax.get_figure()
                 plt.title(f'Average feature importance (top {n_top})')
                 plt.xlabel('Average feature importance')
