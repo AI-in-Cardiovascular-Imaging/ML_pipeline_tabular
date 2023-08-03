@@ -173,20 +173,20 @@ class Verification(DataBorg, Normalisers):
             for score in self.verif_scoring:  # calculate and store all requested scores
                 try:
                     scores[model][score].append(getattr(metrics, score)(self.y_test, probas))
+                    scores[model]['pred'].append(probas)
                 except ValueError:
                     scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
+                    scores[model]['pred'].append(y_pred)
 
             scores[model]['pos_rate'].append(round(self.y_test.sum() / len(self.y_test), 3))
             if y_pred.sum() == 0:
                 logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
 
             if self.config.plot_first_iter and not job_name == 'all_features' and not model in self.ensemble:
-                continue
-                x_train_raw = self.scaler.inverse_transform(self.x_train)
-                x_train_raw = pd.DataFrame(x_train_raw, index=self.x_train.index, columns=self.x_train.columns)[
-                    self.top_features
-                ]
-
+                x_train_raw = self.x_train.copy(deep=True)
+                x_train_raw[self.non_categorical] = self.scaler.inverse_transform(self.x_train[self.non_categorical])
+                x_train_raw = x_train_raw[self.top_features]
+                
                 # ALE (accumulated local effects)
                 ale_fig, ale_ax = plt.subplots()
                 if self.learn_task == 'binary_classification':
@@ -292,16 +292,14 @@ class Verification(DataBorg, Normalisers):
 
     def normalise_test(self, frame: pd.DataFrame) -> pd.DataFrame:
         nunique = frame.nunique()
-        non_categorical = list(nunique[nunique > 5].index)
-        to_normalise = frame[non_categorical]
+        self.non_categorical = list(nunique[nunique > 5].index)
+        to_normalise = frame[self.non_categorical]
         tmp_label = frame[self.target_label]  # keep label col as is
         try:
             arr_frame = to_normalise.drop(self.target_label, axis=1).values
-            cols = to_normalise.columns.drop(self.target_label)
         except KeyError:  # target label is categorical -> already removed
             arr_frame = to_normalise.values
-            cols = to_normalise.columns
         norm_frame = self.scaler.transform(arr_frame)
-        frame[non_categorical] = pd.DataFrame(norm_frame, index=to_normalise.index, columns=cols)
+        frame[self.non_categorical] = norm_frame
         frame[self.target_label] = tmp_label
         return frame

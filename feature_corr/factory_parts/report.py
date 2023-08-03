@@ -37,6 +37,7 @@ class Report(DataBorg):
         scoring_dict = config.verification.scoring[self.learn_task]
         self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
         self.rep_scoring.append('pos_rate')
+        self.rep_scoring.append('pred')
         for seed in self.seeds:  # initialise empty score containers to be filled during verification
             for job_name in self.job_names:
                 for n_top in self.n_top_features:
@@ -129,7 +130,7 @@ class Report(DataBorg):
         averaged_scores = {score: [] for score in self.rep_scoring}
         for seed in self.seeds:
             scores = self.get_store('score', str(seed), job_name)[model]
-            for score in self.rep_scoring:
+            for score in self.rep_scoring + ['pred']:
                 averaged_scores[score].append(scores[score])
         mean_scores = {score: np.mean(averaged_scores[score]) for score in self.rep_scoring}
         std_scores = {score: np.std(averaged_scores[score]) for score in self.rep_scoring}
