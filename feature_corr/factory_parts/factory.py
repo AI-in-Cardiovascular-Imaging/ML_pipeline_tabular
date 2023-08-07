@@ -20,7 +20,7 @@ class Factory:
     def __call__(self) -> None:
         """Run factory"""
         logger.info('Factory started')
-        self.config.plot_first_iter = True
+        self.config.plot_first_iter = False  # set to true to calculate/plot explainability in first bootstrap iteration
         for config in self.state_machine:
             self.produce_pipeline(config)
         self.report()

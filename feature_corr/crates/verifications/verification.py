@@ -173,11 +173,11 @@ class Verification(DataBorg, Normalisers):
             for score in self.verif_scoring:  # calculate and store all requested scores
                 try:
                     scores[model][score].append(getattr(metrics, score)(self.y_test, probas))
-                    scores[model]['pred'].append(probas)
                 except ValueError:
                     scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
-                    scores[model]['pred'].append(y_pred)
 
+            scores[model]['pred'].append(probas.tolist())  # need list to save as json later
+            scores[model]['true'].append(self.y_test.tolist())
             scores[model]['pos_rate'].append(round(self.y_test.sum() / len(self.y_test), 3))
             if y_pred.sum() == 0:
                 logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
@@ -186,7 +186,7 @@ class Verification(DataBorg, Normalisers):
                 x_train_raw = self.x_train.copy(deep=True)
                 x_train_raw[self.non_categorical] = self.scaler.inverse_transform(self.x_train[self.non_categorical])
                 x_train_raw = x_train_raw[self.top_features]
-                
+
                 # ALE (accumulated local effects)
                 ale_fig, ale_ax = plt.subplots()
                 if self.learn_task == 'binary_classification':
@@ -218,7 +218,7 @@ class Verification(DataBorg, Normalisers):
 
                 # tree SHAP (shapley additive explanations)
                 if model in ['forest', 'extreme_forest', 'xgboost']:
-                    tshap_fig, tshap_ax = plt.subplots()
+                    tshap_fig, _ = plt.subplots()
                     tshap = TreeShap(estimator.best_estimator_, model_output='raw')
                     tshap.fit()
                     tshap_expl = tshap.explain(
@@ -233,9 +233,6 @@ class Verification(DataBorg, Normalisers):
                         show=False,
                     )
                     tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}_top_{n_top}.{self.plot_format}'))
-
-                # local method
-                # TODO
 
         self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
 

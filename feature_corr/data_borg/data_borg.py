@@ -1,6 +1,8 @@
-from collections import defaultdict
+import os
+import json
 
 import pandas as pd
+from collections import defaultdict
 from loguru import logger
 
 
@@ -125,3 +127,9 @@ class DataBorg:
             logger.trace(f'State removed -> {state_name}')
         else:
             raise ValueError(f'Invalid state name -> {state_name}')
+        
+    def save_intermediate_results(self, job_dir) -> None:
+        with open(os.path.join(job_dir, '..', 'feature_scores.json'), 'w') as feature_file:
+            json.dump(self._feature_score_store, feature_file)
+        with open(os.path.join(job_dir, '..', 'scores.json'), 'w') as score_file:
+            json.dump(self._score_store, score_file)

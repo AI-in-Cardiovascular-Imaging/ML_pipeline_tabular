@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
+from roc_utils import compute_roc, plot_mean_roc
 
 from feature_corr.crates.helpers import job_name_cleaner
 from feature_corr.data_borg import DataBorg, NestedDefaultDict
@@ -37,17 +38,16 @@ class Report(DataBorg):
         scoring_dict = config.verification.scoring[self.learn_task]
         self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
         self.rep_scoring.append('pos_rate')
-        self.rep_scoring.append('pred')
         for seed in self.seeds:  # initialise empty score containers to be filled during verification
             for job_name in self.job_names:
                 for n_top in self.n_top_features:
                     scores = NestedDefaultDict()
                     for model in self.models:
-                        scores[model] = {score: [] for score in self.rep_scoring}
+                        scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
                     self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
             scores = NestedDefaultDict()
             for model in self.models:
-                scores[model] = {score: [] for score in self.rep_scoring}
+                scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
             self.set_store('score', str(seed), 'all_features', scores)
 
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
@@ -94,23 +94,31 @@ class Report(DataBorg):
                 plt.close(fig)
 
     def summarise_verification(self) -> None:
-        """Summarise verification results over all seeds"""
+        """Summarise verification results over all seeds and bootstraps"""
         for job_name in self.job_names:
             out_dir = os.path.join(self.output_dir, job_name)
             with open(os.path.join(out_dir, f'results_{self.n_bootstraps}_bootstraps.txt'), 'w') as file:
                 for model in self.models + self.ensemble:
+                    best_opt_score, higher_is_better = self.init_scoring()
+                    best_auroc = None
                     file.write(f'Results for {model} model:\n' 'All features:\n')
-                    _, _, avg_scores = self.average_scores('all_features', model)
+                    _, _, avg_scores, _ = self.average_scores('all_features', model)
                     [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
                     mean = []
                     std = []
                     for n_top in self.n_top_features:  # compute average scores and populate plots
                         file.write(f'Top {n_top} features:\n')
-                        mean_scores, std_scores, avg_scores = self.average_scores(f'{job_name}_{n_top}', model)
-                        mean.append(mean_scores[f'{self.opt_scoring}_score'])
+                        mean_scores, std_scores, avg_scores, aurocs = self.average_scores(f'{job_name}_{n_top}', model)
+                        mean_opt_score = mean_scores[f'{self.opt_scoring}_score']
+                        if (higher_is_better and mean_opt_score > best_opt_score) or (
+                            not higher_is_better and mean_opt_score < best_opt_score
+                        ):
+                            best_opt_score = mean_opt_score
+                            best_auroc = aurocs
+                        mean.append(mean_opt_score)
                         std.append(std_scores[f'{self.opt_scoring}_score'])
                         [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
-                    
+
                     plt.figure()
                     plt.xlabel('Number of features selected')
                     plt.ylabel(f'Mean {self.opt_scoring}')
@@ -125,16 +133,37 @@ class Report(DataBorg):
                         os.path.join(out_dir, f'results_{model}_{self.n_bootstraps}_bootstraps.{self.plot_format}')
                     )
                     plt.clf()
+                    
+                    plt.figure()
+                    plot_mean_roc(best_auroc, show_ci=True, show_ti=False)
+                    plt.title(f'Mean ROC for {model} model')
+                    plt.savefig(
+                        os.path.join(out_dir, f'AUROC_{model}_{self.n_bootstraps}_bootstraps.{self.plot_format}')
+                    )
+                    plt.clf()
 
     def average_scores(self, job_name, model) -> None:
+        """Average results over all seeds and bootstraps"""
         averaged_scores = {score: [] for score in self.rep_scoring}
+        aurocs = []
         for seed in self.seeds:
-            scores = self.get_store('score', str(seed), job_name)[model]
-            for score in self.rep_scoring + ['pred']:
+            scores = self.get_store('score', str(seed), job_name)[model]  # contains results for all bootstraps for seed
+            for score in self.rep_scoring:
                 averaged_scores[score].append(scores[score])
+            for boot_iter in range(self.n_bootstraps):
+                aurocs.append(compute_roc(scores['pred'][boot_iter], scores['true'][boot_iter], pos_label=True))
         mean_scores = {score: np.mean(averaged_scores[score]) for score in self.rep_scoring}
         std_scores = {score: np.std(averaged_scores[score]) for score in self.rep_scoring}
         averaged_scores = {
             score: f'{mean_scores[score]:.3f} +- {std_scores[score]:.3f}' for score in self.rep_scoring
         }  # compute mean +- std for all scores
-        return mean_scores, std_scores, averaged_scores
+        return mean_scores, std_scores, averaged_scores, aurocs
+
+    def init_scoring(self):
+        """Find value corresponding to a bad score given the scoring metric, and return whether higher is better"""
+        if self.opt_scoring in ['roc_auc', 'average_precision', 'precision', 'recall', 'f1', 'accuracy', 'r2']:
+            return 0, True
+        elif self.opt_scoring in ['mean_absolute_error', 'mean_squared_error']:
+            return np.Inf, False
+        else:
+            raise NotImplementedError

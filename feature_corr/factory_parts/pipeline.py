@@ -95,6 +95,7 @@ class Pipeline(DataBorg, Normalisers):
                 os.makedirs(job_dir, exist_ok=True)
                 self.selection(job, job_name, job_dir)
                 self.verification(job_name, job_dir, imputer)
+                self.save_intermediate_results(job_dir)
 
             self.config.plot_first_iter = False  # minimise work by producing certain plots only for the first iteration
 
@@ -128,3 +129,5 @@ class Pipeline(DataBorg, Normalisers):
         y_frame = x_frame[self.target_label]
         new_x_frame, _ = over_sampler.fit_resample(x_frame, y_frame)
         return new_x_frame
+    
+    

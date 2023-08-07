@@ -37,6 +37,7 @@ dictlib = "^1.1.5"
 mrmr-selection = "^0.2.6"
 alibi = "^0.9.3"
 shap = "*"
+roc-utils = "^0.2.2"
 
 [tool.poetry.group.dev.dependencies]
 autohooks = "^23.1.0"
