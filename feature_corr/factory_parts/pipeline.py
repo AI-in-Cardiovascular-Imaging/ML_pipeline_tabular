@@ -95,8 +95,8 @@ class Pipeline(DataBorg, Normalisers):
                 os.makedirs(job_dir, exist_ok=True)
                 self.selection(job, job_name, job_dir)
                 self.verification(job_name, job_dir, imputer)
-                self.save_intermediate_results(job_dir)
-
+                
+            self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
             self.config.plot_first_iter = False  # minimise work by producing certain plots only for the first iteration
 
     def __del__(self):

@@ -34,21 +34,25 @@ class Report(DataBorg):
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
         self.learn_task = config.meta.learn_task
+        self.learn_task = 'binary_classification'
         self.opt_scoring = config.selection.scoring[self.learn_task]
         scoring_dict = config.verification.scoring[self.learn_task]
         self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
         self.rep_scoring.append('pos_rate')
-        for seed in self.seeds:  # initialise empty score containers to be filled during verification
-            for job_name in self.job_names:
-                for n_top in self.n_top_features:
-                    scores = NestedDefaultDict()
-                    for model in self.models:
-                        scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
-                    self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
-            scores = NestedDefaultDict()
-            for model in self.models:
-                scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
-            self.set_store('score', str(seed), 'all_features', scores)
+        if config.meta.overwrite:
+            self.load_intermediate_results(self.output_dir)
+        else:
+            for seed in self.seeds:  # initialise empty score containers to be filled during verification
+                for job_name in self.job_names:
+                    for n_top in self.n_top_features:
+                        scores = NestedDefaultDict()
+                        for model in self.models:
+                            scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
+                        self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
+                scores = NestedDefaultDict()
+                for model in self.models:
+                    scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
+                self.set_store('score', str(seed), 'all_features', scores)
 
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]

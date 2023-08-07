@@ -128,8 +128,14 @@ class DataBorg:
         else:
             raise ValueError(f'Invalid state name -> {state_name}')
         
-    def save_intermediate_results(self, job_dir) -> None:
-        with open(os.path.join(job_dir, '..', 'feature_scores.json'), 'w') as feature_file:
+    def save_intermediate_results(self, out_dir) -> None:
+        with open(os.path.join(out_dir, 'feature_scores.json'), 'w') as feature_file:
             json.dump(self._feature_score_store, feature_file)
-        with open(os.path.join(job_dir, '..', 'scores.json'), 'w') as score_file:
+        with open(os.path.join(out_dir, 'scores.json'), 'w') as score_file:
             json.dump(self._score_store, score_file)
+
+    def load_intermediate_results(self, out_dir) -> None:
+        with open(os.path.join(out_dir, 'feature_scores.json'), 'r') as feature_file:
+            self._feature_score_store = json.load(feature_file)
+        with open(os.path.join(out_dir, 'scores.json'), 'r') as score_file:
+            self._score_store = json.load(score_file)
