@@ -19,7 +19,7 @@ def main(config_file: str = None) -> None:
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
 
-    if not config.meta.overwrite:
+    if config.meta.overwrite:
         DataReader(config)()
         CleanUp(config)()
         TargetStatistics(config).show_target_statistics()
