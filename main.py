@@ -19,14 +19,12 @@ def main(config_file: str = None) -> None:
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
 
-    if config.meta.overwrite:
-        DataReader(config)()
-        CleanUp(config)()
-        TargetStatistics(config).show_target_statistics()
-        report = Report(config)
-        Factory(config, report)()
-    else:  # summarise already calculated results stored in json files
-        Report(config)()
+    DataReader(config)()
+    CleanUp(config)()
+    TargetStatistics(config).show_target_statistics()
+    report = Report(config)
+    # Factory(config)()
+    report()  # summarise all results
 
 if __name__ == '__main__':
     main()

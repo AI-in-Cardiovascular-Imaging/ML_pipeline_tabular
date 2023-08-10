@@ -4,11 +4,11 @@ from loguru import logger
 from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
 from sklearn.impute import IterativeImputer, KNNImputer, MissingIndicator, SimpleImputer
 
-from feature_corr.data_borg import DataBorg
+from feature_corr.data_handler import DataHandler
 
 logger.trace(enable_iterative_imputer)  # to avoid auto import removal
 
-class Imputer(DataBorg):
+class Imputer(DataHandler):
     """Impute missing data"""
 
     def __init__(self, config) -> None:

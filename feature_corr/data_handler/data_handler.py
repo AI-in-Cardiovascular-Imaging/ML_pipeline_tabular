@@ -16,7 +16,7 @@ class NestedDefaultDict(defaultdict):
         return repr(dict(self))
 
 
-class DataBorg:
+class DataHandler:
     """Borg pattern, which is used to share frame between classes"""
 
     shared_state = {
@@ -134,8 +134,18 @@ class DataBorg:
         with open(os.path.join(out_dir, 'scores.json'), 'w') as score_file:
             json.dump(self._score_store, score_file)
 
-    def load_intermediate_results(self, out_dir) -> None:
+    def load_intermediate_results(self, out_dir, opt_scoring):
         with open(os.path.join(out_dir, 'feature_scores.json'), 'r') as feature_file:
             self._feature_score_store = json.load(feature_file)
         with open(os.path.join(out_dir, 'scores.json'), 'r') as score_file:
             self._score_store = json.load(score_file)
+
+        seeds = list(self._score_store.keys())  # use seeds and jobs from results, not from current config
+        job_names = list(self._feature_score_store.keys())
+        job_names.remove('all_features')
+        jobs_n_top = list(self._score_store[seeds[0]].keys())
+        models = list(self._score_store[jobs_n_top[0]].keys())
+        scores = list(self._score_store[models[0]].keys())
+        n_bootstraps = len(scores[opt_scoring])
+
+        return seeds, job_names, models, n_bootstraps

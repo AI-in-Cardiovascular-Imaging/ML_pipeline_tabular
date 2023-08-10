@@ -37,6 +37,12 @@ class FeatureReductions:
         self.n_top_features = None
         np.random.seed(self.seed)
 
+    def hand_picked(self, frame: pd.DataFrame) -> tuple:
+        features = list(self.config.meta.hand_picked)
+        frame = frame[features + [self.target_label]]
+
+        return frame, features
+
     def variance_threshold(self, frame: pd.DataFrame) -> tuple:
         """Remove features with variance below threshold"""
         y_frame = frame[self.target_label]

@@ -4,7 +4,7 @@ import pandas as pd
 from loguru import logger
 from omegaconf import OmegaConf
 
-from feature_corr.data_borg import DataBorg
+from feature_corr.data_handler import DataHandler
 
 
 def check_learn_task(target_frame: pd.DataFrame) -> str:
@@ -16,7 +16,7 @@ def check_learn_task(target_frame: pd.DataFrame) -> str:
     return 'regression'
 
 
-class TargetStatistics(DataBorg):
+class TargetStatistics(DataHandler):
     """Show target statistics"""
 
     def __init__(self, config):

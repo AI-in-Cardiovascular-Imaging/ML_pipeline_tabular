@@ -4,10 +4,10 @@ from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 
-from feature_corr.data_borg import DataBorg
+from feature_corr.data_handler import DataHandler
 
 
-class DataSplit(DataBorg):
+class DataSplit(DataHandler):
     """Split frame in selection and verification"""
 
     def __init__(self, config: DictConfig) -> None:

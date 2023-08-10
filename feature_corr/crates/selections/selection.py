@@ -9,10 +9,10 @@ from feature_corr.crates.selections.memoization import Memoize
 from feature_corr.crates.selections.recursive_feature_elimination import (
     RecursiveFeatureElimination,
 )
-from feature_corr.data_borg import DataBorg
+from feature_corr.data_handler import DataHandler
 
 
-class Selection(DataBorg, Normalisers, DimensionProjections, FeatureReductions, RecursiveFeatureElimination, Memoize):
+class Selection(DataHandler, Normalisers, DimensionProjections, FeatureReductions, RecursiveFeatureElimination, Memoize):
     """Execute jobs"""
 
     def __init__(self, config: DictConfig) -> None:

@@ -15,7 +15,7 @@ from alibi.explainers import ALE, plot_ale, PartialDependenceVariance, plot_pd_v
 
 from feature_corr.crates.helpers import init_estimator
 from feature_corr.crates.normalisers import Normalisers
-from feature_corr.data_borg import DataBorg, NestedDefaultDict
+from feature_corr.data_handler import DataHandler, NestedDefaultDict
 
 
 class CrossValidation:
@@ -53,7 +53,7 @@ class CrossValidation:
         return selector
 
 
-class Verification(DataBorg, Normalisers):
+class Verification(DataHandler, Normalisers):
     """Train random forest classifier to verify feature importance"""
 
     def __init__(self, config: DictConfig) -> None:
@@ -86,6 +86,8 @@ class Verification(DataBorg, Normalisers):
 
     def __call__(self, job_name, job_dir, imputer) -> None:
         """Train classifier to verify final feature importance"""
+        # TODO: check whether results already available
+
         self.imputer = imputer
 
         if job_name == 'all_features':

@@ -1,6 +1,5 @@
 import os
 import time
-import typing as t
 
 from loguru import logger
 from omegaconf import DictConfig
@@ -12,9 +11,8 @@ from feature_corr.factory_parts.state_machine import StateMachine
 class Factory:
     """Produces pipelines"""
 
-    def __init__(self, config: DictConfig, report: t.Callable) -> None:
+    def __init__(self, config: DictConfig) -> None:
         self.config = config
-        self.report = report
         self.state_machine = StateMachine(config)
 
     def __call__(self) -> None:
@@ -23,7 +21,6 @@ class Factory:
         self.config.plot_first_iter = False  # set to true to calculate/plot explainability in first bootstrap iteration
         for config in self.state_machine:
             self.produce_pipeline(config)
-        self.report()
 
     def __del__(self):
         logger.info('Factory finished')

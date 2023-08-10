@@ -16,6 +16,7 @@ meta:
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
   input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
+  hand_picked: ['edmassbsa_gm2_report', 'LA_endo_gls_perc', 'GLS_AtB_M_ratio', 'LV_LAX_myo_gls_perc']
   overwrite: False
 
 # specify the clean strategy
@@ -59,6 +60,7 @@ selection:
     regression: "neg_mean_absolute_error"
 
   jobs: [
+      ["z_score_norm", "hand_picked"],
       ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
       ["variance_threshold", "z_score_norm", "univariate_ranking"],
       # ["variance_threshold", "z_score_norm", "correlation", "mrmr"],

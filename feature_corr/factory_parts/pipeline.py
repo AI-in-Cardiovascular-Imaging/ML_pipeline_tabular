@@ -20,7 +20,7 @@ from feature_corr.crates.imputers import Imputer
 from feature_corr.crates.normalisers import Normalisers
 from feature_corr.crates.selections import Selection
 from feature_corr.crates.verifications import Verification
-from feature_corr.data_borg.data_borg import DataBorg
+from feature_corr.data_handler.data_handler import DataHandler
 
 
 def run_when_active(func):
@@ -35,7 +35,7 @@ def run_when_active(func):
     return wrapper
 
 
-class Pipeline(DataBorg, Normalisers):
+class Pipeline(DataHandler, Normalisers):
     """Pipeline definition"""
 
     def __init__(self, config) -> None:

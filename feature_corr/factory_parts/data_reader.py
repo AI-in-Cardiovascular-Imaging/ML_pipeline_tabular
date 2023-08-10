@@ -3,10 +3,10 @@ import os
 import pandas as pd
 from loguru import logger
 
-from feature_corr.data_borg import DataBorg
+from feature_corr.data_handler import DataHandler
 
 
-class DataReader(DataBorg):
+class DataReader(DataHandler):
     """Reads excel, csv, or dataframe and returns a dataframe"""
 
     def __init__(self, config) -> None:

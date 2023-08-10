@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from feature_corr.data_borg import DataBorg
+from feature_corr.data_handler import DataHandler
 
 
-class CleanUp(DataBorg):
+class CleanUp(DataHandler):
     """Clean up data"""
 
     def __init__(self, config) -> None:

@@ -3,43 +3,43 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from roc_utils import compute_roc, plot_mean_roc
 
 from feature_corr.crates.helpers import job_name_cleaner
-from feature_corr.data_borg import DataBorg, NestedDefaultDict
+from feature_corr.data_handler import DataHandler, NestedDefaultDict
 
 
-class Report(DataBorg):
+class Report(DataHandler):
     """Class to summarise and report all results"""
 
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
-        experiment_name = config.meta.name
-        self.seeds = config.meta.seed
-        self.output_dir = os.path.join(config.meta.output_dir, experiment_name)
-        OmegaConf.save(
-            config, os.path.join(self.output_dir, 'job_config.yaml')
-        )  # save copy of config for future reference
+        self.output_dir = os.path.join(config.meta.output_dir, config.meta.name)
         self.plot_format = config.meta.plot_format
+        self.seeds = config.meta.seed
+        self.learn_task = config.meta.learn_task
         self.n_bootstraps = config.data_split.n_bootstraps
-        self.jobs = config.selection.jobs
-        self.job_names = job_name_cleaner(self.jobs)
         self.n_top_features = config.verification.use_n_top_features
         if isinstance(self.n_top_features, str):  # turn range provided as string into list
             self.n_top_features = list(eval(self.n_top_features))
             config.verification.use_n_top_features = self.n_top_features
         models_dict = config.verification.models
         self.models = [model for model in models_dict if models_dict[model]]
-        self.learn_task = config.meta.learn_task
-        self.learn_task = 'binary_classification'
         self.opt_scoring = config.selection.scoring[self.learn_task]
+        self.jobs = config.selection.jobs
+        self.job_names = job_name_cleaner(self.jobs)
         scoring_dict = config.verification.scoring[self.learn_task]
         self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
         self.rep_scoring.append('pos_rate')
+
         if config.meta.overwrite:
+            OmegaConf.save(
+                config, os.path.join(self.output_dir, 'job_config.yaml')
+            )  # save copy of config for future reference
             for seed in self.seeds:  # initialise empty score containers to be filled during verification
                 for job_name in self.job_names:
                     for n_top in self.n_top_features:
@@ -52,7 +52,11 @@ class Report(DataBorg):
                     scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
                 self.set_store('score', str(seed), 'all_features', scores)
         else:
-            self.load_intermediate_results(self.output_dir)
+            # TODO: expand scores nested dict
+            seeds_done, jobs_done, models_done, boots_done = self.load_intermediate_results(
+                self.output_dir, self.opt_scoring
+            )
+
 
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]
@@ -99,8 +103,10 @@ class Report(DataBorg):
 
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds and bootstraps"""
+        best_opt_scores = pd.DataFrame(columns=self.job_names, index=(self.models + self.ensemble))
         for job_name in self.job_names:
             out_dir = os.path.join(self.output_dir, job_name)
+            best_opt_scores_job = []
             with open(os.path.join(out_dir, f'results_{self.n_bootstraps}_bootstraps.txt'), 'w') as file:
                 for model in self.models + self.ensemble:
                     best_opt_score, higher_is_better = self.init_scoring()
@@ -123,6 +129,7 @@ class Report(DataBorg):
                         std.append(std_scores[f'{self.opt_scoring}_score'])
                         [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
 
+                    best_opt_scores_job.append(best_opt_score)
                     plt.figure()
                     plt.xlabel('Number of features selected')
                     plt.ylabel(f'Mean {self.opt_scoring}')
@@ -137,7 +144,7 @@ class Report(DataBorg):
                         os.path.join(out_dir, f'results_{model}_{self.n_bootstraps}_bootstraps.{self.plot_format}')
                     )
                     plt.clf()
-                    
+
                     plt.figure()
                     plot_mean_roc(best_auroc, show_ci=True, show_ti=False)
                     plt.title(f'Mean ROC for {model} model')
@@ -146,16 +153,37 @@ class Report(DataBorg):
                     )
                     plt.clf()
 
+            best_opt_scores[job_name] = best_opt_scores_job
+        fig = plt.figure()
+        sns.heatmap(
+            best_opt_scores,
+            annot=True,
+            xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
+            yticklabels=True,
+            vmin=0.5,
+            vmax=1.0,
+            cmap='Blues',
+        )
+        plt.xticks(rotation=0)
+        plt.yticks(rotation=0)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, f'results_heatmap.{self.plot_format}'))
+        plt.close(fig)
+        logger.info(
+            f'\nStrategies summary:\n' + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names))
+        )
+
     def average_scores(self, job_name, model) -> None:
         """Average results over all seeds and bootstraps"""
         averaged_scores = {score: [] for score in self.rep_scoring}
         aurocs = []
         for seed in self.seeds:
             scores = self.get_store('score', str(seed), job_name)[model]  # contains results for all bootstraps for seed
-            for score in self.rep_scoring:
-                averaged_scores[score].append(scores[score])
-            for boot_iter in range(self.n_bootstraps):
-                aurocs.append(compute_roc(scores['pred'][boot_iter], scores['true'][boot_iter], pos_label=True))
+            if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top
+                for score in self.rep_scoring:
+                    averaged_scores[score].append(scores[score])
+                for boot_iter in range(self.n_bootstraps):
+                    aurocs.append(compute_roc(scores['pred'][boot_iter], scores['true'][boot_iter], pos_label=True))
         mean_scores = {score: np.mean(averaged_scores[score]) for score in self.rep_scoring}
         std_scores = {score: np.std(averaged_scores[score]) for score in self.rep_scoring}
         averaged_scores = {
