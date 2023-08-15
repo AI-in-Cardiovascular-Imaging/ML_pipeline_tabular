@@ -50,7 +50,7 @@ class Pipeline(DataHandler, Normalisers):
         self.n_bootstraps = config.data_split.n_bootstraps
         self.oversample = config.data_split.oversample
         self.oversample_method = config.data_split.oversample_method
-        self.add_state_name(self.state_name)
+        self.add_seed(self.state_name)
         self.sync_ephemeral_data_to_data_store(self.state_name, 'ephemeral')
 
         self.imputer_pipeline = Imputer(self.config)
@@ -74,9 +74,9 @@ class Pipeline(DataHandler, Normalisers):
         """Iterate over pipeline steps"""
         np.random.seed(self.seed)
         boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)
-        for i in range(self.n_bootstraps):
-            logger.info(f'Running bootstrap iteration {i+1}/{self.n_bootstraps}...')
-            self.data_splitter(boot_seeds[i])
+        for boot_iter in range(self.n_bootstraps):
+            logger.info(f'Running bootstrap iteration {boot_iter+1}/{self.n_bootstraps}...')
+            self.data_splitter(boot_seeds[boot_iter], boot_iter)
             imputer = self.impute()
             if self.oversample:
                 train = self.over_sampling(self.get_store('frame', self.state_name, 'train'))
@@ -86,22 +86,24 @@ class Pipeline(DataHandler, Normalisers):
             ]  # need to init first normalisation for verification
             train_frame = self.get_store('frame', self.state_name, 'train')
             _ = getattr(self, norm)(train_frame)
-            self.verification('all_features', None, imputer)  # run only once per data split, not for every job
+            self.verification(
+                boot_iter, 'all_features', None, imputer
+            )  # run only once per data split, not for every job
 
             job_names = job_name_cleaner(self.jobs)
             for job, job_name in zip(self.jobs, job_names):
                 logger.info(f'Running {job_name}...')
                 job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, self.state_name)
                 os.makedirs(job_dir, exist_ok=True)
-                self.selection(job, job_name, job_dir)
-                self.verification(job_name, job_dir, imputer)
-                
+                features = self.get_store('feature', self.state_name, job_name, boot_iter=str(boot_iter))
+                if not features:
+                    self.selection(
+                        boot_iter, job, job_name, job_dir
+                    )  # run only if selection results not already available
+                self.verification(boot_iter, job_name, job_dir, imputer)
+
             self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
             self.config.plot_first_iter = False  # minimise work by producing certain plots only for the first iteration
-
-    def __del__(self):
-        """Delete assigned state data store"""
-        self.remove_state_data_store(self.state_name)
 
     @run_when_active
     def impute(self) -> None:
@@ -109,14 +111,14 @@ class Pipeline(DataHandler, Normalisers):
         self.imputer_pipeline()
 
     @run_when_active
-    def selection(self, job, job_name, job_dir):
+    def selection(self, boot_iter, job, job_name, job_dir):
         """Explore data"""
-        self.selector(job, job_name, job_dir)
+        self.selector(boot_iter, job, job_name, job_dir)
 
     @run_when_active
-    def verification(self, job_name, job_dir, imputer) -> None:
+    def verification(self, boot_iter, job_name, job_dir, imputer) -> None:
         """Verify selected features"""
-        self.verifier(job_name, job_dir, imputer)
+        self.verifier(boot_iter, job_name, job_dir, imputer)
 
     def over_sampling(self, x_frame: pd.DataFrame) -> pd.DataFrame:
         """Over sample data"""
@@ -129,5 +131,3 @@ class Pipeline(DataHandler, Normalisers):
         y_frame = x_frame[self.target_label]
         new_x_frame, _ = over_sampler.fit_resample(x_frame, y_frame)
         return new_x_frame
-    
-    

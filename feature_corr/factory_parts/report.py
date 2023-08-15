@@ -52,11 +52,23 @@ class Report(DataHandler):
                     scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
                 self.set_store('score', str(seed), 'all_features', scores)
         else:
-            # TODO: expand scores nested dict
-            seeds_done, jobs_done, models_done, boots_done = self.load_intermediate_results(
+            loaded_scores = self.load_intermediate_results(
                 self.output_dir, self.opt_scoring
             )
-
+            for seed in self.seeds:  # initialise score containers for missing parameter combinations
+                for job_name in self.job_names:
+                    for n_top in self.n_top_features:
+                        scores = NestedDefaultDict()
+                        for model in self.models:
+                            try:
+                                scores[model] = loaded_scores[seed][f'{job_name}_{n_top}'][model]
+                            except KeyError:  # scores not yet available
+                                scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
+                        self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
+                scores = NestedDefaultDict()
+                for model in self.models:
+                    scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
+                self.set_store('score', str(seed), 'all_features', scores)
 
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]

@@ -32,4 +32,4 @@ class Factory:
         start_time = time.time()
         pipeline = Pipeline(config)
         pipeline()
-        logger.info(f'Pipelines finished in {(time.time() - start_time)/60:.2f} minutes')
+        logger.info(f'Pipeline finished in {(time.time() - start_time)/60:.2f} minutes')

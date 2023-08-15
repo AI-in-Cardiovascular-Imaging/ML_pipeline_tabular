@@ -62,9 +62,9 @@ class Verification(DataHandler, Normalisers):
         self.seed = config.meta.seed
         self.plot_format = config.meta.plot_format
         self.workers = config.meta.workers
-        self.state_name = config.meta.state_name
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
+        self.n_bootstraps = config.data_split.n_bootstraps
         self.train_scoring = config.selection.scoring
         self.class_weight = config.selection.class_weight
         self.n_top_features = config.verification.use_n_top_features
@@ -84,64 +84,65 @@ class Verification(DataHandler, Normalisers):
         self.y_test = None
         self.x_test_raw = None
 
-    def __call__(self, job_name, job_dir, imputer) -> None:
+    def __call__(self, boot_iter, job_name, job_dir, imputer) -> None:
         """Train classifier to verify final feature importance"""
-        # TODO: check whether results already available
-
         self.imputer = imputer
+        self.boot_iter = boot_iter
 
         if job_name == 'all_features':
             logger.info('Evaluating baseline performance using all features...')
-            self.top_features = self.get_store('feature', str(self.seed), job_name)
+            self.top_features = self.get_store('feature', self.seed, job_name, boot_iter)
             self.train_test_split()
-            self.train_models()  # optimise all models
+            self.train_models(job_name)  # optimise all models
             self.evaluate(job_name, job_dir, None)  # evaluate all optimised models
         else:
             self.train_test_split()
-            top_features = self.get_store('feature', str(self.seed), job_name)
+            top_features = self.get_store('feature', self.seed, job_name, boot_iter)
             self.n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
             for n_top in self.n_top_features:
                 logger.info(f'Verifying final feature importance for top {n_top} features...')
                 self.top_features = top_features[:n_top]
-                self.train_models()  # optimise all models
+                self.train_models(job_name)  # optimise all models
                 self.evaluate(f'{job_name}_{n_top}', job_dir, n_top)  # evaluate all optimised models
 
     def train_test_split(self) -> None:
         """Prepare data for training"""
-        v_train = self.get_store('frame', self.state_name, 'train')
-        v_test = self.get_store('frame', self.state_name, 'test')
+        v_train = self.get_store('frame', self.seed, 'train')
+        v_test = self.get_store('frame', self.seed, 'test')
         self.x_train, self.y_train, _ = self.split_frame(v_train)
         self.x_test, self.y_test, self.x_test_raw = self.split_frame(
             v_test, normalise=True
         )  # test data not yet normalised
 
-    def train_models(self) -> None:
+    def train_models(self, job_name) -> None:
         """Train classifier to verify feature importance"""
         estimators = []
         for model in self.models:
-            logger.info(f'Training {model} model...')
-            param_grid = self.param_grids[model]
-            estimator, cross_validator, scoring = init_estimator(
-                model,
-                self.learn_task,
-                self.seed,
-                self.train_scoring,
-                self.class_weight,
-                self.workers,
-            )
-            optimiser = CrossValidation(
-                self.x_train[self.top_features],
-                self.y_train,
-                estimator,
-                cross_validator,
-                param_grid,
-                scoring,
-                self.seed,
-                self.workers,
-            )
-            best_estimator = optimiser()
-            estimators.append((model, best_estimator))
-            self.best_estimators[model] = best_estimator  # store for evaluation later
+            scores = self.get_store('score', self.seed, job_name)[model]
+            if len(scores[self.verif_scoring[0]]) < self.boot_iter:  # bootstraps missing
+                logger.info(f'Training {model} model...')
+                param_grid = self.param_grids[model]
+                estimator, cross_validator, scoring = init_estimator(
+                    model,
+                    self.learn_task,
+                    self.seed,
+                    self.train_scoring,
+                    self.class_weight,
+                    self.workers,
+                )
+                optimiser = CrossValidation(
+                    self.x_train[self.top_features],
+                    self.y_train,
+                    estimator,
+                    cross_validator,
+                    param_grid,
+                    scoring,
+                    self.seed,
+                    self.workers,
+                )
+                best_estimator = optimiser()
+                estimators.append((model, best_estimator))
+                self.best_estimators[model] = best_estimator  # store for evaluation later
 
         for ensemble in self.ensemble:
             logger.info(f'Training {ensemble} ensemble model...')
@@ -166,108 +167,80 @@ class Verification(DataHandler, Normalisers):
 
     def evaluate(self, job_name, job_dir, n_top) -> None:
         """Evaluate all optimised models"""
-        scores = self.get_store('score', str(self.seed), job_name)
+        scores = self.get_store('score', self.seed, job_name)
         for i, model in enumerate(self.models + self.ensemble):
-            logger.info(f'Evaluating {model} model ({i+1}/{len(self.models + self.ensemble)})...')
-            estimator = self.best_estimators[model]
-            y_pred = estimator.predict(self.x_test[self.top_features])
-            pred_func, probas = self.get_predictions(estimator)
-            for score in self.verif_scoring:  # calculate and store all requested scores
-                try:
-                    scores[model][score].append(getattr(metrics, score)(self.y_test, probas))
-                except ValueError:
-                    scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
+            if len(scores[model][self.verif_scoring[0]]) < self.boot_iter:
+                logger.info(f'Evaluating {model} model ({i+1}/{len(self.models + self.ensemble)})...')
+                estimator = self.best_estimators[model]
+                y_pred = estimator.predict(self.x_test[self.top_features])
+                pred_func, probas = self.get_predictions(estimator)
+                for score in self.verif_scoring:  # calculate and store all requested scores
+                    try:
+                        scores[model][score].append(getattr(metrics, score)(self.y_test, probas))
+                    except ValueError:
+                        scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
 
-            scores[model]['pred'].append(probas.tolist())  # need list to save as json later
-            scores[model]['true'].append(self.y_test.tolist())
-            scores[model]['pos_rate'].append(round(self.y_test.sum() / len(self.y_test), 3))
-            if y_pred.sum() == 0:
-                logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
+                scores[model]['pred'].append(probas.tolist())  # need list to save as json later
+                scores[model]['true'].append(self.y_test.tolist())
+                scores[model]['pos_rate'].append(round(self.y_test.sum() / len(self.y_test), 3))
+                if y_pred.sum() == 0:
+                    logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
 
-            if self.config.plot_first_iter and not job_name == 'all_features' and not model in self.ensemble:
-                x_train_raw = self.x_train.copy(deep=True)
-                x_train_raw[self.non_categorical] = self.scaler.inverse_transform(self.x_train[self.non_categorical])
-                x_train_raw = x_train_raw[self.top_features]
-
-                # ALE (accumulated local effects)
-                ale_fig, ale_ax = plt.subplots()
-                if self.learn_task == 'binary_classification':
-                    target_names = (
-                        ['0', self.target_label] if model in ['forest', 'extreme_forest'] else [self.target_label]
+                if self.config.plot_first_iter and not job_name == 'all_features' and not model in self.ensemble:
+                    x_train_raw = self.x_train.copy(deep=True)
+                    x_train_raw[self.non_categorical] = self.scaler.inverse_transform(
+                        self.x_train[self.non_categorical]
                     )
-                else:
-                    target_names = None
-                ale = ALE(pred_func, feature_names=self.top_features, target_names=target_names)
-                ale_expl = ale.explain(x_train_raw.values)
-                plot_ale(
-                    ale_expl,
-                    n_cols=n_top // 5 + 1,
-                    targets=[target_names[-1]],
-                    fig_kw={'figwidth': 8, 'figheight': 8},
-                    sharey='all',
-                    ax=ale_ax,
-                )
-                ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}_top_{n_top}.{self.plot_format}'))
+                    x_train_raw = x_train_raw[self.top_features]
 
-                # PDV (partial dependence variance)
-                # pdv_fig, pdv_ax = plt.subplots()
-                # pdv = PartialDependenceVariance(pred_func, feature_names=self.top_features, target_names=target_names)
-                # pdv_expl = pdv.explain(x_train_raw.values, method='interaction')
-                # plot_pd_variance(
-                #     pdv_expl, n_cols=n_top // 5 + 1, fig_kw={'figwidth': 8, 'figheight': 8}, ax=pdv_ax, top_k=n_top
-                # )
-                # pdv_fig.savefig(os.path.join(job_dir, f'PDV_interaction_{model}_top_{n_top}.{self.plot_format}'))
-
-                # tree SHAP (shapley additive explanations)
-                if model in ['forest', 'extreme_forest', 'xgboost']:
-                    tshap_fig, _ = plt.subplots()
-                    tshap = TreeShap(estimator.best_estimator_, model_output='raw')
-                    tshap.fit()
-                    tshap_expl = tshap.explain(
-                        self.x_test_raw[self.top_features].values, feature_names=self.top_features
+                    # ALE (accumulated local effects)
+                    ale_fig, ale_ax = plt.subplots()
+                    if self.learn_task == 'binary_classification':
+                        target_names = (
+                            ['0', self.target_label] if model in ['forest', 'extreme_forest'] else [self.target_label]
+                        )
+                    else:
+                        target_names = None
+                    ale = ALE(pred_func, feature_names=self.top_features, target_names=target_names)
+                    ale_expl = ale.explain(x_train_raw.values)
+                    plot_ale(
+                        ale_expl,
+                        n_cols=n_top // 5 + 1,
+                        targets=[target_names[-1]],
+                        fig_kw={'figwidth': 8, 'figheight': 8},
+                        sharey='all',
+                        ax=ale_ax,
                     )
-                    shap_values = tshap_expl.shap_values[-1]  # display values for positive class
-                    shap.summary_plot(
-                        shap_values,
-                        self.x_test_raw[self.top_features].values,
-                        feature_names=self.top_features,
-                        class_names=target_names,
-                        show=False,
-                    )
-                    tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}_top_{n_top}.{self.plot_format}'))
+                    ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}_top_{n_top}.{self.plot_format}'))
 
-        self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
+                    # PDV (partial dependence variance)
+                    # pdv_fig, pdv_ax = plt.subplots()
+                    # pdv = PartialDependenceVariance(pred_func, feature_names=self.top_features, target_names=target_names)
+                    # pdv_expl = pdv.explain(x_train_raw.values, method='interaction')
+                    # plot_pd_variance(
+                    #     pdv_expl, n_cols=n_top // 5 + 1, fig_kw={'figwidth': 8, 'figheight': 8}, ax=pdv_ax, top_k=n_top
+                    # )
+                    # pdv_fig.savefig(os.path.join(job_dir, f'PDV_interaction_{model}_top_{n_top}.{self.plot_format}'))
 
-    def performance_statistics(self, scores, y_pred: pd.DataFrame) -> None:
-        """Print performance statistics"""
-        if self.learn_task == 'binary_classification':
-            print('Averaged metrics:')
-            for metric, score in scores.items():
-                print(f'{metric}: {score}')
+                    # tree SHAP (shapley additive explanations)
+                    if model in ['forest', 'extreme_forest', 'xgboost']:
+                        tshap_fig, _ = plt.subplots()
+                        tshap = TreeShap(estimator.best_estimator_, model_output='raw')
+                        tshap.fit()
+                        tshap_expl = tshap.explain(
+                            self.x_test_raw[self.top_features].values, feature_names=self.top_features
+                        )
+                        shap_values = tshap_expl.shap_values[-1]  # display values for positive class
+                        shap.summary_plot(
+                            shap_values,
+                            self.x_test_raw[self.top_features].values,
+                            feature_names=self.top_features,
+                            class_names=target_names,
+                            show=False,
+                        )
+                        tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}_top_{n_top}.{self.plot_format}'))
 
-            print('Metrics calculated from single evaluation:')
-            print(metrics.classification_report(self.y_test, y_pred, zero_division=0))
-            conf_m = metrics.confusion_matrix(self.y_test, y_pred)
-            print(conf_m)
-            plt.figure(figsize=(10, 7))
-            plt.title('Confusion matrix')
-            sns.heatmap(conf_m, annot=True, fmt='d')
-            plt.xlabel('Predicted')
-            plt.ylabel('Truth')
-            # plt.show()
-        elif self.learn_task == 'multi_classification':
-            raise NotImplementedError('Multi-classification has not yet been implemented.')
-        elif self.learn_task == 'regression':
-            print('Mean absolute error', metrics.mean_absolute_error(self.y_test, y_pred))
-            print('R2 score', metrics.r2_score(self.y_test, y_pred))
-            plt.figure(figsize=(10, 7))
-            plt.title(f'Regression on {self.target_label}')
-            sns.regplot(x=self.y_test, y=y_pred, ci=None)
-            plt.xlabel(f'True {self.target_label}')
-            plt.ylabel(f'Predicted {self.target_label}')
-            # plt.show()
-        else:
-            NotImplementedError(f'{self.learn_task} has not yet been implemented.')
+                self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
 
     def get_predictions(self, best_estimator):
         try:  # e.g. for logistic regression

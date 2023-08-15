@@ -37,7 +37,7 @@ class Selection(DataHandler, Normalisers, DimensionProjections, FeatureReduction
         self.job_name = ''
         self.job_dir = None
 
-    def __call__(self, job, job_name, job_dir) -> None:
+    def __call__(self, boot_iter, job, job_name, job_dir) -> None:
         """Run all jobs"""
         self.__check_jobs()
         self.job_name = job_name
@@ -50,7 +50,7 @@ class Selection(DataHandler, Normalisers, DimensionProjections, FeatureReduction
             if error:
                 logger.error(f'Step {step} is invalid')
                 break
-            self.__store_features(features, step)
+            self.__store_features(features, boot_iter)
 
     def __check_jobs(self) -> None:
         """Check if the given jobs are valid"""
@@ -59,12 +59,12 @@ class Selection(DataHandler, Normalisers, DimensionProjections, FeatureReduction
         if not jobs.issubset(valid_methods):
             raise ValueError(f'Invalid job, check -> {str(jobs - valid_methods)}')
 
-    def __store_features(self, features: list, step: str) -> None:
+    def __store_features(self, features: list, boot_iter) -> None:
         """Store features"""
         if features:
             if isinstance(features, list):
                 if len(features) > 0:
-                    self.set_store('feature', self.state_name, self.job_name, features)
+                    self.set_store('feature', self.state_name, self.job_name, features, boot_iter)
                 else:
                     logger.warning(f'No features found for {self.job_name}')
             else:

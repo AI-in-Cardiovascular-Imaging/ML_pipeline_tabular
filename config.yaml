@@ -35,7 +35,7 @@ impute:
 
 # data split definitions
 data_split:
-  n_bootstraps: 4
+  n_bootstraps: 2
   test_frac: 0.3 # fraction of data to use for testing verification models
 
   oversample: False # oversample minority class to balance training set

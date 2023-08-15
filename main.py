@@ -23,7 +23,7 @@ def main(config_file: str = None) -> None:
     CleanUp(config)()
     TargetStatistics(config).show_target_statistics()
     report = Report(config)
-    # Factory(config)()
+    Factory(config)()
     report()  # summarise all results
 
 if __name__ == '__main__':

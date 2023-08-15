@@ -23,9 +23,10 @@ class DataSplit(DataHandler):
         self.stratify = None
         self.frame = self.get_store('frame', self.state_name, 'ephemeral')
 
-    def __call__(self, boot_seed):
+    def __call__(self, boot_seed, boot_iter):
         """Split data"""
         self.boot_seed = boot_seed
+        self.boot_iter = boot_iter
         self.split_frame()
 
     def split_frame(self) -> None:
@@ -33,12 +34,12 @@ class DataSplit(DataHandler):
         train, test = self.create_split()
 
         if self.test_frac <= 0.0 or self.test_frac >= 1.0:
-            raise ValueError('"test_frac" is invalid, must be float between (0.0, 1.0)')
+            raise ValueError('"test_frac" is invalid, must be float in (0.0, 1.0)')
 
         self.set_store('frame', self.state_name, 'train', train)
         self.set_store('frame', self.state_name, 'test', test)
         all_features = list(train.columns.drop(self.target_label))
-        self.set_store('feature', self.state_name, 'all_features', all_features)
+        self.set_store('feature', self.state_name, 'all_features', all_features, self.boot_iter)
 
     def set_stratification(self, frame: pd.DataFrame = None) -> None:
         """Set stratification"""
