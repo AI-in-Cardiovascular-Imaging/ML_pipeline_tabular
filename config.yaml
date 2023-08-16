@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "phenomapping_bootstrap_corr_95" # experiment name
+  name: "phenomapping_bootstrap_test" # experiment name
   plot_format: "png"
   # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
   # seed: [784, 125]
@@ -35,7 +35,7 @@ impute:
 
 # data split definitions
 data_split:
-  n_bootstraps: 2
+  n_bootstraps: 100
   test_frac: 0.3 # fraction of data to use for testing verification models
 
   oversample: False # oversample minority class to balance training set
@@ -63,7 +63,7 @@ selection:
       ["z_score_norm", "hand_picked"],
       ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
       ["variance_threshold", "z_score_norm", "univariate_ranking"],
-      # ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
+      ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
       # ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
       # ["get_memory", "fr_xgboost"],
       # ["get_memory", "fr_adaboost" ],
@@ -73,8 +73,8 @@ selection:
 # verification strategy and final model to train and evaluate
 verification:
   active: True # whether to perform verification analysis for each job
-  # use_n_top_features: [7] # list or range of n_features to use for verification
-  use_n_top_features: "range(1, 10, 2)"
+  # use_n_top_features: [2, 4, 6] # list or range of n_features to use for verification
+  use_n_top_features: "range(1, 66, 1)"
   scoring:
     binary_classification:
       roc_auc_score: True
@@ -94,10 +94,10 @@ verification:
     ensemble_voting: False
     logistic_regression: True
     svm: True
-    forest: False
-    extreme_forest: False
-    adaboost: False
-    xgboost: False
+    forest: True
+    extreme_forest: True
+    adaboost: True
+    xgboost: True
     lasso: False
     lassolars: False
     elastic_net: False

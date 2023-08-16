@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import sklearn.metrics as metrics
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from roc_utils import compute_roc, plot_mean_roc
@@ -45,30 +46,14 @@ class Report(DataHandler):
                     for n_top in self.n_top_features:
                         scores = NestedDefaultDict()
                         for model in self.models:
-                            scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
+                            scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
                         self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
                 scores = NestedDefaultDict()
                 for model in self.models:
-                    scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
+                    scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
                 self.set_store('score', str(seed), 'all_features', scores)
         else:
-            loaded_scores = self.load_intermediate_results(
-                self.output_dir, self.opt_scoring
-            )
-            for seed in self.seeds:  # initialise score containers for missing parameter combinations
-                for job_name in self.job_names:
-                    for n_top in self.n_top_features:
-                        scores = NestedDefaultDict()
-                        for model in self.models:
-                            try:
-                                scores[model] = loaded_scores[seed][f'{job_name}_{n_top}'][model]
-                            except KeyError:  # scores not yet available
-                                scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
-                        self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
-                scores = NestedDefaultDict()
-                for model in self.models:
-                    scores[model] = {score: [] for score in self.rep_scoring + ['true', 'pred']}
-                self.set_store('score', str(seed), 'all_features', scores)
+            self.load_intermediate_results(self.output_dir)
 
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]
@@ -190,9 +175,23 @@ class Report(DataHandler):
         averaged_scores = {score: [] for score in self.rep_scoring}
         aurocs = []
         for seed in self.seeds:
-            scores = self.get_store('score', str(seed), job_name)[model]  # contains results for all bootstraps for seed
+            try:
+                scores = self.get_store('score', seed, job_name)[model]
+            except KeyError:  # model not yet stored for this seed/job
+                scores = {scoring: [] for scoring in self.verif_scoring}
             if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top
                 for score in self.rep_scoring:
+                    if score not in scores.keys() or len(scores[score]) < self.n_bootstraps:  # score not yet computed
+                        try:  # some metrics can be calculated using probabilities, others need prediction
+                            scores[score] = [
+                                getattr(metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
+                                for boot_iter in range(self.n_bootstraps)
+                            ]
+                        except ValueError:
+                            scores[score] = [
+                                getattr(metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
+                                for boot_iter in range(self.n_bootstraps)
+                            ]
                     averaged_scores[score].append(scores[score])
                 for boot_iter in range(self.n_bootstraps):
                     aurocs.append(compute_roc(scores['pred'][boot_iter], scores['true'][boot_iter], pos_label=True))
@@ -206,7 +205,7 @@ class Report(DataHandler):
     def init_scoring(self):
         """Find value corresponding to a bad score given the scoring metric, and return whether higher is better"""
         if self.opt_scoring in ['roc_auc', 'average_precision', 'precision', 'recall', 'f1', 'accuracy', 'r2']:
-            return 0, True
+            return -np.Inf, True
         elif self.opt_scoring in ['mean_absolute_error', 'mean_squared_error']:
             return np.Inf, False
         else:

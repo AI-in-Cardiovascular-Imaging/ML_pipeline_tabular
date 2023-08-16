@@ -22,7 +22,7 @@ def main(config_file: str = None) -> None:
     DataReader(config)()
     CleanUp(config)()
     TargetStatistics(config).show_target_statistics()
-    report = Report(config)
+    report = Report(config)  # contains important initialisations for Factory
     Factory(config)()
     report()  # summarise all results
 

@@ -50,7 +50,6 @@ class Pipeline(DataHandler, Normalisers):
         self.n_bootstraps = config.data_split.n_bootstraps
         self.oversample = config.data_split.oversample
         self.oversample_method = config.data_split.oversample_method
-        self.add_seed(self.state_name)
         self.sync_ephemeral_data_to_data_store(self.state_name, 'ephemeral')
 
         self.imputer_pipeline = Imputer(self.config)
@@ -95,7 +94,10 @@ class Pipeline(DataHandler, Normalisers):
                 logger.info(f'Running {job_name}...')
                 job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, self.state_name)
                 os.makedirs(job_dir, exist_ok=True)
-                features = self.get_store('feature', self.state_name, job_name, boot_iter=str(boot_iter))
+                try:
+                    features = self.get_store('feature', self.state_name, job_name, boot_iter=boot_iter)
+                except KeyError:
+                    features = []
                 if not features:
                     self.selection(
                         boot_iter, job, job_name, job_dir

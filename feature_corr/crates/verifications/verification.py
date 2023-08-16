@@ -98,11 +98,11 @@ class Verification(DataHandler, Normalisers):
         else:
             self.train_test_split()
             top_features = self.get_store('feature', self.seed, job_name, boot_iter)
-            self.n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
-            for n_top in self.n_top_features:
+            n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
+            for n_top in n_top_features:
                 logger.info(f'Verifying final feature importance for top {n_top} features...')
                 self.top_features = top_features[:n_top]
-                self.train_models(job_name)  # optimise all models
+                self.train_models(f'{job_name}_{n_top}')  # optimise all models
                 self.evaluate(f'{job_name}_{n_top}', job_dir, n_top)  # evaluate all optimised models
 
     def train_test_split(self) -> None:
@@ -118,8 +118,11 @@ class Verification(DataHandler, Normalisers):
         """Train classifier to verify feature importance"""
         estimators = []
         for model in self.models:
-            scores = self.get_store('score', self.seed, job_name)[model]
-            if len(scores[self.verif_scoring[0]]) < self.boot_iter:  # bootstraps missing
+            try:
+                scores = self.get_store('score', self.seed, job_name)[model]
+            except KeyError:  # model not yet stored for this seed/job
+                scores = {scoring: [] for scoring in self.verif_scoring}
+            if len(scores[self.verif_scoring[0]]) < self.boot_iter + 1:  # bootstraps missing
                 logger.info(f'Training {model} model...')
                 param_grid = self.param_grids[model]
                 estimator, cross_validator, scoring = init_estimator(
@@ -169,18 +172,22 @@ class Verification(DataHandler, Normalisers):
         """Evaluate all optimised models"""
         scores = self.get_store('score', self.seed, job_name)
         for i, model in enumerate(self.models + self.ensemble):
-            if len(scores[model][self.verif_scoring[0]]) < self.boot_iter:
+            if model not in scores.keys():
+                scores[model] = {scoring: [] for scoring in self.verif_scoring + ['probas', 'true', 'pred', 'pos_rate']}
+            if len(scores[model][self.verif_scoring[0]]) < self.boot_iter + 1:
                 logger.info(f'Evaluating {model} model ({i+1}/{len(self.models + self.ensemble)})...')
                 estimator = self.best_estimators[model]
                 y_pred = estimator.predict(self.x_test[self.top_features])
                 pred_func, probas = self.get_predictions(estimator)
                 for score in self.verif_scoring:  # calculate and store all requested scores
+                    if score not in scores[model].keys():
+                        scores[model][score] = []
                     try:
                         scores[model][score].append(getattr(metrics, score)(self.y_test, probas))
                     except ValueError:
                         scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
-
-                scores[model]['pred'].append(probas.tolist())  # need list to save as json later
+                scores[model]['probas'].append(probas.tolist())  # need list to save as json later
+                scores[model]['pred'].append(y_pred.tolist())
                 scores[model]['true'].append(self.y_test.tolist())
                 scores[model]['pos_rate'].append(round(self.y_test.sum() / len(self.y_test), 3))
                 if y_pred.sum() == 0:
@@ -239,8 +246,7 @@ class Verification(DataHandler, Normalisers):
                             show=False,
                         )
                         tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}_top_{n_top}.{self.plot_format}'))
-
-                self.set_store('score', str(self.seed), job_name, scores)  # store results for summary in report
+        self.set_store('score', self.seed, job_name, scores)  # store results for summary in report
 
     def get_predictions(self, best_estimator):
         try:  # e.g. for logistic regression

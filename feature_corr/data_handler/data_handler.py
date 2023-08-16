@@ -37,12 +37,6 @@ class DataHandler:
         self._ephemeral_frame = None
         self.__dict__ = self.shared_state  # borg design pattern
 
-    def add_seed(self, seed: str) -> None:
-        """Sets the state name"""
-        self._frame_store[seed] = NestedDefaultDict()
-        self._feature_store[seed] = NestedDefaultDict()
-        logger.trace(f'State name set -> {seed}')
-
     def set_frame(self, name: str, frame: pd.DataFrame) -> None:
         """Sets the frame"""
         if 'original' in name:
@@ -80,8 +74,15 @@ class DataHandler:
             self._frame_store[seed][job_name] = data
             logger.trace(f'Store data set -> {type(data)}')
         elif 'feature' in name:
+            if seed not in self._feature_store.keys():
+                self._feature_store[seed] = NestedDefaultDict()
+            if boot_iter not in self._feature_store[seed].keys():  # new boot_iter
+                self._feature_store[seed][boot_iter] = NestedDefaultDict()
             self._feature_store[seed][boot_iter][job_name] = data
             logger.trace(f'Feature data set -> {type(data)}')
+
+            if job_name not in self._feature_score_store.keys():
+                self._feature_score_store[job_name] = NestedDefaultDict()
             scores = len(data) * [1]
             scores[: min(10, len(data))] = range(
                 10, 10 - min(10, len(data)), -1
@@ -92,6 +93,8 @@ class DataHandler:
                 else:
                     self._feature_score_store[job_name][feature] = scores[i]
         elif 'score' in name:
+            if seed not in self._score_store.keys():
+                self._score_store[seed] = {}
             self._score_store[seed][job_name] = data
             logger.trace(f'Score data set -> {type(data)}')
         else:
@@ -112,8 +115,11 @@ class DataHandler:
             logger.trace(f'Returning feature scores -> {type(self._feature_score_store[job_name])}')
             return self._feature_score_store[job_name]
         elif name == 'score':
-            logger.trace(f'Returning score -> {type(self._score_store[seed][job_name])}')
-            return self._score_store[seed][job_name]
+            try:
+                logger.trace(f'Returning score -> {type(self._score_store[seed][job_name])}')
+                return self._score_store[seed][job_name]
+            except KeyError:
+                return {}
         raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature, score')
 
     def sync_ephemeral_data_to_data_store(self, seed: int, job_name: str) -> None:
@@ -129,21 +135,11 @@ class DataHandler:
         with open(os.path.join(out_dir, 'scores.json'), 'w') as score_file:
             json.dump(self._score_store, score_file)
 
-    def load_intermediate_results(self, out_dir, opt_scoring):
+    def load_intermediate_results(self, out_dir):
         with open(os.path.join(out_dir, 'features.json'), 'r') as feature_file:
             self._feature_store = json.load(feature_file)
-            logger.debug(self._feature_store)
         with open(os.path.join(out_dir, 'feature_scores.json'), 'r') as feature_score_file:
             self._feature_score_store = json.load(feature_score_file)
         with open(os.path.join(out_dir, 'scores.json'), 'r') as score_file:
-            loaded_scores = json.load(score_file)
+            self._score_store = json.load(score_file)
 
-        # seeds = list(loaded_scores.keys())  # use seeds and jobs from results, not from current config
-        # job_names = list(self._feature_score_store.keys())
-        # job_names.remove('all_features')
-        # jobs_n_top = list(loaded_scores[seeds[0]].keys())
-        # models = list(loaded_scores[jobs_n_top[0]].keys())
-        # scores = list(loaded_scores[models[0]].keys())
-        # n_bootstraps = len(scores[opt_scoring])
-
-        return loaded_scores
