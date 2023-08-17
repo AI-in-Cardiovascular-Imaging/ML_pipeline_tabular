@@ -2,14 +2,10 @@
 meta:
   name: "ATTR_run_Aug_17" # experiment name
   plot_format: "png"
-  # seed: [784, 125, 467, 822, 943, 348, 679, 915, 534, 299] # random seeds
-  # seed: [784, 125]
-  # seed: [784]
   workers: 24 # number of workers for parallel processing
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
-
-  state_name: "" # don't change this, will be set automatically by the pipeline
   learn_task: "" # don't change this, will be set automatically by the pipeline
+
   # target_label: "mace"
   # output_dir: "/home/sebalzer/Documents/Myo_Flamber/"
   # input_file: "/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx"
@@ -30,11 +26,12 @@ inspection:
 
 # imputation strategy
 impute:
-  active: True # impute missing values
   method: "iterative_impute" #: drop_nan_impute, iterative_impute, simple_impute, knn_impute
 
 # data split definitions
 data_split:
+  init_seed: 545
+  n_seeds: 100
   n_bootstraps: 1
   test_frac: 0.3 # fraction of data to use for testing verification models
 
@@ -46,7 +43,6 @@ data_split:
 
 # feature reduction strategy
 selection:
-  active: True # whether to perform feature selections
   class_weight: "balanced"
   corr_method: "pearson" # correlation method
   corr_thresh: 0.95 # threshold above which correlated features are removed
@@ -72,9 +68,8 @@ selection:
 
 # verification strategy and final model to train and evaluate
 verification:
-  active: True # whether to perform verification analysis for each job
   use_n_top_features: [2, 4, 6, 8, 10, 15, 20, 25, 30] # list or range of n_features to use for verification
-  # use_n_top_features: "range(1, 67, 1)"
+  # use_n_top_features: [4]
   # use_n_top_features: ["range(1, 11, 1)", "range(12, 21, 2)", "range(25, 70, 5)"]
   scoring:
     binary_classification:
@@ -96,9 +91,9 @@ verification:
     logistic_regression: True
     svm: True
     forest: True
-    extreme_forest: False
     adaboost: True
     xgboost: True
+    extreme_forest: False
     lasso: False
     lassolars: False
     elastic_net: False

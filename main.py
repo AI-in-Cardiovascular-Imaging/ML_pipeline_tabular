@@ -4,10 +4,9 @@ import sys
 from loguru import logger
 
 from feature_corr.config_manager import ConfigManager
-from feature_corr.crates.inspections import CleanUp, TargetStatistics
-from feature_corr.factory_parts.data_reader import DataReader
-from feature_corr.factory_parts.factory import Factory
-from feature_corr.factory_parts.report import Report
+from feature_corr.utils.inspections import CleanUp, TargetStatistics
+from feature_corr.pipeline.data_reader import DataReader
+from feature_corr.pipeline.pipeline import Pipeline
 
 
 def main(config_file: str = None) -> None:
@@ -22,9 +21,7 @@ def main(config_file: str = None) -> None:
     DataReader(config)()
     CleanUp(config)()
     TargetStatistics(config).show_target_statistics()
-    report = Report(config)  # contains important initialisations for Factory
-    Factory(config)()
-    report()  # summarise all results
+    Pipeline(config)()
 
 if __name__ == '__main__':
     main()

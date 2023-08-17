@@ -24,8 +24,7 @@ class DataHandler:
         '_feature_store': NestedDefaultDict(),
         '_feature_score_store': NestedDefaultDict(),
         '_score_store': NestedDefaultDict(),
-        '_original_frame': None,
-        '_ephemeral_frame': None,
+        '_frame': None,
     }
 
     def __init__(self) -> None:
@@ -33,30 +32,18 @@ class DataHandler:
         self._feature_store = NestedDefaultDict()
         self._feature_score_store = NestedDefaultDict()
         self._score_store = NestedDefaultDict()
-        self._original_frame = None
-        self._ephemeral_frame = None
+        self._frame = None
         self.__dict__ = self.shared_state  # borg design pattern
 
-    def set_frame(self, name: str, frame: pd.DataFrame) -> None:
+    def set_frame(self,frame: pd.DataFrame) -> None:
         """Sets the frame"""
-        if 'original' in name:
-            self._original_frame = frame
-            logger.trace(f'Original frame set -> {type(frame)}')
-        elif 'ephemeral' in name:
-            self._ephemeral_frame = frame
-            logger.trace(f'Ephemeral frame set -> {type(frame)}')
-        else:
-            raise ValueError(f'Invalid name -> {name}, allowed -> original, ephemeral')
+        self._frame = frame
+        logger.trace(f'Frame set -> {type(frame)}')
 
-    def get_frame(self, name: str) -> pd.DataFrame:
+    def get_frame(self) -> pd.DataFrame:
         """Returns the frame"""
-        if 'original' in name:
-            logger.trace(f'Returning original frame -> {type(self._original_frame)}')
-            return self._original_frame
-        if 'ephemeral' in name:
-            logger.trace(f'Returning ephemeral frame -> {type(self._ephemeral_frame)}')
-            return self._ephemeral_frame
-        raise ValueError(f'Invalid name -> {name}, allowed -> original, ephemeral')
+        logger.trace(f'Returning frame -> {type(self._frame)}')
+        return self._frame
 
     def set_store(
         self,
@@ -121,11 +108,6 @@ class DataHandler:
             except KeyError:
                 return {}
         raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature, score')
-
-    def sync_ephemeral_data_to_data_store(self, seed: int, job_name: str) -> None:
-        """Syncs the ephemeral frame with the data store"""
-        self._frame_store[seed][job_name] = self._ephemeral_frame
-        logger.trace(f'Ephemeral frame synced -> {type(self._ephemeral_frame)} to data store')
 
     def save_intermediate_results(self, out_dir) -> None:
         with open(os.path.join(out_dir, 'features.json'), 'w') as feature_file:
