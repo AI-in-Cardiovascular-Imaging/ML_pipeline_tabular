@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from loguru import logger
+from tqdm import tqdm
 from imblearn.over_sampling import (
     ADASYN,
     SMOTE,
@@ -48,46 +49,49 @@ class Pipeline(DataHandler, Normalisers):
 
     def __call__(self) -> None:
         """Iterate over pipeline steps"""
+        high_logging_level = self.config.meta.logging_level in ['TRACE', 'DEBUG', 'INFO']
         np.random.seed(self.init_seed)
         seeds = np.random.randint(low=0, high=2**32, size=self.n_seeds)  # generate desired number of random seeds
         report = Report(self.config, seeds)
 
-        for seed in seeds:
-            np.random.seed(seed)
-            boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)  # generate boot seeds
-            for boot_iter in range(self.n_bootstraps):
-                logger.info(f'Running bootstrap iteration {boot_iter+1}/{self.n_bootstraps}...')
-                self.data_split(seed, boot_seeds[boot_iter], boot_iter)
-                fit_imputer = self.imputation(seed)
-                if self.oversample:
-                    train = self.over_sampling(self.get_store('frame', seed, 'train'), seed)
-                    self.set_store('frame', seed, 'train', train)
-                norm = [step for step in self.jobs[0] if 'norm' in step][
-                    0
-                ]  # need to init first normalisation for verification
-                train_frame = self.get_store('frame', seed, 'train')
-                _ = getattr(self, norm)(train_frame)
-                self.verification(
-                    seed, boot_iter, 'all_features', None, fit_imputer
-                )  # run only once per data split, not for every job
+        if not self.config.meta.collect_results:
+            for seed_iter, seed in tqdm(enumerate(seeds), disable=high_logging_level):
+                logger.info(f'Running seed {seed_iter+1}/{self.n_seeds}...')
+                np.random.seed(seed)
+                boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)  # generate boot seeds
+                for boot_iter in range(self.n_bootstraps):
+                    logger.info(f'Running bootstrap iteration {boot_iter+1}/{self.n_bootstraps}...')
+                    self.data_split(seed, boot_seeds[boot_iter], boot_iter)
+                    fit_imputer = self.imputation(seed)
+                    if self.oversample:
+                        train = self.over_sampling(self.get_store('frame', seed, 'train'), seed)
+                        self.set_store('frame', seed, 'train', train)
+                    norm = [step for step in self.jobs[0] if 'norm' in step][
+                        0
+                    ]  # need to init first normalisation for verification
+                    train_frame = self.get_store('frame', seed, 'train')
+                    _ = getattr(self, norm)(train_frame)
+                    self.verification(
+                        seed, boot_iter, 'all_features', None, fit_imputer
+                    )  # run only once per data split, not for every job
 
-                job_names = job_name_cleaner(self.jobs)
-                for job, job_name in zip(self.jobs, job_names):
-                    logger.info(f'Running {job_name}...')
-                    job_dir = os.path.join(self.out_dir, self.experiment_name, job_name, str(seed))
-                    os.makedirs(job_dir, exist_ok=True)
-                    try:
-                        features = self.get_store('feature', seed, job_name, boot_iter=boot_iter)
-                    except KeyError:
-                        features = []
-                    if not features:
-                        self.selection(
-                            seed, boot_iter, job, job_name, job_dir
-                        )  # run only if selection results not already available
-                    self.verification(seed, boot_iter, job_name, job_dir, fit_imputer)
+                    job_names = job_name_cleaner(self.jobs)
+                    for job, job_name in zip(self.jobs, job_names):
+                        logger.info(f'Running {job_name}...')
+                        job_dir = os.path.join(self.out_dir, self.experiment_name, job_name)
+                        os.makedirs(job_dir, exist_ok=True)
+                        try:
+                            features = self.get_store('feature', seed, job_name, boot_iter=boot_iter)
+                        except KeyError:
+                            features = []
+                        if not features:
+                            self.selection(
+                                seed, boot_iter, job, job_name, job_dir
+                            )  # run only if selection results not already available
+                        self.verification(seed, boot_iter, job_name, job_dir, fit_imputer)
 
-                self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
-                self.config.plot_first_iter = False  # minimise work by producing certain plots only for the first iteration
+                    self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
+                    self.config.plot_first_iter = False  # minimise work by producing certain plots only for the first iteration
 
         report()  # summarise results
 
