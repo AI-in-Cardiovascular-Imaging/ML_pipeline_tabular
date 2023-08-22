@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import sklearn.metrics as metrics
+import imblearn.metrics as imb_metrics
 from loguru import logger
 from omegaconf import DictConfig
 from sklearn.ensemble import VotingClassifier, VotingRegressor
@@ -186,6 +187,17 @@ class Verification(DataHandler, Normalisers):
                         scores[model][score].append(getattr(metrics, score)(self.y_test, probas))
                     except ValueError:
                         scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
+                    except AttributeError:  # try imbalanced learn metrics (e.g. for specificity)
+                        try:
+                            scores[score] = [
+                                getattr(imb_metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
+                                for boot_iter in range(self.n_bootstraps)
+                            ]
+                        except ValueError:
+                            scores[score] = [
+                                getattr(imb_metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
+                                for boot_iter in range(self.n_bootstraps)
+                            ]
                 scores[model]['probas'].append(probas.tolist())  # need list to save as json later
                 scores[model]['pred'].append(y_pred.tolist())
                 scores[model]['true'].append(self.y_test.tolist())

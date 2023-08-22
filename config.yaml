@@ -14,7 +14,7 @@ meta:
   input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
   hand_picked: ['edmassbsa_gm2_report', 'LA_endo_gls_perc', 'GLS_AtB_M_ratio', 'LV_LAX_myo_gls_perc']
   collect_results: True  # does not check whether all jobs have been run, only summarises available results
-  overwrite: True
+  overwrite: False
 
 # specify the clean strategy
 inspection:
@@ -77,9 +77,11 @@ verification:
       roc_auc_score: True
       average_precision_score: True
       recall_score: True
+      specificity_score: True
       precision_score: True
       f1_score: True
       accuracy_score: True
+      balanced_accuracy_score: True
     multi_classification: {}
     regression:
       r2_score: True

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import sklearn.metrics as metrics
+import imblearn.metrics as imb_metrics
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from roc_utils import compute_roc, plot_mean_roc
@@ -101,13 +102,26 @@ class Report(DataHandler):
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds and bootstraps"""
         best_opt_scores = pd.DataFrame(columns=self.job_names, index=(self.models + self.ensemble))
-        for job_name in self.job_names:
+        best_all_scores = pd.DataFrame(
+            columns=[f'Strat. {i+1}' for i in range(len(self.job_names))],
+            index=(['model', '#features'] + self.rep_scoring),
+        )
+        roc_plot, roc_ax = plt.subplots()
+        prop_cycle = plt.rcParams['axes.prop_cycle']
+        colors = prop_cycle.by_key()['color']
+        for i, job_name in enumerate(self.job_names):
             out_dir = os.path.join(self.output_dir, job_name)
+            best_opt_score_job, higher_is_better = self.init_scoring()
             best_opt_scores_job = []
-            with open(os.path.join(out_dir, f'results_{self.n_bootstraps}_bootstraps.txt'), 'w') as file:
+            best_roc_job = []
+            best_model = None
+            best_n_top = None
+            best_scores_mean = None
+            best_scores_std = None
+            with open(os.path.join(out_dir, f'results.txt'), 'w') as file:
                 for model in self.models + self.ensemble:
-                    best_opt_score, higher_is_better = self.init_scoring()
-                    best_auroc = None
+                    best_opt_score_model, _ = self.init_scoring()
+                    best_roc_model = None
                     file.write(f'Results for {model} model:\n' 'All features:\n')
                     _, _, avg_scores, _ = self.average_scores('all_features', model)
                     [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
@@ -115,18 +129,27 @@ class Report(DataHandler):
                     std = []
                     for n_top in self.n_top_features:  # compute average scores and populate plots
                         file.write(f'Top {n_top} features:\n')
-                        mean_scores, std_scores, avg_scores, aurocs = self.average_scores(f'{job_name}_{n_top}', model)
+                        mean_scores, std_scores, avg_scores, roc = self.average_scores(f'{job_name}_{n_top}', model)
                         mean_opt_score = mean_scores[f'{self.opt_scoring}_score']
-                        if (higher_is_better and mean_opt_score > best_opt_score) or (
-                            not higher_is_better and mean_opt_score < best_opt_score
-                        ):
-                            best_opt_score = mean_opt_score
-                            best_auroc = aurocs
+                        if (higher_is_better and mean_opt_score > best_opt_score_model) or (
+                            not higher_is_better and mean_opt_score < best_opt_score_model
+                        ):  # update best scores for model
+                            best_opt_score_model = mean_opt_score
+                            best_roc_model = roc
+                            if (higher_is_better and mean_opt_score > best_opt_score_job) or (
+                                not higher_is_better and mean_opt_score < best_opt_score_job
+                            ):  # update best scores for job
+                                best_opt_score_job = mean_opt_score
+                                best_model = model
+                                best_n_top = n_top
+                                best_scores_mean = mean_scores
+                                best_scores_std = std_scores
                         mean.append(mean_opt_score)
                         std.append(std_scores[f'{self.opt_scoring}_score'])
                         [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
 
-                    best_opt_scores_job.append(best_opt_score)
+                    best_opt_scores_job.append(best_opt_score_model)
+                    best_roc_job.append(best_roc_model)
                     plt.figure()
                     plt.xlabel('Number of features selected')
                     plt.ylabel(f'Mean {self.opt_scoring}')
@@ -137,20 +160,46 @@ class Report(DataHandler):
                         yerr=std,
                     )
                     plt.title(f'{model} model performance for increasing number of features')
-                    plt.savefig(
-                        os.path.join(out_dir, f'results_{model}_{self.n_bootstraps}_bootstraps.{self.plot_format}')
-                    )
+                    plt.savefig(os.path.join(out_dir, f'results_{model}.{self.plot_format}'))
                     plt.clf()
 
                     plt.figure()
-                    plot_mean_roc(best_auroc, show_ci=True, show_ti=False)
+                    plot_mean_roc(best_roc_model, show_ci=True, show_ti=False, show_opt=False)
                     plt.title(f'Mean ROC for {model} model')
-                    plt.savefig(
-                        os.path.join(out_dir, f'AUROC_{model}_{self.n_bootstraps}_bootstraps.{self.plot_format}')
-                    )
+                    plt.savefig(os.path.join(out_dir, f'AUROC_best_{model}.{self.plot_format}'))
                     plt.clf()
 
             best_opt_scores[job_name] = best_opt_scores_job
+            best_all_scores[f'Strat. {i+1}'] = [best_model, best_n_top] + [
+                f'{mean:.2f} \u00B1 {std:.2f}' for mean, std in zip(best_scores_mean.values(), best_scores_std.values())
+            ]
+            best_index = np.argmax(best_opt_scores_job) if higher_is_better else np.argmin(best_opt_scores_job)
+            best_roc_job = best_roc_job[best_index]
+            plot_mean_roc(
+                best_roc_job,
+                show_ci=False,
+                show_ti=False,
+                show_opt=False,
+                ax=roc_ax,
+                label=f'Strat. {i+1}',
+                color=colors[i],
+            )
+            plt.figure()
+            plot_mean_roc(
+                best_roc_job,
+                show_ci=True,
+                show_ti=False,
+                show_opt=False,
+                label=f'Strat. {i+1}',
+            )
+            plt.title(f'Best mean ROC for Strat. {i+1}')
+            plt.savefig(os.path.join(self.output_dir, f'AUROC_best_{job_name}.{self.plot_format}'))
+            plt.clf()
+
+        best_all_scores.to_csv(os.path.join(self.output_dir, f'best_model_all_scores.csv'))
+
+        roc_ax.set_title('Best mean ROC for all strategies')
+        roc_plot.savefig(os.path.join(self.output_dir, f'AUROC_best_per_strat.{self.plot_format}'))
         fig = plt.figure()
         sns.heatmap(
             best_opt_scores,
@@ -160,6 +209,7 @@ class Report(DataHandler):
             vmin=0.5,
             vmax=1.0,
             cmap='Blues',
+            fmt='.2g',
         )
         plt.xticks(rotation=0)
         plt.yticks(rotation=0)
@@ -173,7 +223,7 @@ class Report(DataHandler):
     def average_scores(self, job_name, model) -> None:
         """Average results over all seeds and bootstraps"""
         averaged_scores = {score: [] for score in self.rep_scoring}
-        aurocs = []
+        roc = []
         for seed in self.seeds:
             try:
                 scores = self.get_store('score', seed, job_name)[model]
@@ -192,19 +242,39 @@ class Report(DataHandler):
                                 getattr(metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
                                 for boot_iter in range(self.n_bootstraps)
                             ]
+                        except AttributeError:  # try imbalanced learn metrics (e.g. for specificity)
+                            try:
+                                scores[score] = [
+                                    getattr(imb_metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
+                                    for boot_iter in range(self.n_bootstraps)
+                                ]
+                            except ValueError:
+                                scores[score] = [
+                                    getattr(imb_metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
+                                    for boot_iter in range(self.n_bootstraps)
+                                ]
                     averaged_scores[score].append(scores[score])
                 for boot_iter in range(self.n_bootstraps):
-                    aurocs.append(compute_roc(scores['pred'][boot_iter], scores['true'][boot_iter], pos_label=True))
+                    roc.append(compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True))
         mean_scores = {score: np.mean(averaged_scores[score]) for score in self.rep_scoring}
         std_scores = {score: np.std(averaged_scores[score]) for score in self.rep_scoring}
         averaged_scores = {
-            score: f'{mean_scores[score]:.3f} +- {std_scores[score]:.3f}' for score in self.rep_scoring
+            score: f'{mean_scores[score]:.2f} +- {std_scores[score]:.2f}' for score in self.rep_scoring
         }  # compute mean +- std for all scores
-        return mean_scores, std_scores, averaged_scores, aurocs
+        return mean_scores, std_scores, averaged_scores, roc
 
     def init_scoring(self):
         """Find value corresponding to a bad score given the scoring metric, and return whether higher is better"""
-        if self.opt_scoring in ['roc_auc', 'average_precision', 'precision', 'recall', 'f1', 'accuracy', 'r2']:
+        if self.opt_scoring in [
+            'roc_auc',
+            'average_precision',
+            'precision',
+            'recall',
+            'specificity',
+            'f1',
+            'accuracy',
+            'r2',
+        ]:
             return -np.Inf, True
         elif self.opt_scoring in ['mean_absolute_error', 'mean_squared_error']:
             return np.Inf, False
