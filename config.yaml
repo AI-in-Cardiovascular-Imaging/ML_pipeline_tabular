@@ -12,8 +12,14 @@ meta:
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
   input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
-  hand_picked: ['edmassbsa_gm2_report', 'LA_endo_gls_perc', 'GLS_AtB_M_ratio', 'LV_LAX_myo_gls_perc']
-  collect_results: True  # does not check whether all jobs have been run, only summarises available results
+  hand_picked:
+    [
+      "edmassbsa_gm2_report",
+      "LA_endo_gls_perc",
+      "GLS_AtB_M_ratio",
+      "LV_LAX_myo_gls_perc",
+    ]
+  collect_results: True # does not check whether all jobs have been run, only summarises available results
   overwrite: False
 
 # specify the clean strategy
@@ -23,7 +29,7 @@ inspection:
   export_cleaned_frame: True # for visual inspection of the cleaned data
   manual_clean: True # manual cleaning of data
   manual_strategy:
-    drop_columns_regex: ["([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+"] # don't use string annotation "", example: _\d or [_\d, ^_, d+$] https://regex101.com/
+    drop_columns_regex: ["([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+"] # remove single segment columns from ATTR dataset
 
 # imputation strategy
 impute:
@@ -56,22 +62,18 @@ selection:
     multi_classification: "roc_auc"
     regression: "neg_mean_absolute_error"
 
-  jobs: [
+  jobs:
+    [
       ["z_score_norm", "hand_picked"],
       ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
       ["variance_threshold", "z_score_norm", "univariate_ranking"],
       ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
-      # ["variance_threshold", "z_score_norm", "correlation", "set_memory", "fr_forest"],
-      # ["get_memory", "fr_xgboost"],
-      # ["get_memory", "fr_adaboost" ],
-      # ["get_memory", "fr_extreme_forest" ],
     ]
 
 # verification strategy and final model to train and evaluate
 verification:
   use_n_top_features: [2, 4, 6, 8, 10, 15, 20, 25, 30] # list or range of n_features to use for verification
   # use_n_top_features: [4]
-  # use_n_top_features: ["range(1, 11, 1)", "range(12, 21, 2)", "range(25, 70, 5)"]
   scoring:
     binary_classification:
       roc_auc_score: True

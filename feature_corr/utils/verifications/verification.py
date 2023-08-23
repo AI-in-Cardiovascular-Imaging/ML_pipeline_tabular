@@ -3,8 +3,6 @@ import shap
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import numpy as np
-import seaborn as sns
 import sklearn.metrics as metrics
 import imblearn.metrics as imb_metrics
 from loguru import logger
@@ -12,7 +10,7 @@ from omegaconf import DictConfig
 from sklearn.ensemble import VotingClassifier, VotingRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
-from alibi.explainers import ALE, plot_ale, PartialDependenceVariance, plot_pd_variance, TreeShap
+from alibi.explainers import ALE, plot_ale, TreeShap
 
 from feature_corr.utils.helpers import init_estimator
 from feature_corr.utils.normalisers import Normalisers
@@ -189,15 +187,10 @@ class Verification(DataHandler, Normalisers):
                         scores[model][score].append(getattr(metrics, score)(self.y_test, y_pred))
                     except AttributeError:  # try imbalanced learn metrics (e.g. for specificity)
                         try:
-                            scores[score] = [
-                                getattr(imb_metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
-                                for boot_iter in range(self.n_bootstraps)
-                            ]
+                            scores[model][score].append(getattr(imb_metrics, score)(self.y_test, probas))
                         except ValueError:
-                            scores[score] = [
-                                getattr(imb_metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
-                                for boot_iter in range(self.n_bootstraps)
-                            ]
+                            scores[model][score].append(getattr(imb_metrics, score)(self.y_test, y_pred))
+                            
                 scores[model]['probas'].append(probas.tolist())  # need list to save as json later
                 scores[model]['pred'].append(y_pred.tolist())
                 scores[model]['true'].append(self.y_test.tolist())
@@ -231,15 +224,6 @@ class Verification(DataHandler, Normalisers):
                         ax=ale_ax,
                     )
                     ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}_top_{n_top}.{self.plot_format}'))
-
-                    # PDV (partial dependence variance)
-                    # pdv_fig, pdv_ax = plt.subplots()
-                    # pdv = PartialDependenceVariance(pred_func, feature_names=self.top_features, target_names=target_names)
-                    # pdv_expl = pdv.explain(x_train_raw.values, method='interaction')
-                    # plot_pd_variance(
-                    #     pdv_expl, n_cols=n_top // 5 + 1, fig_kw={'figwidth': 8, 'figheight': 8}, ax=pdv_ax, top_k=n_top
-                    # )
-                    # pdv_fig.savefig(os.path.join(job_dir, f'PDV_interaction_{model}_top_{n_top}.{self.plot_format}'))
 
                     # tree SHAP (shapley additive explanations)
                     if model in ['forest', 'extreme_forest', 'xgboost']:

@@ -37,29 +37,11 @@ class Report(DataHandler):
         scoring_dict = config.verification.scoring[self.learn_task]
         self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
         self.rep_scoring.append('pos_rate')
-
-        if config.meta.overwrite:
-            OmegaConf.save(
-                config, os.path.join(self.output_dir, 'job_config.yaml')
-            )  # save copy of config for future reference
-            for seed in self.seeds:  # initialise empty score containers to be filled during verification
-                for job_name in self.job_names:
-                    for n_top in self.n_top_features:
-                        scores = NestedDefaultDict()
-                        for model in self.models:
-                            scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
-                        self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
-                scores = NestedDefaultDict()
-                for model in self.models:
-                    scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
-                self.set_store('score', str(seed), 'all_features', scores)
-        else:
-            self.load_intermediate_results(self.output_dir)
-
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]
         if len(self.models) < 2:  # ensemble methods need at least two models two combine their results
             self.ensemble = []
+        self.init_containers()
         self.all_features = None
 
     def __call__(self):
@@ -104,7 +86,7 @@ class Report(DataHandler):
         best_opt_scores = pd.DataFrame(columns=self.job_names, index=(self.models + self.ensemble))
         best_all_scores = pd.DataFrame(
             columns=[f'Strat. {i+1}' for i in range(len(self.job_names))],
-            index=(['model', '#features'] + self.rep_scoring),
+            index=(['job', 'model', '#features'] + self.rep_scoring),
         )
         roc_plot, roc_ax = plt.subplots()
         prop_cycle = plt.rcParams['axes.prop_cycle']
@@ -170,7 +152,7 @@ class Report(DataHandler):
                     plt.clf()
 
             best_opt_scores[job_name] = best_opt_scores_job
-            best_all_scores[f'Strat. {i+1}'] = [best_model, best_n_top] + [
+            best_all_scores[f'Strat. {i+1}'] = [job_name, best_model, best_n_top] + [
                 f'{mean:.2f} \u00B1 {std:.2f}' for mean, std in zip(best_scores_mean.values(), best_scores_std.values())
             ]
             best_index = np.argmax(best_opt_scores_job) if higher_is_better else np.argmin(best_opt_scores_job)
@@ -193,7 +175,7 @@ class Report(DataHandler):
                 label=f'Strat. {i+1}',
             )
             plt.title(f'Best mean ROC for Strat. {i+1}')
-            plt.savefig(os.path.join(self.output_dir, f'AUROC_best_{job_name}.{self.plot_format}'))
+            plt.savefig(os.path.join(self.output_dir, f'AUROC_best_strat_{i+1}.{self.plot_format}'))
             plt.clf()
 
         best_all_scores.to_csv(os.path.join(self.output_dir, f'best_model_all_scores.csv'))
@@ -232,27 +214,7 @@ class Report(DataHandler):
             if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top
                 for score in self.rep_scoring:
                     if score not in scores.keys() or len(scores[score]) < self.n_bootstraps:  # score not yet computed
-                        try:  # some metrics can be calculated using probabilities, others need prediction
-                            scores[score] = [
-                                getattr(metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
-                                for boot_iter in range(self.n_bootstraps)
-                            ]
-                        except ValueError:
-                            scores[score] = [
-                                getattr(metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
-                                for boot_iter in range(self.n_bootstraps)
-                            ]
-                        except AttributeError:  # try imbalanced learn metrics (e.g. for specificity)
-                            try:
-                                scores[score] = [
-                                    getattr(imb_metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
-                                    for boot_iter in range(self.n_bootstraps)
-                                ]
-                            except ValueError:
-                                scores[score] = [
-                                    getattr(imb_metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
-                                    for boot_iter in range(self.n_bootstraps)
-                                ]
+                        self.compute_missing_scores(scores, score)
                     averaged_scores[score].append(scores[score])
                 for boot_iter in range(self.n_bootstraps):
                     roc.append(compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True))
@@ -262,6 +224,48 @@ class Report(DataHandler):
             score: f'{mean_scores[score]:.2f} +- {std_scores[score]:.2f}' for score in self.rep_scoring
         }  # compute mean +- std for all scores
         return mean_scores, std_scores, averaged_scores, roc
+
+    def compute_missing_scores(self, scores, score):
+        try:  # some metrics can be calculated using probabilities, others need prediction
+            scores[score] = [
+                getattr(metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
+                for boot_iter in range(self.n_bootstraps)
+            ]
+        except ValueError:
+            scores[score] = [
+                getattr(metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
+                for boot_iter in range(self.n_bootstraps)
+            ]
+        except AttributeError:  # try imbalanced learn metrics (e.g. for specificity)
+            try:
+                scores[score] = [
+                    getattr(imb_metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
+                    for boot_iter in range(self.n_bootstraps)
+                ]
+            except ValueError:
+                scores[score] = [
+                    getattr(imb_metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
+                    for boot_iter in range(self.n_bootstraps)
+                ]
+
+    def init_containers(self):
+        if self.config.meta.overwrite:
+            OmegaConf.save(
+                self.config, os.path.join(self.output_dir, 'job_config.yaml')
+            )  # save copy of config for future reference
+            for seed in self.seeds:  # initialise empty score containers to be filled during verification
+                for job_name in self.job_names:
+                    for n_top in self.n_top_features:
+                        scores = NestedDefaultDict()
+                        for model in self.models + self.ensemble:
+                            scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
+                        self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
+                scores = NestedDefaultDict()
+                for model in self.models + self.ensemble:
+                    scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
+                self.set_store('score', str(seed), 'all_features', scores)
+        else:
+            self.load_intermediate_results(self.output_dir)
 
     def init_scoring(self):
         """Find value corresponding to a bad score given the scoring metric, and return whether higher is better"""
