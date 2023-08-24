@@ -90,10 +90,10 @@ class Verification(DataHandler, Normalisers):
 
         if job_name == 'all_features':
             logger.info('Evaluating baseline performance using all features...')
-            self.top_features = self.get_store('feature', seed, job_name, boot_iter)
-            self.train_test_split()
-            self.train_models(job_name)  # optimise all models
-            self.evaluate(job_name, job_dir, None)  # evaluate all optimised models
+            # self.top_features = self.get_store('feature', seed, job_name, boot_iter)
+            # self.train_test_split()
+            # self.train_models(job_name)  # optimise all models
+            # self.evaluate(job_name, job_dir, None)  # evaluate all optimised models
         else:
             self.train_test_split()
             top_features = self.get_store('feature', seed, job_name, boot_iter)

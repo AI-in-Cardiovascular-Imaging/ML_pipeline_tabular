@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import pingouin as pg
 import sklearn.metrics as metrics
 import imblearn.metrics as imb_metrics
 from loguru import logger
@@ -104,9 +105,9 @@ class Report(DataHandler):
                 for model in self.models + self.ensemble:
                     best_opt_score_model, _ = self.init_scoring()
                     best_roc_model = None
-                    file.write(f'Results for {model} model:\n' 'All features:\n')
-                    _, _, avg_scores, _ = self.average_scores('all_features', model)
-                    [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
+                    # file.write(f'Results for {model} model:\n' 'All features:\n')
+                    # _, _, avg_scores, _ = self.average_scores('all_features', model)
+                    # [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
                     mean = []
                     std = []
                     for n_top in self.n_top_features:  # compute average scores and populate plots
@@ -249,7 +250,9 @@ class Report(DataHandler):
                 ]
 
     def init_containers(self):
-        if self.config.meta.overwrite:
+        if not self.config.meta.overwrite:
+            scores_found = self.load_intermediate_results(self.output_dir)  # try loading available results
+        if self.config.meta.overwrite or not scores_found:
             OmegaConf.save(
                 self.config, os.path.join(self.output_dir, 'job_config.yaml')
             )  # save copy of config for future reference
@@ -260,12 +263,10 @@ class Report(DataHandler):
                         for model in self.models + self.ensemble:
                             scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
                         self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
-                scores = NestedDefaultDict()
-                for model in self.models + self.ensemble:
-                    scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
-                self.set_store('score', str(seed), 'all_features', scores)
-        else:
-            self.load_intermediate_results(self.output_dir)
+                # scores = NestedDefaultDict()
+                # for model in self.models + self.ensemble:
+                #     scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
+                # self.set_store('score', str(seed), 'all_features', scores)
 
     def init_scoring(self):
         """Find value corresponding to a bad score given the scoring metric, and return whether higher is better"""

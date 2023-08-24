@@ -38,7 +38,7 @@ class DataSplit(DataHandler):
         self.set_store('frame', self.seed, 'train', train)
         self.set_store('frame', self.seed, 'test', test)
         all_features = list(train.columns.drop(self.target_label))
-        self.set_store('feature', self.seed, 'all_features', all_features, self.boot_iter)
+        # self.set_store('feature', self.seed, 'all_features', all_features, self.boot_iter)
 
     def set_stratification(self, frame: pd.DataFrame = None) -> None:
         """Set stratification"""

@@ -118,10 +118,21 @@ class DataHandler:
             json.dump(self._score_store, score_file)
 
     def load_intermediate_results(self, out_dir):
-        with open(os.path.join(out_dir, 'features.json'), 'r') as feature_file:
-            self._feature_store = json.load(feature_file)
-        with open(os.path.join(out_dir, 'feature_scores.json'), 'r') as feature_score_file:
-            self._feature_score_store = json.load(feature_score_file)
-        with open(os.path.join(out_dir, 'scores.json'), 'r') as score_file:
-            self._score_store = json.load(score_file)
+        try:
+            with open(os.path.join(out_dir, 'features.json'), 'r') as feature_file:
+                self._feature_store = json.load(feature_file)
+        except FileNotFoundError:
+            pass
+        try:
+            with open(os.path.join(out_dir, 'feature_scores.json'), 'r') as feature_score_file:
+                self._feature_score_store = json.load(feature_score_file)
+        except FileNotFoundError:
+            pass
+        try:
+            with open(os.path.join(out_dir, 'scores.json'), 'r') as score_file:
+                self._score_store = json.load(score_file)
+        except FileNotFoundError:
+            return False  # need to init scores nested dict
+
+        return True  # when all files could be read
 
