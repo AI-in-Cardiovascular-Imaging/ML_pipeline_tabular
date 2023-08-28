@@ -106,13 +106,13 @@ class Report(DataHandler):
                     best_opt_score_model, _ = self.init_scoring()
                     best_roc_model = None
                     # file.write(f'Results for {model} model:\n' 'All features:\n')
-                    # _, _, avg_scores, _ = self.average_scores('all_features', model)
+                    # _, _, _, avg_scores, _ = self.average_scores('all_features', model)
                     # [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
                     mean = []
                     std = []
                     for n_top in self.n_top_features:  # compute average scores and populate plots
                         file.write(f'Top {n_top} features:\n')
-                        mean_scores, std_scores, avg_scores, roc = self.average_scores(f'{job_name}_{n_top}', model)
+                        mean_scores, std_scores, opt_scores, avg_scores, roc = self.average_scores(f'{job_name}_{n_top}', model)
                         mean_opt_score = mean_scores[f'{self.opt_scoring}_score']
                         if (higher_is_better and mean_opt_score > best_opt_score_model) or (
                             not higher_is_better and mean_opt_score < best_opt_score_model
@@ -205,7 +205,7 @@ class Report(DataHandler):
 
     def average_scores(self, job_name, model) -> None:
         """Average results over all seeds and bootstraps"""
-        averaged_scores = {score: [] for score in self.rep_scoring}
+        all_scores = {score: [] for score in self.rep_scoring}
         roc = []
         for seed in self.seeds:
             try:
@@ -216,15 +216,16 @@ class Report(DataHandler):
                 for score in self.rep_scoring:
                     if score not in scores.keys() or len(scores[score]) < self.n_bootstraps:  # score not yet computed
                         self.compute_missing_scores(scores, score)
-                    averaged_scores[score].append(scores[score])
+                    all_scores[score].append(scores[score])
                 for boot_iter in range(self.n_bootstraps):
                     roc.append(compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True))
-        mean_scores = {score: np.mean(averaged_scores[score]) for score in self.rep_scoring}
-        std_scores = {score: np.std(averaged_scores[score]) for score in self.rep_scoring}
+        mean_scores = {score: np.mean(all_scores[score]) for score in self.rep_scoring}
+        std_scores = {score: np.std(all_scores[score]) for score in self.rep_scoring}
         averaged_scores = {
             score: f'{mean_scores[score]:.2f} +- {std_scores[score]:.2f}' for score in self.rep_scoring
         }  # compute mean +- std for all scores
-        return mean_scores, std_scores, averaged_scores, roc
+        opt_scores = all_scores[f'{self.opt_scoring}_score']
+        return mean_scores, std_scores, averaged_scores, opt_scores, roc
 
     def compute_missing_scores(self, scores, score):
         try:  # some metrics can be calculated using probabilities, others need prediction

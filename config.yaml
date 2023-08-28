@@ -1,6 +1,6 @@
 # meta specifies the experiment name and the random seed
 meta:
-  name: "ATTR_run_Aug_23_f1_score" # experiment name
+  name: "ATTR_run_Aug_17" # experiment name
   plot_format: "png"
   workers: 24 # number of workers for parallel processing
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -10,8 +10,10 @@ meta:
   # output_dir: "/home/sebalzer/Documents/Myo_Flamber/"
   # input_file: "/home/sebalzer/Documents/Myo_Flamber/5_merged/phenomapping.xlsx"
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
-  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
+  # output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
+  output_dir: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose"
+  # input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
+  input_file: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
   hand_picked:
     [
       "edmassbsa_gm2_report",
@@ -19,7 +21,7 @@ meta:
       "GLS_AtB_M_ratio",
       "LV_LAX_myo_gls_perc",
     ]
-  collect_results: False # does not check whether all jobs have been run, only summarises available results
+  collect_results: True # does not check whether all jobs have been run, only summarises available results
   overwrite: False
 
 # specify the clean strategy
@@ -65,9 +67,9 @@ selection:
   jobs:
     [
       ["z_score_norm", "hand_picked"],
-      ["z_score_norm", "correlation", "fr_forest"],
-      ["z_score_norm", "univariate_ranking"],
-      ["z_score_norm", "correlation", "mrmr"],
+      ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
+      ["variance_threshold", "z_score_norm", "univariate_ranking"],
+      ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
     ]
 
 # verification strategy and final model to train and evaluate
@@ -94,10 +96,10 @@ verification:
   models:
     ensemble_voting: False
     logistic_regression: True
-    svm: False
-    forest: False
-    adaboost: False
-    xgboost: False
+    svm: True
+    forest: True
+    adaboost: True
+    xgboost: True
     extreme_forest: False
     lasso: False
     lassolars: False
