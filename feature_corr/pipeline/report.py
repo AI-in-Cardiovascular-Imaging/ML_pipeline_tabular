@@ -108,9 +108,6 @@ class Report(DataHandler):
                 for model in self.models + self.ensemble:
                     best_opt_score_model, _ = self.init_scoring()
                     best_roc_model = None
-                    # file.write(f'Results for {model} model:\n' 'All features:\n')
-                    # _, _, _, avg_scores, _ = self.average_scores('all_features', model)
-                    # [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
                     mean = []
                     std = []
                     for n_top in self.n_top_features:  # compute average scores and populate plots
@@ -200,11 +197,6 @@ class Report(DataHandler):
             plt.clf()
 
         best_all_scores.to_csv(os.path.join(self.output_dir, f'best_model_all_scores.csv'))
-        # ttest_results = {
-        #     f'Strat. 1/Strat {i+1}': pg.ttest(best_opt_scores[0], best_opt_scores[i], paired=False)
-        #     for i in range(len(best_opt_scores))
-        # }
-        # logger.debug(ttest_results)
 
         roc_ax.set_title('Best mean ROC for all strategies')
         roc_plot.savefig(os.path.join(self.output_dir, f'AUROC_best_per_strat.{self.plot_format}'))
@@ -291,10 +283,6 @@ class Report(DataHandler):
                         for model in self.models + self.ensemble:
                             scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
                         self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
-                # scores = NestedDefaultDict()
-                # for model in self.models + self.ensemble:
-                #     scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
-                # self.set_store('score', str(seed), 'all_features', scores)
 
     def init_scoring(self):
         """Find value corresponding to a bad score given the scoring metric, and return whether higher is better"""

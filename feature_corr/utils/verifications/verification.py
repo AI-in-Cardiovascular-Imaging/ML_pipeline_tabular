@@ -88,21 +88,14 @@ class Verification(DataHandler, Normalisers):
         self.boot_iter = boot_iter
         self.imputer = imputer
 
-        if job_name == 'all_features':
-            logger.info('Evaluating baseline performance using all features...')
-            # self.top_features = self.get_store('feature', seed, job_name, boot_iter)
-            # self.train_test_split()
-            # self.train_models(job_name)  # optimise all models
-            # self.evaluate(job_name, job_dir, None)  # evaluate all optimised models
-        else:
-            self.train_test_split()
-            top_features = self.get_store('feature', seed, job_name, boot_iter)
-            n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
-            for n_top in n_top_features:
-                logger.info(f'Verifying final feature importance for top {n_top} features...')
-                self.top_features = top_features[:n_top]
-                self.train_models(f'{job_name}_{n_top}')  # optimise all models
-                self.evaluate(f'{job_name}_{n_top}', job_dir, n_top)  # evaluate all optimised models
+        self.train_test_split()
+        top_features = self.get_store('feature', seed, job_name, boot_iter)
+        n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
+        for n_top in n_top_features:
+            logger.info(f'Verifying final feature importance for top {n_top} features...')
+            self.top_features = top_features[:n_top]
+            self.train_models(f'{job_name}_{n_top}')  # optimise all models
+            self.evaluate(f'{job_name}_{n_top}', job_dir, n_top)  # evaluate all optimised models
 
     def train_test_split(self) -> None:
         """Prepare data for training"""

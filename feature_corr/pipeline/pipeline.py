@@ -71,9 +71,6 @@ class Pipeline(DataHandler, Normalisers):
                     ]  # need to init first normalisation for verification
                     train_frame = self.get_store('frame', seed, 'train')
                     _ = getattr(self, norm)(train_frame)
-                    # self.verification(
-                    #     seed, boot_iter, 'all_features', None, fit_imputer
-                    # )  # run only once per data split, not for every job
 
                     job_names = job_name_cleaner(self.jobs)
                     for job, job_name in zip(self.jobs, job_names):
