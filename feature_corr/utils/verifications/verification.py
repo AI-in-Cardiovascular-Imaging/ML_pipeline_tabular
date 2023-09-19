@@ -259,14 +259,14 @@ class Verification(DataHandler, Normalisers):
 
     def normalise_test(self, frame: pd.DataFrame) -> pd.DataFrame:
         nunique = frame.nunique()
-        self.non_categorical = list(nunique[nunique > 5].index)
-        to_normalise = frame[self.non_categorical]
+        non_categorical = self.scaler.feature_names_in_  # use same features as in train fit
+        to_normalise = frame[non_categorical]
         tmp_label = frame[self.target_label]  # keep label col as is
         try:
             arr_frame = to_normalise.drop(self.target_label, axis=1).values
         except KeyError:  # target label is categorical -> already removed
             arr_frame = to_normalise.values
         norm_frame = self.scaler.transform(arr_frame)
-        frame[self.non_categorical] = norm_frame
+        frame[non_categorical] = norm_frame
         frame[self.target_label] = tmp_label
         return frame

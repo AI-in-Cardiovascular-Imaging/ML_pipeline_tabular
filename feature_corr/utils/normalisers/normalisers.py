@@ -18,9 +18,9 @@ def data_bubble(func):
         to_normalise = frame[non_categorical]
         tmp_label = frame[self.target_label]  # keep label col as is
         try:
-            arr_frame = to_normalise.drop(self.target_label, axis=1).values
+            arr_frame = to_normalise.drop(self.target_label, axis=1)
         except KeyError:  # target label is categorical -> already removed
-            arr_frame = to_normalise.values
+            arr_frame = to_normalise
         norm_frame = func(self, arr_frame)
         frame[non_categorical] = norm_frame
         frame[self.target_label] = tmp_label
