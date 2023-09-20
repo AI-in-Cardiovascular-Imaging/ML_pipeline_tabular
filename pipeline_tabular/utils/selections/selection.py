@@ -2,13 +2,13 @@ import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
 
-from feature_corr.utils.normalisers import Normalisers
-from feature_corr.utils.selections.dimension_projections import DimensionProjections
-from feature_corr.utils.selections.feature_reductions import FeatureReductions
-from feature_corr.utils.selections.recursive_feature_elimination import (
+from pipeline_tabular.utils.normalisers import Normalisers
+from pipeline_tabular.utils.selections.dimension_projections import DimensionProjections
+from pipeline_tabular.utils.selections.feature_reductions import FeatureReductions
+from pipeline_tabular.utils.selections.recursive_feature_elimination import (
     RecursiveFeatureElimination,
 )
-from feature_corr.data_handler.data_handler import DataHandler
+from pipeline_tabular.data_handler.data_handler import DataHandler
 
 
 class Selection(DataHandler, Normalisers, DimensionProjections, FeatureReductions, RecursiveFeatureElimination):

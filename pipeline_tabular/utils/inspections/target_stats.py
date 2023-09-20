@@ -4,7 +4,7 @@ import pandas as pd
 from loguru import logger
 from omegaconf import OmegaConf
 
-from feature_corr.data_handler.data_handler import DataHandler
+from pipeline_tabular.data_handler.data_handler import DataHandler
 
 
 def check_learn_task(target_frame: pd.DataFrame) -> str:

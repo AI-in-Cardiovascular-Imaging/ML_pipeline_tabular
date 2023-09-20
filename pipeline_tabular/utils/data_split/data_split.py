@@ -4,7 +4,7 @@ from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 
-from feature_corr.data_handler.data_handler import DataHandler
+from pipeline_tabular.data_handler.data_handler import DataHandler
 
 
 class DataSplit(DataHandler):

@@ -11,8 +11,8 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from roc_utils import compute_roc, plot_mean_roc
 
-from feature_corr.utils.helpers import job_name_cleaner
-from feature_corr.data_handler.data_handler import DataHandler, NestedDefaultDict
+from pipeline_tabular.utils.helpers import job_name_cleaner
+from pipeline_tabular.data_handler.data_handler import DataHandler, NestedDefaultDict
 
 
 class Report(DataHandler):

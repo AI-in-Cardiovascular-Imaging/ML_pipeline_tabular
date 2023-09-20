@@ -15,18 +15,18 @@ from imblearn.over_sampling import (
     RandomOverSampler,
 )
 
-from feature_corr.utils.data_split import DataSplit
-from feature_corr.utils.helpers import job_name_cleaner
-from feature_corr.utils.imputers import Imputer
-from feature_corr.utils.normalisers import Normalisers
-from feature_corr.utils.selections import Selection
-from feature_corr.utils.verifications import Verification
-from feature_corr.data_handler.data_handler import DataHandler
-from feature_corr.pipeline.report import Report
+from pipeline_tabular.utils.data_split import DataSplit
+from pipeline_tabular.utils.helpers import job_name_cleaner
+from pipeline_tabular.utils.imputers import Imputer
+from pipeline_tabular.utils.normalisers import Normalisers
+from pipeline_tabular.utils.selections import Selection
+from pipeline_tabular.utils.verifications import Verification
+from pipeline_tabular.data_handler.data_handler import DataHandler
+from pipeline_tabular.run.report import Report
 
 
-class Pipeline(DataHandler, Normalisers):
-    """Pipeline definition"""
+class Run(DataHandler, Normalisers):
+    """Class to run the desired models for multiple seeds/bootstraps as defined in config file"""
 
     def __init__(self, config) -> None:
         super().__init__()
@@ -48,7 +48,7 @@ class Pipeline(DataHandler, Normalisers):
         self.verification = Verification(self.config)
 
     def __call__(self) -> None:
-        """Iterate over pipeline steps"""
+        """Iterate over all desired seeds/bootstraps, etc."""
         high_logging_level = self.config.meta.logging_level in ['TRACE', 'DEBUG', 'INFO']
         np.random.seed(self.init_seed)
         seeds = np.random.randint(low=0, high=2**32, size=self.n_seeds)  # generate desired number of random seeds
@@ -88,7 +88,9 @@ class Pipeline(DataHandler, Normalisers):
                         self.verification(seed, boot_iter, job_name, job_dir, fit_imputer)
 
                     self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
-                    self.config.plot_first_iter = False  # minimise work by producing certain plots only for the first iteration
+                    self.config.plot_first_iter = (
+                        False  # minimise work by producing certain plots only for the first iteration
+                    )
 
         report()  # summarise results
 

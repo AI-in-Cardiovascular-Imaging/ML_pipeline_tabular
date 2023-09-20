@@ -1,10 +1,10 @@
-# meta specifies the experiment name and the random seed
 meta:
-  name: "ATTR_run_Sep_19" # experiment name
-  plot_format: "png"
+  name: "ATTR_run_Sep_19" # experiment name, results are stored in directory with this name
+  plot_format: "png"  # format in which plots are saved, e.g. png, pdf
   workers: 24 # number of workers for parallel processing
   logging_level: "ERROR" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
-  learn_task: "" # don't change this, will be set automatically by the pipeline
+  ignore_warnings: True  # whether to ignore all warnings (removes ConvergenceWarnings during run)
+  learn_task: "" # don't change this, will be set automatically by the run
 
   # target_label: "mace"
   # output_dir: "/home/sebalzer/Documents/Projects/Myo_Flamber/"
@@ -14,7 +14,7 @@ meta:
   input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/all_usable_features_without_segments_cleaned.xlsx"
   # output_dir: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose"
   # input_file: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
-  hand_picked:
+  hand_picked:  # specify hand-picked features (if available), need to add a job with step "hand_picked" below
     [
       "edmassbsa_gm2_report",
       "LA_endo_gls_perc",
@@ -22,7 +22,7 @@ meta:
       "LV_LAX_myo_gls_perc",
     ]
   collect_results: False # does not check whether all jobs have been run, only summarises available results
-  overwrite: False
+  overwrite: False  # whether to overwrite existing results
 
 # specify the clean strategy
 inspection:
@@ -60,7 +60,7 @@ selection:
   univariate_thresh: 0.00 # use only features with univariate score above this threshold
 
   scoring:
-    binary_classification: "roc_auc"
+    binary_classification: "roc_auc"  # this metric is used for all training (also during verification)
     multi_classification: "roc_auc"
     regression: "neg_mean_absolute_error"
 
@@ -77,7 +77,7 @@ verification:
   use_n_top_features: [2, 4, 6, 8, 10, 15, 20, 25, 30] # list or range of n_features to use for verification
   # use_n_top_features: [4]
   scoring:
-    binary_classification:
+    binary_classification:  # these are only the reported metrics, set metric for optimisation under selection.scoring
       roc_auc_score: True
       average_precision_score: True
       recall_score: True

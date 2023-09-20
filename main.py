@@ -4,10 +4,10 @@ import warnings
 
 from loguru import logger
 
-from feature_corr.config_manager import ConfigManager
-from feature_corr.utils.inspections import CleanUp, TargetStatistics
-from feature_corr.pipeline.data_reader import DataReader
-from feature_corr.pipeline.pipeline import Pipeline
+from pipeline_tabular.config_manager import ConfigManager
+from pipeline_tabular.utils.inspections import CleanUp, TargetStatistics
+from pipeline_tabular.run.data_reader import DataReader
+from pipeline_tabular.run.run import Run
 
 
 def main(config_file: str = None) -> None:
@@ -18,13 +18,14 @@ def main(config_file: str = None) -> None:
 
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
+    if config.meta.ignore_warnings:
+        warnings.simplefilter("ignore")
+        os.environ["PYTHONWARNINGS"] = "ignore"
 
-    warnings.simplefilter("ignore")
-    os.environ["PYTHONWARNINGS"] = "ignore"
     DataReader(config)()
     CleanUp(config)()
     TargetStatistics(config).show_target_statistics()
-    Pipeline(config)()
+    Run(config)()
 
 if __name__ == '__main__':
     main()

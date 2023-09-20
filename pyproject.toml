@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "feature_corr"
+name = "pipeline_tabular"
 version = "0.1.0"
 description = ""
 authors = ["cardionaut"]

@@ -7,8 +7,8 @@ import pandas as pd
 from loguru import logger
 from sklearn.feature_selection import RFECV, RFE
 
-from feature_corr.utils.helpers import init_estimator
-from feature_corr.utils.verifications.verification import CrossValidation
+from pipeline_tabular.utils.helpers import init_estimator
+from pipeline_tabular.utils.verifications.verification import CrossValidation
 
 
 class RecursiveFeatureElimination:

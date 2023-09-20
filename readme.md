@@ -1,39 +1,53 @@
 ## Table of contents
 
-- [quick-start](#quick-start)
-- [dicom](#dicom)
-- [excel](#excel)
+- [Table of contents](#table-of-contents)
+- [Installation](#installation)
+- [Functionalities](#functionalities)
+- [Configuration](#configuration)
+- [Run](#run)
 
 
-## Quick start
-    install anaconda or miniconda
-    conda create -n <project_name> python=3.9
+## Installation
+```
+    python3 -m venv env
+    source env/bin/activate
     pip install poetry
-    conda activate <project_name>
-    cd /path/to/this/repo
     poetry install
+```
+## Functionalities
+This pipeline for tabular data offers the following functionalities:
+- automatic clean-up
+- automatic detection of learn task (classification/regression)
+- splitting of dataset for any number of desired seeds or bootstraps
+- imputation of missing data and data normalisation
+- oversampling (if desired)
+- ability to run multiple feature selection strategies which can be configured step-by-step
+- verification of these strategies using one or more models
+- explainability
+## Configuration
+Make sure to configure everything needed for your experiments in the **config.yaml** file.\
+Most important is the target_label, input_file and the label_as_index (if available).\
+Other noteworthy entries in the config file:
+- meta:
+  - workers: set according to your machine
+- impute:
+  - method: method to use for imputation of missing values
+- data_split:
+  - n_seeds: number of data split seeds to run
+  - test_frac: fraction of dataset to use for testing
+- selection:
+  - scoring: the metric to use for training during selection and verification
+  - jobs: each list defines a job of desired feature selection steps and normalisation
+- verification:
+  - models: models to train and test
+  - param_grids: parameter grids for GridSearchCV
 
-## Dicom
-Tag based dicom file converter. 
-Tags are not defined yet. Not used yet.
+## Run
+After the config file is set up properly, you can run the pipeline using:
+```
+python3 main.py
+```
+Computation progress is saved after each seed/bootstrap and will not be recomputed unless the meta.overwrite flag is set to True.
 
-## Excel
 
-### Nice to know
-- path_master.py -> holds src and export folder definitions
-- data in test folder -> healthy (myocarditis negative, not necessary really healthy)
-- data in train folder -> myocarditis positive
 
-#### 1. Pre-processing (to create basic data structure)
-- workbook_2_sheets.py  -> extract sheets from workbook and save as separate files
-- sheets_2_tables.py -> extract tables from sheets and save as separate files
-- cleaner.py -> clean up tables and save in a new folder
-- checks.py  -> check if all tables complete and save in a new folder
-
-#### 2. Refinement (more specific data arrangement for faster plotting)
-- calculate_accelerations.py -> calculate accelerations from raw data and save in a new folder
-- table_condenser.py -> focus on specific data and save in a same folder as acceleration results
-- table_merger.py -> merge tables and save in a new folder
-
-#### 3. Analyze (ce plots)
-- use jupyter notebook (load the data into the RAM for faster plotting iterations)

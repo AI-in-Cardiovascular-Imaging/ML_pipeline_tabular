@@ -10,8 +10,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.inspection import permutation_importance
 
-from feature_corr.utils.helpers import init_estimator
-from feature_corr.utils.verifications.verification import CrossValidation
+from pipeline_tabular.utils.helpers import init_estimator
+from pipeline_tabular.utils.verifications.verification import CrossValidation
 
 
 class FeatureReductions:

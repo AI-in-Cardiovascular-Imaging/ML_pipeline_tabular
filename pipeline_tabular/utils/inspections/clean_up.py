@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from feature_corr.data_handler.data_handler import DataHandler
+from pipeline_tabular.data_handler.data_handler import DataHandler
 
 
 class CleanUp(DataHandler):

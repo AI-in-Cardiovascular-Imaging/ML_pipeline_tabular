@@ -12,9 +12,9 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 from alibi.explainers import ALE, plot_ale, TreeShap
 
-from feature_corr.utils.helpers import init_estimator
-from feature_corr.utils.normalisers import Normalisers
-from feature_corr.data_handler.data_handler import DataHandler, NestedDefaultDict
+from pipeline_tabular.utils.helpers import init_estimator
+from pipeline_tabular.utils.normalisers import Normalisers
+from pipeline_tabular.data_handler.data_handler import DataHandler, NestedDefaultDict
 
 
 class CrossValidation:

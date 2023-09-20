@@ -4,7 +4,7 @@ from loguru import logger
 from sklearn.experimental import enable_iterative_imputer  # because of bug in sklearn
 from sklearn.impute import IterativeImputer, KNNImputer, MissingIndicator, SimpleImputer
 
-from feature_corr.data_handler.data_handler import DataHandler
+from pipeline_tabular.data_handler.data_handler import DataHandler
 
 logger.trace(enable_iterative_imputer)  # to avoid auto import removal
 
