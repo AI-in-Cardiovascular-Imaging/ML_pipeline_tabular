@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 
 from loguru import logger
 
@@ -18,6 +19,8 @@ def main(config_file: str = None) -> None:
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
 
+    warnings.simplefilter("ignore")
+    os.environ["PYTHONWARNINGS"] = "ignore"
     DataReader(config)()
     CleanUp(config)()
     TargetStatistics(config).show_target_statistics()

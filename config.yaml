@@ -3,7 +3,7 @@ meta:
   name: "ATTR_run_Sep_19" # experiment name
   plot_format: "png"
   workers: 24 # number of workers for parallel processing
-  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "ERROR" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   learn_task: "" # don't change this, will be set automatically by the pipeline
 
   # target_label: "mace"
@@ -40,7 +40,7 @@ impute:
 # data split definitions
 data_split:
   init_seed: 545
-  n_seeds: 10
+  n_seeds: 100
   n_bootstraps: 1
   test_frac: 0.3 # fraction of data to use for testing verification models
 
@@ -96,10 +96,10 @@ verification:
   models:
     ensemble_voting: False
     logistic_regression: True
-    svm: False
-    forest: False
-    adaboost: False
-    xgboost: False
+    svm: True
+    forest: True
+    adaboost: True
+    xgboost: True
     extreme_forest: False
     lasso: False
     lassolars: False
