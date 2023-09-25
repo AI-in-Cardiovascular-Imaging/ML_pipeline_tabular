@@ -61,7 +61,7 @@ class Run(DataHandler, Normalisers):
                 boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)  # generate boot seeds
                 for boot_iter in range(self.n_bootstraps):
                     logger.info(f'Running bootstrap iteration {boot_iter+1}/{self.n_bootstraps}...')
-                    self.data_split(seed, boot_seeds[boot_iter], boot_iter)
+                    self.data_split(seed, boot_seeds[boot_iter])
                     fit_imputer = self.imputation(seed)
                     if self.oversample:
                         train = self.over_sampling(self.get_store('frame', seed, 'train'), seed)
@@ -85,7 +85,7 @@ class Run(DataHandler, Normalisers):
                             self.selection(
                                 seed, boot_iter, job, job_name, job_dir
                             )  # run only if selection results not already available
-                        self.verification(seed, boot_iter, job_name, job_dir, fit_imputer)
+                        _ = self.verification(seed, boot_iter, job_name, job_dir, fit_imputer)
 
                     self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
                     self.config.plot_first_iter = (

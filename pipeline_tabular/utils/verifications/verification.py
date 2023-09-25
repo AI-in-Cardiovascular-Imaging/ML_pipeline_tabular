@@ -73,7 +73,7 @@ class Verification(DataHandler, Normalisers):
         self.models = [model for model in models_dict if models_dict[model]]
         self.ensemble = [model for model in self.models if 'ensemble' in model]  # only ensemble models
         self.models = [model for model in self.models if model not in self.ensemble]
-        if len(self.models) < 2:  # ensemble methods need at least two models two combine their results
+        if len(self.models) < 2:  # ensemble methods need at least two models to combine their results
             self.ensemble = []
         self.best_estimators = NestedDefaultDict()
         self.x_train = None
@@ -82,11 +82,14 @@ class Verification(DataHandler, Normalisers):
         self.y_test = None
         self.x_test_raw = None
 
-    def __call__(self, seed, boot_iter, job_name, job_dir, imputer) -> None:
+    def __call__(self, seed, boot_iter, job_name, imputer, model=None, n_top_features=None, explain_mode=False):
         """Train classifier to verify final feature importance"""
         self.seed = seed
         self.boot_iter = boot_iter
         self.imputer = imputer
+        self.models = model if model is not None else self.models  # single model provided by Explain class
+        self.n_top_features = n_top_features if n_top_features is not None else self.n_top_features
+        self.explain_mode = explain_mode
 
         self.train_test_split()
         top_features = self.get_store('feature', seed, job_name, boot_iter)
@@ -95,7 +98,9 @@ class Verification(DataHandler, Normalisers):
             logger.info(f'Verifying final feature importance for top {n_top} features...')
             self.top_features = top_features[:n_top]
             self.train_models(f'{job_name}_{n_top}')  # optimise all models
-            self.evaluate(f'{job_name}_{n_top}', job_dir, n_top)  # evaluate all optimised models
+            pred_function = self.evaluate(f'{job_name}_{n_top}')  # evaluate all optimised models
+
+        return pred_function, self.x_train, self.x_test  # only needed for Explain class
 
     def train_test_split(self) -> None:
         """Prepare data for training"""
@@ -114,7 +119,7 @@ class Verification(DataHandler, Normalisers):
                 scores = self.get_store('score', self.seed, job_name)[model]
             except KeyError:  # model not yet stored for this seed/job
                 scores = {scoring: [] for scoring in self.verif_scoring}
-            if len(scores[self.verif_scoring[0]]) < self.boot_iter + 1:  # bootstraps missing
+            if len(scores[self.verif_scoring[0]]) < self.boot_iter + 1 or self.explain_mode:  # bootstraps missing
                 logger.info(f'Training {model} model...')
                 param_grid = self.param_grids[model]
                 estimator, cross_validator, scoring = init_estimator(
@@ -160,13 +165,14 @@ class Verification(DataHandler, Normalisers):
 
             self.best_estimators[ensemble] = ens_estimator  # store for evaluation later
 
-    def evaluate(self, job_name, job_dir, n_top) -> None:
+    def evaluate(self, job_name):
         """Evaluate all optimised models"""
+        # pred_func = None
         scores = self.get_store('score', self.seed, job_name)
         for i, model in enumerate(self.models + self.ensemble):
             if model not in scores.keys():
                 scores[model] = {scoring: [] for scoring in self.verif_scoring + ['probas', 'true', 'pred', 'pos_rate']}
-            if len(scores[model][self.verif_scoring[0]]) < self.boot_iter + 1:
+            if len(scores[model][self.verif_scoring[0]]) < self.boot_iter + 1 or self.explain_mode:
                 logger.info(f'Evaluating {model} model ({i+1}/{len(self.models + self.ensemble)})...')
                 estimator = self.best_estimators[model]
                 y_pred = estimator.predict(self.x_test[self.top_features])
@@ -190,53 +196,11 @@ class Verification(DataHandler, Normalisers):
                 scores[model]['pos_rate'].append(round(self.y_test.sum() / len(self.y_test), 3))
                 if y_pred.sum() == 0:
                     logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
-
-                if self.config.plot_first_iter and not job_name == 'all_features' and not model in self.ensemble:
-                    x_train_raw = self.x_train.copy(deep=True)
-                    x_train_raw[self.non_categorical] = self.scaler.inverse_transform(
-                        self.x_train[self.non_categorical]
-                    )
-                    x_train_raw = x_train_raw[self.top_features]
-
-                    # ALE (accumulated local effects)
-                    ale_fig, ale_ax = plt.subplots()
-                    if self.learn_task == 'binary_classification':
-                        target_names = (
-                            ['0', self.target_label] if model in ['forest', 'extreme_forest'] else [self.target_label]
-                        )
-                    else:
-                        target_names = None
-                    ale = ALE(pred_func, feature_names=self.top_features, target_names=target_names)
-                    ale_expl = ale.explain(x_train_raw.values)
-                    plot_ale(
-                        ale_expl,
-                        n_cols=n_top // 5 + 1,
-                        targets=[target_names[-1]],
-                        fig_kw={'figwidth': 8, 'figheight': 8},
-                        sharey='all',
-                        ax=ale_ax,
-                    )
-                    ale_fig.savefig(os.path.join(job_dir, f'ALE_{model}_top_{n_top}.{self.plot_format}'))
-
-                    # tree SHAP (shapley additive explanations)
-                    if model in ['forest', 'extreme_forest', 'xgboost']:
-                        tshap_fig, _ = plt.subplots()
-                        tshap = TreeShap(estimator.best_estimator_, model_output='raw')
-                        tshap.fit()
-                        tshap_expl = tshap.explain(
-                            self.x_test_raw[self.top_features].values, feature_names=self.top_features
-                        )
-                        shap_values = tshap_expl.shap_values[-1]  # display values for positive class
-                        shap.summary_plot(
-                            shap_values,
-                            self.x_test_raw[self.top_features].values,
-                            feature_names=self.top_features,
-                            class_names=target_names,
-                            show=False,
-                        )
-                        tshap_fig.savefig(os.path.join(job_dir, f'treeSHAP_{model}_top_{n_top}.{self.plot_format}'))
+        logger.debug(scores[model]['roc_auc_score'])
         self.set_store('score', self.seed, job_name, scores)  # store results for summary in report
 
+        return pred_func
+        
     def get_predictions(self, best_estimator):
         try:  # e.g. for logistic regression
             pred_func = best_estimator.decision_function
@@ -258,7 +222,6 @@ class Verification(DataHandler, Normalisers):
         return x_frame, y_frame, x_frame_raw
 
     def normalise_test(self, frame: pd.DataFrame) -> pd.DataFrame:
-        nunique = frame.nunique()
         non_categorical = self.scaler.feature_names_in_  # use same features as in train fit
         to_normalise = frame[non_categorical]
         tmp_label = frame[self.target_label]  # keep label col as is

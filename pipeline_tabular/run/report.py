@@ -47,6 +47,9 @@ class Report(DataHandler):
 
     def __call__(self):
         """Run feature report"""
+        from pipeline_tabular.utils.explain.explain import Explain  # to avoid circular imports
+
+        self.explainer = Explain(self.config)
         self.summarise_selection()
         self.summarise_verification()
 
@@ -87,14 +90,13 @@ class Report(DataHandler):
         best_mean_opt_scores = pd.DataFrame(columns=self.job_names, index=(self.models + self.ensemble))
         best_all_scores = pd.DataFrame(
             columns=[f'Strat. {i+1}' for i in range(len(self.job_names))],
-            index=(['job', 'model', '#features'] + self.rep_scoring)
-            + ['MWU p-value'],
+            index=(['job', 'model', '#features'] + self.rep_scoring) + ['MWU p-value'],
         )
         best_opt_scores = []
         roc_plot, roc_ax = plt.subplots()
         prop_cycle = plt.rcParams['axes.prop_cycle']
         colors = prop_cycle.by_key()['color']
-        for i, job_name in enumerate(self.job_names):
+        for job_index, job_name in enumerate(self.job_names):
             out_dir = os.path.join(self.output_dir, job_name)
             best_mean_opt_score_job, higher_is_better = self.init_scoring()
             best_mean_opt_scores_job = []
@@ -105,12 +107,12 @@ class Report(DataHandler):
             best_scores_mean = None
             best_scores_std = None
             with open(os.path.join(out_dir, f'results.txt'), 'w') as file:
-                for model in self.models + self.ensemble:
+                for model in self.models + self.ensemble:  # find best model for each selection strategy (job)
                     best_opt_score_model, _ = self.init_scoring()
                     best_roc_model = None
                     mean = []
                     std = []
-                    for n_top in self.n_top_features:  # compute average scores and populate plots
+                    for n_top in self.n_top_features:  # find best number of features for each model/strat combo
                         file.write(f'Top {n_top} features:\n')
                         mean_scores, std_scores, opt_scores, avg_scores, roc = self.average_scores(
                             f'{job_name}_{n_top}', model
@@ -156,14 +158,19 @@ class Report(DataHandler):
                     plt.clf()
 
             best_opt_scores.append(best_opt_score)
+            mean_split_index = np.argmin(
+                np.abs(best_opt_score - best_mean_opt_score_job)
+            )  # find data split representative of mean model performance
+            logger.debug(best_mean_opt_score_job)
+            self.explainer(job_name, job_index, best_model, best_n_top, mean_split_index, self.seeds, self.n_bootstraps)
             best_mean_opt_scores[job_name] = best_mean_opt_scores_job
-            if i == 0:  # cannot compare job 0 to itself
+            if job_index == 0:  # cannot compare job 0 to itself
                 stats = ['-']
             else:
                 stats = [
-                    round(pg.mwu(best_opt_scores[0], best_opt_scores[i])['p-val'][0], 4),
+                    round(pg.mwu(best_opt_scores[0], best_opt_scores[job_index])['p-val'][0], 4),
                 ]
-            best_all_scores[f'Strat. {i+1}'] = (
+            best_all_scores[f'Strat. {job_index+1}'] = (
                 [job_name, best_model, best_n_top]
                 + [
                     f'{mean:.2f} \u00B1 {std:.2f}'
@@ -181,8 +188,8 @@ class Report(DataHandler):
                 show_ti=False,
                 show_opt=False,
                 ax=roc_ax,
-                label=f'Strat. {i+1}',
-                color=colors[i],
+                label=f'Strat. {job_index+1}',
+                color=colors[job_index],
             )
             plt.figure()
             plot_mean_roc(
@@ -190,10 +197,10 @@ class Report(DataHandler):
                 show_ci=True,
                 show_ti=False,
                 show_opt=False,
-                label=f'Strat. {i+1}',
+                label=f'Strat. {job_index+1}',
             )
-            plt.title(f'Best mean ROC for Strat. {i+1}')
-            plt.savefig(os.path.join(self.output_dir, f'AUROC_best_strat_{i+1}.{self.plot_format}'))
+            plt.title(f'Best mean ROC for Strat. {job_index+1}')
+            plt.savefig(os.path.join(self.output_dir, f'AUROC_best_strat_{job_index+1}.{self.plot_format}'))
             plt.clf()
 
         best_all_scores.to_csv(os.path.join(self.output_dir, f'best_model_all_scores.csv'))
@@ -224,19 +231,21 @@ class Report(DataHandler):
         """Average results over all seeds and bootstraps"""
         all_scores = {score: [] for score in self.rep_scoring}
         roc = []
-        for seed in self.seeds:
+        for seed_index, seed in enumerate(self.seeds):
             try:
                 scores = self.get_store('score', seed, job_name)[model]
             except KeyError:  # model not yet stored for this seed/job
-                scores = {scoring: [] for scoring in self.verif_scoring}
-                
+                scores = {scoring: [] for scoring in self.rep_scoring}
+
             if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top
                 for score in self.rep_scoring:
                     if score not in scores.keys() or len(scores[score]) < self.n_bootstraps:  # score not yet computed
-                        self.compute_missing_scores(scores, score)
+                        scores = self.compute_missing_scores(scores, score)
                     all_scores[score].append(scores[score])
                 for boot_iter in range(self.n_bootstraps):
                     roc.append(compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True))
+            else:
+                np.delete(self.seeds, seed_index)
         mean_scores = {score: np.mean(all_scores[score]) for score in self.rep_scoring}
         std_scores = {score: np.std(all_scores[score]) for score in self.rep_scoring}
         averaged_scores = {
@@ -268,6 +277,8 @@ class Report(DataHandler):
                     getattr(imb_metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
                     for boot_iter in range(self.n_bootstraps)
                 ]
+
+        return scores
 
     def init_containers(self):
         if not self.config.meta.overwrite:

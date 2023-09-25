@@ -21,11 +21,10 @@ class DataSplit(DataHandler):
         self.stratify = None
         self.frame = self.get_frame()
 
-    def __call__(self, seed, boot_seed, boot_iter):
+    def __call__(self, seed, boot_seed):
         """Split data"""
         self.seed = seed
         self.boot_seed = boot_seed
-        self.boot_iter = boot_iter
         self.split_frame()
 
     def split_frame(self) -> None:

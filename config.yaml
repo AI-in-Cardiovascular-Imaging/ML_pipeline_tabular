@@ -1,8 +1,8 @@
 meta:
-  name: "ATTR_run_Sep_19" # experiment name, results are stored in directory with this name
+  name: "ATTR_run_Aug_17" # experiment name, results are stored in directory with this name
   plot_format: "png"  # format in which plots are saved, e.g. png, pdf
   workers: 24 # number of workers for parallel processing
-  logging_level: "ERROR" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   ignore_warnings: True  # whether to ignore all warnings (removes ConvergenceWarnings during run)
   learn_task: "" # don't change this, will be set automatically by the run
 
@@ -11,7 +11,7 @@ meta:
   # input_file: "/home/sebalzer/Documents/Projects/Myo_Flamber/5_merged/phenomapping.xlsx"
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
-  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/all_usable_features_without_segments_cleaned.xlsx"
+  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
   # output_dir: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose"
   # input_file: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
   hand_picked:  # specify hand-picked features (if available), need to add a job with step "hand_picked" below
@@ -21,7 +21,7 @@ meta:
       "GLS_AtB_M_ratio",
       "LV_LAX_myo_gls_perc",
     ]
-  collect_results: False # does not check whether all jobs have been run, only summarises available results
+  collect_results: True # does not check whether all jobs have been run, only summarises available results
   overwrite: False  # whether to overwrite existing results
 
 # specify the clean strategy
