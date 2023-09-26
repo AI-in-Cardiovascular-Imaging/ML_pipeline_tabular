@@ -10,7 +10,6 @@ from omegaconf import DictConfig
 from sklearn.ensemble import VotingClassifier, VotingRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
-from alibi.explainers import ALE, plot_ale, TreeShap
 
 from pipeline_tabular.utils.helpers import init_estimator
 from pipeline_tabular.utils.normalisers import Normalisers
@@ -58,11 +57,9 @@ class Verification(DataHandler, Normalisers):
     def __init__(self, config: DictConfig) -> None:
         super().__init__()
         self.config = config
-        self.plot_format = config.meta.plot_format
         self.workers = config.meta.workers
         self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
-        self.n_bootstraps = config.data_split.n_bootstraps
         self.train_scoring = config.selection.scoring
         self.class_weight = config.selection.class_weight
         self.n_top_features = config.verification.use_n_top_features
@@ -88,19 +85,19 @@ class Verification(DataHandler, Normalisers):
         self.boot_iter = boot_iter
         self.imputer = imputer
         self.models = model if model is not None else self.models  # single model provided by Explain class
-        self.n_top_features = n_top_features if n_top_features is not None else self.n_top_features
         self.explain_mode = explain_mode
 
         self.train_test_split()
         top_features = self.get_store('feature', seed, job_name, boot_iter)
-        n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
+        if not explain_mode:
+            n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
         for n_top in n_top_features:
             logger.info(f'Verifying final feature importance for top {n_top} features...')
             self.top_features = top_features[:n_top]
             self.train_models(f'{job_name}_{n_top}')  # optimise all models
-            pred_function = self.evaluate(f'{job_name}_{n_top}')  # evaluate all optimised models
+            pred_function, conf_matrix = self.evaluate(f'{job_name}_{n_top}')  # evaluate all optimised models
 
-        return pred_function, self.x_train, self.x_test  # only needed for Explain class
+        return pred_function, conf_matrix, self.x_train, self.x_test  # only needed for Explain class
 
     def train_test_split(self) -> None:
         """Prepare data for training"""
@@ -169,14 +166,19 @@ class Verification(DataHandler, Normalisers):
         """Evaluate all optimised models"""
         # pred_func = None
         scores = self.get_store('score', self.seed, job_name)
-        for i, model in enumerate(self.models + self.ensemble):
+        models = self.models if self.explain_mode else (self.models + self.ensemble)
+        for i, model in enumerate(models):
             if model not in scores.keys():
                 scores[model] = {scoring: [] for scoring in self.verif_scoring + ['probas', 'true', 'pred', 'pos_rate']}
             if len(scores[model][self.verif_scoring[0]]) < self.boot_iter + 1 or self.explain_mode:
-                logger.info(f'Evaluating {model} model ({i+1}/{len(self.models + self.ensemble)})...')
+                logger.info(f'Evaluating {model} model ({i+1}/{len(models)})...')
                 estimator = self.best_estimators[model]
                 y_pred = estimator.predict(self.x_test[self.top_features])
                 pred_func, probas = self.get_predictions(estimator)
+                if self.explain_mode:
+                    conf_matrix = metrics.confusion_matrix(self.y_test, y_pred, labels=estimator.classes_)
+                    conf_matrix = metrics.ConfusionMatrixDisplay(conf_matrix, display_labels=estimator.classes_)
+                    return pred_func, conf_matrix
                 for score in self.verif_scoring:  # calculate and store all requested scores
                     if score not in scores[model].keys():
                         scores[model][score] = []
@@ -196,19 +198,17 @@ class Verification(DataHandler, Normalisers):
                 scores[model]['pos_rate'].append(round(self.y_test.sum() / len(self.y_test), 3))
                 if y_pred.sum() == 0:
                     logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
-        logger.debug(scores[model]['roc_auc_score'])
         self.set_store('score', self.seed, job_name, scores)  # store results for summary in report
 
-        return pred_func
+        return None
         
     def get_predictions(self, best_estimator):
         try:  # e.g. for logistic regression
-            pred_func = best_estimator.decision_function
             probas = best_estimator.decision_function(self.x_test[self.top_features])
         except AttributeError:  # other estimators
-            pred_func = best_estimator.predict_proba
             probas = best_estimator.predict_proba(self.x_test[self.top_features])[:, 1]
 
+        pred_func = best_estimator.predict_proba
         return pred_func, probas
 
     def split_frame(self, frame: pd.DataFrame, normalise=False) -> tuple:

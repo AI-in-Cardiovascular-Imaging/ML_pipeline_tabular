@@ -15,6 +15,8 @@ class Explain(Run):
     def __init__(self, config) -> None:
         super().__init__(config)
         self.plot_format = config.meta.plot_format
+        self.expl_out_dir = os.path.join(self.out_dir, self.experiment_name, 'explain')
+        os.makedirs(self.expl_out_dir, exist_ok=True)
 
     def __call__(self, job_name, job_index, model, n_top, mean_split_index, seeds, n_bootstraps) -> None:
         if n_bootstraps == 1:  # i.e. no bootstrapping
@@ -33,15 +35,25 @@ class Explain(Run):
         train_frame, _ = getattr(self, norm)(train_frame)
         self.set_store('frame', seed, 'train', train_frame)
         features = self.get_store('feature', seed, job_name, boot_iter=0)[:n_top]
-
-        pred_function, x_train_norm, x_test_norm = self.verification(
-            seed, 0, job_name, fit_imputer, model=[model], n_top_features=[n_top], explain_mode=True 
+        pred_function, conf_matrix, x_train_norm, x_test_norm = self.verification(
+            seed, 0, job_name, fit_imputer, model=[model], n_top_features=[n_top], explain_mode=True
         )
 
+        # confusion matrix plot
+        plt.figure()
+        plt.tight_layout()
+        conf_matrix.plot()
+        plt.savefig(os.path.join(self.expl_out_dir, f'confusion_matrix_strat_{job_index}.{self.plot_format}'))
+        plt.clf()
+
+        # KernelSHAP plots
         explainer = KernelShap(pred_function)
         explainer.fit(x_train_norm[features])
         explanation = explainer.explain(x_test_norm[features], feature_names=features)
 
-        shap_plot, _ = plt.subplots()
-        shap.summary_plot(explainer.shap_values[-1], x_test_norm[features], features)
-        shap_plot.savefig(os.path.join(self.out_dir, f'KernelSHAP_{model}_strat_{job_index}.{self.plot_format}'))
+        shap.summary_plot(explanation.shap_values[1], x_test_norm[features], features, show=False)
+        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_positive_class_strat_{job_index}.{self.plot_format}'))
+        plt.clf()
+
+        shap.summary_plot(explanation.shap_values, x_test_norm[features], features, show=False)
+        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_both_classes_strat_{job_index}.{self.plot_format}'))
