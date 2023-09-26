@@ -200,7 +200,7 @@ class Verification(DataHandler, Normalisers):
                     logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
         self.set_store('score', self.seed, job_name, scores)  # store results for summary in report
 
-        return None
+        return None, None
         
     def get_predictions(self, best_estimator):
         try:  # e.g. for logistic regression
