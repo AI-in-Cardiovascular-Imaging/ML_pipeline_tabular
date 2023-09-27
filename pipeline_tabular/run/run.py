@@ -66,11 +66,6 @@ class Run(DataHandler, Normalisers):
                     if self.oversample:
                         train = self.over_sampling(self.get_store('frame', seed, 'train'), seed)
                         self.set_store('frame', seed, 'train', train)
-                    norm = [step for step in self.jobs[0] if 'norm' in step][
-                        0
-                    ]  # need to init first normalisation for verification
-                    train_frame = self.get_store('frame', seed, 'train')
-                    _ = getattr(self, norm)(train_frame)
 
                     job_names = job_name_cleaner(self.jobs)
                     for job, job_name in zip(self.jobs, job_names):

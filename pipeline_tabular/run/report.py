@@ -50,6 +50,7 @@ class Report(DataHandler):
     def __call__(self):
         """Run feature report"""
         from pipeline_tabular.utils.explain.explain import Explain  # to avoid circular imports
+
         self.explainer = Explain(self.config)
         self.summarise_selection()
         self.summarise_verification()
@@ -63,7 +64,13 @@ class Report(DataHandler):
             job_scores = job_scores.sort_values(by='score', ascending=True).reset_index(drop=True)
             job_scores['score'] = job_scores['score'] / job_scores['score'].sum()
 
-            ax = job_scores.plot.barh(x='feature', y='score', figsize=(10, 10))
+            try:
+                ax = job_scores.plot.barh(x='feature', y='score', figsize=(10, 10))
+            except TypeError:  # no data is available to plot, i.e. collect_results flag set to True by accident
+                logger.error(
+                    f'Report was run without any computed results, have you set collect_results=True by accident?'
+                )
+                raise SystemExit(0)
             fig = ax.get_figure()
             plt.title(f'Average feature ranking')
             plt.xlabel('Average feature ranking')
@@ -157,7 +164,7 @@ class Report(DataHandler):
                     plt.title(f'Mean ROC for {model} model')
                     plt.savefig(os.path.join(out_dir, f'AUROC_best_{model}.{self.plot_format}'))
                     plt.clf()
-            
+
             best_opt_scores.append(best_opt_score)
             mean_split_index = np.argmin(
                 np.abs(best_opt_score - best_mean_opt_score_job)
