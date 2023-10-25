@@ -37,7 +37,7 @@ class RecursiveFeatureElimination:
 
         y = frame[self.target_label]
         x = frame.drop(self.target_label, axis=1)
-        min_features = 1
+        min_features = 2
         optimiser = CrossValidation(
             x,
             y,

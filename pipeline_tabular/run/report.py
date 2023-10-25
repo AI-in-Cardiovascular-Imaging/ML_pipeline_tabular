@@ -96,6 +96,8 @@ class Report(DataHandler):
     def summarise_verification(self) -> None:
         """Summarise verification results over all seeds and bootstraps"""
         best_mean_opt_scores = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
+        best_mean_recall = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
+        best_mean_specificity = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
         best_all_scores = pd.DataFrame(
             columns=[f'Strat. {i+1}' for i in range(len(self.job_names))],
             index=(['job', 'model', '#features'] + self.rep_scoring) + ['MWU p-value'],
@@ -107,7 +109,10 @@ class Report(DataHandler):
         for job_index, job_name in enumerate(self.job_names):
             out_dir = os.path.join(self.run_dir, job_name)
             best_mean_opt_score_job, higher_is_better = self.init_scoring()
+            best_mean_opt_score_job_combined, _ = self.init_scoring()
             best_mean_opt_scores_job = []
+            best_mean_recall_job = []
+            best_mean_specificity_job = []
             best_roc_job = []
             best_opt_score = None
             best_model = None
@@ -117,6 +122,7 @@ class Report(DataHandler):
             with open(os.path.join(out_dir, f'results.txt'), 'w') as file:
                 for model in self.rep_models + self.ensemble:  # find best model for each selection strategy (job)
                     best_opt_score_model, _ = self.init_scoring()
+                    best_opt_score_model_combined, _ = self.init_scoring()
                     best_roc_model = None
                     mean = []
                     std = []
@@ -126,14 +132,24 @@ class Report(DataHandler):
                             f'{job_name}_{n_top}', model
                         )
                         mean_opt_score = mean_scores[f'{self.opt_scoring}_score']
-                        if (higher_is_better and mean_opt_score > best_opt_score_model) or (
-                            not higher_is_better and mean_opt_score < best_opt_score_model
+                        mean_opt_score_combined = (
+                            mean_scores[f'{self.opt_scoring}_score']
+                            + mean_scores['recall_score']
+                            + mean_scores['specificity_score']
+                        )
+                        if (higher_is_better and mean_opt_score_combined > best_opt_score_model_combined) or (
+                            not higher_is_better and mean_opt_score_combined < best_opt_score_model_combined
                         ):  # update best scores for model
+                            best_opt_score_model_combined = mean_opt_score_combined
+                            best_opt_score_model = mean_opt_score
+                            best_recall_model = mean_scores['recall_score']
+                            best_specificity_model = mean_scores['specificity_score']
                             best_opt_score_model = mean_opt_score
                             best_roc_model = roc
-                            if (higher_is_better and mean_opt_score > best_mean_opt_score_job) or (
-                                not higher_is_better and mean_opt_score < best_mean_opt_score_job
+                            if (higher_is_better and mean_opt_score_combined > best_mean_opt_score_job_combined) or (
+                                not higher_is_better and mean_opt_score_combined < best_mean_opt_score_job_combined
                             ):  # update best scores for job
+                                best_mean_opt_score_job_combined = mean_opt_score_combined
                                 best_mean_opt_score_job = mean_opt_score
                                 best_opt_score = opt_scores
                                 best_model = model
@@ -145,6 +161,8 @@ class Report(DataHandler):
                         [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
 
                     best_mean_opt_scores_job.append(best_opt_score_model)
+                    best_mean_recall_job.append(best_recall_model)
+                    best_mean_specificity_job.append(best_specificity_model)
                     best_roc_job.append(best_roc_model)
                     plt.figure()
                     plt.xlabel('Number of features selected')
@@ -171,6 +189,8 @@ class Report(DataHandler):
             )  # find data split representative of mean model performance
             self.explainer(job_name, job_index, best_model, best_n_top, mean_split_index, self.seeds, self.n_bootstraps)
             best_mean_opt_scores[job_name] = best_mean_opt_scores_job
+            best_mean_recall[job_name] = best_mean_recall_job
+            best_mean_specificity[job_name] = best_mean_specificity_job
             if job_index == 0:  # cannot compare job 0 to itself
                 stats = ['-']
             else:
@@ -211,9 +231,9 @@ class Report(DataHandler):
             plt.clf()
 
         best_all_scores.to_csv(os.path.join(self.rep_out_dir, f'best_model_all_scores.csv'))
-
         roc_ax.set_title('Best mean ROC for all strategies')
         roc_plot.savefig(os.path.join(self.rep_out_dir, f'AUROC_best_per_strat.{self.plot_format}'))
+
         fig = plt.figure()
         sns.heatmap(
             best_mean_opt_scores,
@@ -228,7 +248,39 @@ class Report(DataHandler):
         plt.xticks(rotation=0)
         plt.yticks(rotation=0)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.rep_out_dir, f'results_heatmap.{self.plot_format}'))
+        plt.savefig(os.path.join(self.rep_out_dir, f'results_heatmap_{self.opt_scoring}.{self.plot_format}'))
+        plt.close(fig)
+        fig = plt.figure()
+        sns.heatmap(
+            best_mean_recall,
+            annot=True,
+            xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
+            yticklabels=True,
+            vmin=0.5,
+            vmax=1.0,
+            cmap='Greens',
+            fmt='.2g',
+        )
+        plt.xticks(rotation=0)
+        plt.yticks(rotation=0)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.rep_out_dir, f'results_heatmap_recall.{self.plot_format}'))
+        plt.close(fig)
+        fig = plt.figure()
+        sns.heatmap(
+            best_mean_specificity,
+            annot=True,
+            xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
+            yticklabels=True,
+            vmin=0.5,
+            vmax=1.0,
+            cmap='Reds',
+            fmt='.2g',
+        )
+        plt.xticks(rotation=0)
+        plt.yticks(rotation=0)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.rep_out_dir, f'results_heatmap_specificity.{self.plot_format}'))
         plt.close(fig)
         logger.info(
             f'\nStrategies summary:\n' + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names))
