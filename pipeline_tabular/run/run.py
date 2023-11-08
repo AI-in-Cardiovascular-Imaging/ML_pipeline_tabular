@@ -55,7 +55,7 @@ class Run(DataHandler, Normalisers):
         report = Report(self.config, seeds)
 
         if not self.config.meta.collect_results:
-            for seed_iter, seed in tqdm(enumerate(seeds), disable=high_logging_level):
+            for seed_iter, seed in enumerate(tqdm(seeds, desc='Running seeds', disable=high_logging_level)):
                 logger.info(f'Running seed {seed_iter+1}/{self.n_seeds}...')
                 np.random.seed(seed)
                 boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)  # generate boot seeds
@@ -66,11 +66,6 @@ class Run(DataHandler, Normalisers):
                     if self.oversample:
                         train = self.over_sampling(self.get_store('frame', seed, 'train'), seed)
                         self.set_store('frame', seed, 'train', train)
-                    norm = [step for step in self.jobs[0] if 'norm' in step][
-                        0
-                    ]  # need to init first normalisation for verification
-                    train_frame = self.get_store('frame', seed, 'train')
-                    _ = getattr(self, norm)(train_frame)
                     job_names = job_name_cleaner(self.jobs)
                     for job, job_name in zip(self.jobs, job_names):
                         logger.info(f'Running {job_name}...')
@@ -84,6 +79,12 @@ class Run(DataHandler, Normalisers):
                             self.selection(
                                 seed, boot_iter, job, job_name, job_dir
                             )  # run only if selection results not already available
+                        else:
+                            norm = [step for step in self.jobs[0] if 'norm' in step][
+                                0
+                            ]  # need to init normalisation for verification (normally part of selection)
+                            train_frame = self.get_store('frame', seed, 'train')
+                            _ = getattr(self, norm)(train_frame)
                         _ = self.verification(seed, boot_iter, job_name, job_dir, fit_imputer)
 
                     self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))

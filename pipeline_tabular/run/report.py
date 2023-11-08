@@ -133,18 +133,17 @@ class Report(DataHandler):
                         )
                         mean_opt_score = mean_scores[f'{self.opt_scoring}_score']
                         mean_opt_score_combined = (
-                            mean_scores[f'{self.opt_scoring}_score']
+                            mean_opt_score
                             + mean_scores['recall_score']
                             + mean_scores['specificity_score']
                         )
                         if (higher_is_better and mean_opt_score_combined > best_opt_score_model_combined) or (
                             not higher_is_better and mean_opt_score_combined < best_opt_score_model_combined
                         ):  # update best scores for model
-                            best_opt_score_model_combined = mean_opt_score_combined
                             best_opt_score_model = mean_opt_score
+                            best_opt_score_model_combined = mean_opt_score_combined
                             best_recall_model = mean_scores['recall_score']
                             best_specificity_model = mean_scores['specificity_score']
-                            best_opt_score_model = mean_opt_score
                             best_roc_model = roc
                             if (higher_is_better and mean_opt_score_combined > best_mean_opt_score_job_combined) or (
                                 not higher_is_better and mean_opt_score_combined < best_mean_opt_score_job_combined
