@@ -1,6 +1,5 @@
-## Table of contents
+## Table of contents <!-- omit in toc -->
 
-- [Table of contents](#table-of-contents)
 - [Installation](#installation)
 - [Functionalities](#functionalities)
 - [Configuration](#configuration)
