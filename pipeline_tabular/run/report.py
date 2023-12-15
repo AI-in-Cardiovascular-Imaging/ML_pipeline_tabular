@@ -68,7 +68,7 @@ class Report(DataHandler):
                 ax = job_scores.plot.barh(x='feature', y='score', figsize=(10, 10))
             except TypeError:  # no data is available to plot, i.e. collect_results flag set to True by accident
                 logger.error(
-                    f'Report was run without any computed results, have you set collect_results=True by accident?'
+                    f'Report was run without any computed results, did you set collect_results=True by accident?'
                 )
                 raise SystemExit(0)
             fig = ax.get_figure()

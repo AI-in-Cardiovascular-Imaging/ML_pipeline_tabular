@@ -5,7 +5,7 @@ import warnings
 from loguru import logger
 
 from pipeline_tabular.config_manager import ConfigManager
-from pipeline_tabular.utils.inspections import CleanUp, TargetStatistics
+from pipeline_tabular.utils.inspections import CleanUp, DataExploration
 from pipeline_tabular.run.data_reader import DataReader
 from pipeline_tabular.run.run import Run
 
@@ -24,7 +24,7 @@ def main(config_file: str = None) -> None:
 
     DataReader(config)()
     CleanUp(config)()
-    TargetStatistics(config).show_target_statistics()
+    DataExploration(config)()
     Run(config)()
 
 if __name__ == '__main__':

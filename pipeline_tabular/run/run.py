@@ -92,7 +92,7 @@ class Run(DataHandler, Normalisers):
                         False  # minimise work by producing certain plots only for the first iteration
                     )
 
-        report()  # summarise results
+        # report()  # summarise results
 
     def over_sampling(self, x_frame: pd.DataFrame, seed: int) -> pd.DataFrame:
         """Over sample data"""

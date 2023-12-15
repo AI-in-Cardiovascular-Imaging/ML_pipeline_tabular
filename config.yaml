@@ -1,5 +1,5 @@
 meta:
-  name: "ATTR_run_Oct_24" # experiment name, results are stored in directory with this name
+  name: "ATTR_run_test" # experiment name, results are stored in directory with this name
   plot_format: "png"  # format in which plots are saved, e.g. png, pdf
   workers: 24 # number of workers for parallel processing
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -11,7 +11,7 @@ meta:
   # input_file: "/home/sebalzer/Documents/Projects/Myo_Flamber/5_merged/phenomapping.xlsx"
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
-  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_CT.xlsx"
+  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_modalities_coloured.xlsx"
   # output_dir: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose"
   # input_file: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
   hand_picked:  # specify hand-picked features (if available), need to add a job with step "hand_picked" below
@@ -21,7 +21,7 @@ meta:
       "GLS_AtB_M_ratio",
       "LV_LAX_myo_gls_perc",
     ]
-  collect_results: False # does not check whether all jobs have been run, only summarises available results
+  collect_results: True # does not check whether all jobs have been run, only summarises available results
   overwrite: False  # whether to overwrite existing results
 
 # specify the clean strategy
@@ -66,14 +66,16 @@ selection:
 
   jobs:
     [
-      ["z_score_norm", "hand_picked"],
+      # ["z_score_norm", "hand_picked"],
       ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
       ["variance_threshold", "z_score_norm", "univariate_ranking"],
       ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
+      # ["variance_threshold", "z_score_norm"],
     ]
 
 # verification strategy and final model to train and evaluate
 verification:
+  # use_n_top_features: [2] # list or range of n_features to use for verification
   use_n_top_features: [2, 4, 6, 8, 10, 15, 20, 25, 30] # list or range of n_features to use for verification
   scoring:
     binary_classification:  # these are only the reported metrics, set metric for optimisation under selection.scoring

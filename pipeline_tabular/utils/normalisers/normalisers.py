@@ -14,7 +14,7 @@ def data_bubble(func):
         if frame.isna().any(axis=None):
             raise ValueError('Data contains NaN values, consider imputing data')
         nunique = frame.nunique()
-        non_categorical = list(nunique[nunique > 5].index)
+        non_categorical = list(nunique[nunique > 3].index)
         to_normalise = frame[non_categorical]
         tmp_label = frame[self.target_label]  # keep label col as is
         try:
@@ -39,12 +39,14 @@ class Normalisers:
     @data_bubble
     def l1_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """L1 normalise frame"""
+        logger.warning('check implementation')
         self.scaler = preprocessing.Normalizer(norm='l1')
         return self.scaler.fit_transform(frame.T).T  # l1 normalisation with transposed frame
 
     @data_bubble
     def l2_norm(self, frame: pd.DataFrame) -> pd.DataFrame:
         """L2 normalise frame"""
+        logger.warning('check implementation')
         self.scaler = preprocessing.Normalizer(norm='l2')
         return self.scaler.fit_transform(frame.T).T  # l2 normalisation with transposed frame
 
