@@ -58,8 +58,8 @@ class DataExploration(DataHandler):
     def plot_cluster_map(self) -> None:
         frame = self.frame.drop(self.target_label, axis=1)
         cluster_map = sns.clustermap(frame, figsize=(20, 20), cmap='coolwarm', method='ward', metric='euclidean')
-        plt.show()
         cluster_map.savefig(os.path.join(self.out_dir, f'feature_{self.corr_method}_cluster_map.{self.plot_format}'))
+        plt.clf()
 
     def plot_corr_heatmap(self) -> None:
         frame = self.frame.drop(self.target_label, axis=1)
@@ -79,18 +79,20 @@ class DataExploration(DataHandler):
             hue='correlation',
             size=corr_matrix['correlation'].abs(),
             palette='coolwarm',
-            sizes=(0, 20),
-            height=20,
+            sizes=(20, 80),
+            size_norm=(-1, 1),
+            hue_norm=(-1, 1),
+            height=10,
             aspect=1,
         )
         corr_plot.set(xlabel='', ylabel='', aspect='equal')
         corr_plot.despine(left=True, bottom=True)
         corr_plot.ax.margins(0.01)
-        label_font_size = 5
+        label_font_size = 10
         corr_plot.ax.set_xticklabels(corr_plot.ax.get_xticklabels(), rotation=90, fontsize=label_font_size)
         corr_plot.ax.set_yticklabels(corr_plot.ax.get_yticklabels(), fontsize=label_font_size)
         # corr_plot.tight_layout()
-        plt.show()
+        # plt.show()
         corr_plot.savefig(os.path.join(self.out_dir, f'feature_{self.corr_method}_corr_heatmap.{self.plot_format}'))
 
     def show_target_statistics(self) -> None:

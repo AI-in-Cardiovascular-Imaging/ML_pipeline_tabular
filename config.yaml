@@ -11,7 +11,7 @@ meta:
   # input_file: "/home/sebalzer/Documents/Projects/Myo_Flamber/5_merged/phenomapping.xlsx"
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
-  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_modalities_coloured.xlsx"
+  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_CT.xlsx"
   # output_dir: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose"
   # input_file: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
   hand_picked:  # specify hand-picked features (if available), need to add a job with step "hand_picked" below
@@ -70,7 +70,6 @@ selection:
       ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
       ["variance_threshold", "z_score_norm", "univariate_ranking"],
       ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
-      # ["variance_threshold", "z_score_norm"],
     ]
 
 # verification strategy and final model to train and evaluate
