@@ -42,7 +42,7 @@ class Explain(Run):
         # confusion matrix plot
         plt.figure()
         plt.tight_layout()
-        conf_matrix.plot()
+        conf_matrix.plot(cmap='Blues', values_format='d')
         plt.savefig(os.path.join(self.expl_out_dir, f'confusion_matrix_strat_{job_index}.{self.plot_format}'))
         plt.clf()
 
@@ -50,10 +50,20 @@ class Explain(Run):
         explainer = KernelShap(pred_function)
         explainer.fit(x_train_norm[features])
         explanation = explainer.explain(x_test_norm[features], feature_names=features)
-
         shap.summary_plot(explanation.shap_values[1], x_test_norm[features], features, show=False)
+        plt.tight_layout()
         plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_positive_class_strat_{job_index}.{self.plot_format}'))
         plt.clf()
-
         shap.summary_plot(explanation.shap_values, x_test_norm[features], features, show=False)
+        plt.tight_layout()
         plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_both_classes_strat_{job_index}.{self.plot_format}'))
+        plt.clf()
+
+        heatmap_explainer = shap.KernelExplainer(
+            lambda x: pred_function(x)[:, 1], x_train_norm[features]
+        )  # need different format for heatmap plot
+        values = heatmap_explainer(x_test_norm[features])
+        shap.plots.heatmap(values, show=False)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_heatmap_strat_{job_index}.{self.plot_format}'))
+        plt.clf()

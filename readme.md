@@ -16,7 +16,6 @@
 ## Functionalities
 This pipeline for tabular data offers the following functionalities:
 - automatic clean-up
-- automatic detection of learn task (classification/regression)
 - splitting of dataset for any number of desired seeds or bootstraps
 - imputation of missing data and data normalisation
 - oversampling (if desired)

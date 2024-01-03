@@ -10,12 +10,8 @@ from pipeline_tabular.run.data_reader import DataReader
 from pipeline_tabular.run.run import Run
 
 
-def main(config_file: str = None) -> None:
-    """Main function"""
-
-    cwd = os.path.abspath(os.getcwd())
-    config = ConfigManager(config_file, cwd)()
-
+def main() -> None:
+    config = ConfigManager()()
     logger.remove()
     logger.add(sys.stderr, level=config.meta.logging_level)
     if config.meta.ignore_warnings:

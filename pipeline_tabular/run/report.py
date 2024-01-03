@@ -233,13 +233,14 @@ class Report(DataHandler):
         roc_ax.set_title('Best mean ROC for all strategies')
         roc_plot.savefig(os.path.join(self.rep_out_dir, f'AUROC_best_per_strat.{self.plot_format}'))
 
+        VMIN_HEATMAP = 0.0
         fig = plt.figure()
         sns.heatmap(
             best_mean_opt_scores,
             annot=True,
             xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
             yticklabels=True,
-            vmin=0.5,
+            vmin=VMIN_HEATMAP,
             vmax=1.0,
             cmap='Blues',
             fmt='.2g',
@@ -255,7 +256,7 @@ class Report(DataHandler):
             annot=True,
             xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
             yticklabels=True,
-            vmin=0.5,
+            vmin=VMIN_HEATMAP,
             vmax=1.0,
             cmap='Greens',
             fmt='.2g',
@@ -271,7 +272,7 @@ class Report(DataHandler):
             annot=True,
             xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
             yticklabels=True,
-            vmin=0.5,
+            vmin=VMIN_HEATMAP,
             vmax=1.0,
             cmap='Reds',
             fmt='.2g',

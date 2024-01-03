@@ -7,9 +7,8 @@ from omegaconf import DictConfig, OmegaConf
 
 
 class ConfigManager:
-    def __init__(self, config_file: str = None, cwd: str = '') -> None:
-        self.config_file = config_file
-        self.cwd = cwd
+    def __init__(self) -> None:
+        self.cwd = os.path.abspath(os.getcwd())
 
         logger.remove()
         logger.add(sys.stderr, level='INFO')
@@ -21,10 +20,7 @@ class ConfigManager:
 
     def _load_config_file(self) -> DictConfig:
         """Load config file and merge with paths file"""
-        if self.config_file is None:
-            load_path = os.path.join(self.cwd, 'config.yaml')
-        else:
-            load_path = self.config_file
+        load_path = os.path.join(self.cwd, 'config.yaml')
 
         logger.info(f'Try to load config file -> {load_path}')
         if not os.path.exists(load_path):

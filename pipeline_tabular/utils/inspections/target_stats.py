@@ -5,7 +5,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from loguru import logger
-from omegaconf import OmegaConf
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
@@ -19,6 +18,7 @@ class DataExploration(DataHandler):
         super().__init__()
         self.config = config
         self.plot_format = config.meta.plot_format
+        self.learn_task = config.meta.learn_task
         self.target_label = config.meta.target_label
         self.out_dir = config.meta.output_dir
         self.corr_method = config.selection.corr_method
@@ -40,7 +40,7 @@ class DataExploration(DataHandler):
         self.corr_to_target()
         self.plot_cluster_map()
         self.plot_corr_heatmap()
-        self.show_target_statistics()
+        self.plot_stats()
 
     def corr_to_target(self) -> None:
         y = self.frame[self.target_label]
@@ -65,55 +65,28 @@ class DataExploration(DataHandler):
         frame = self.frame.drop(self.target_label, axis=1)
         corr_matrix = frame.corr(method=self.corr_method)
         corr_matrix = corr_matrix.dropna(axis=0, how='all').dropna(axis=1, how='all')
-        mask = np.tril(np.ones_like(corr_matrix, dtype=bool))
-        corr_matrix = corr_matrix.mask(mask, 0)
-        corr_thresh = 0.8
-        to_drop = corr_matrix[(corr_matrix.abs() < corr_thresh).all(0, skipna=False)].index
-        frame = frame.drop(to_drop, axis=1).reset_index()
-        corr_matrix = frame.corr(method=self.corr_method)
-        corr_matrix = corr_matrix.stack().reset_index(name='correlation')
-        corr_plot = sns.relplot(
-            data=corr_matrix,
-            x='level_0',
-            y='level_1',
-            hue='correlation',
-            size=corr_matrix['correlation'].abs(),
-            palette='coolwarm',
-            sizes=(20, 80),
-            size_norm=(-1, 1),
-            hue_norm=(-1, 1),
-            height=10,
-            aspect=1,
+        mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+        corr_plot = sns.heatmap(
+            corr_matrix,
+            mask=mask,
+            cmap='coolwarm',
+            annot=False,
+            square=True,
+            vmin=-1,
+            vmax=1,
+            center=0,
+            linewidths=0.5,
+            cbar_kws={'shrink': 0.5},
         )
-        corr_plot.set(xlabel='', ylabel='', aspect='equal')
-        corr_plot.despine(left=True, bottom=True)
-        corr_plot.ax.margins(0.01)
-        label_font_size = 10
-        corr_plot.ax.set_xticklabels(corr_plot.ax.get_xticklabels(), rotation=90, fontsize=label_font_size)
-        corr_plot.ax.set_yticklabels(corr_plot.ax.get_yticklabels(), fontsize=label_font_size)
-        # corr_plot.tight_layout()
-        # plt.show()
+        corr_plot.figure.tight_layout()
+        corr_plot = corr_plot.get_figure()
         corr_plot.savefig(os.path.join(self.out_dir, f'feature_{self.corr_method}_corr_heatmap.{self.plot_format}'))
-
-    def show_target_statistics(self) -> None:
-        """Show target statistics"""
-        if self.target_label not in self.frame.columns:
-            raise ValueError(f'Target label {self.target_label} not in data')
-        self.target_frame = self.frame[self.target_label]
-        self.learn_task = self.check_learn_task()
-        OmegaConf.update(self.config.meta, 'learn_task', self.learn_task)
-        self.plot_stats()
-
-    def check_learn_task(self) -> str:
-        """Check if the target variable is binary, multiclass or continuous."""
-        if self.target_frame.nunique() == 2:
-            return 'binary_classification'
-        if 2 < self.target_frame.nunique() <= 10:
-            return 'multi_classification'
-        return 'regression'
 
     def plot_stats(self) -> None:
         """Plot target statistics"""
+        if self.target_label not in self.frame.columns:
+            raise ValueError(f'Target label {self.target_label} not in data')
+        self.target_frame = self.frame[self.target_label]
         if self.learn_task == 'binary_classification':
             perc = int((self.target_frame.sum() / len(self.target_frame.index)).round(2) * 100)
             logger.info(

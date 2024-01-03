@@ -1,10 +1,10 @@
 meta:
-  name: "ATTR_run_test" # experiment name, results are stored in directory with this name
+  name: "ATTR_run_CT" # experiment name, results are stored in directory with this name
   plot_format: "png"  # format in which plots are saved, e.g. png, pdf
   workers: 24 # number of workers for parallel processing
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   ignore_warnings: True  # whether to ignore all warnings (removes ConvergenceWarnings during run)
-  learn_task: "" # don't change this, will be set automatically by the run
+  learn_task: "binary_classification" # binary_classification, multi_classification, regression
 
   # target_label: "mace"
   # output_dir: "/home/sebalzer/Documents/Projects/Myo_Flamber/"
@@ -160,3 +160,6 @@ verification:
 
     omp:
       n_nonzero_coefs: [5, 10, 20, 50, null]
+
+collect_results:
+  to_collect: ["ATTR_run_CT"]
