@@ -35,7 +35,7 @@ class DataHandler:
         self._frame = None
         self.__dict__ = self.shared_state  # borg design pattern
 
-    def set_frame(self,frame: pd.DataFrame) -> None:
+    def set_frame(self, frame: pd.DataFrame) -> None:
         """Sets the frame"""
         self._frame = frame
         logger.trace(f'Frame set -> {type(frame)}')
@@ -109,6 +109,10 @@ class DataHandler:
                 return {}
         raise ValueError(f'Invalid data name to get store data -> {name}, allowed -> frame, feature, score')
 
+    def save_frame(self, out_dir) -> None:
+        """Save frame"""
+        self._frame.to_csv(os.path.join(out_dir, 'frame.csv'), index=True)
+
     def save_intermediate_results(self, out_dir) -> None:
         with open(os.path.join(out_dir, 'features.json'), 'w') as feature_file:
             json.dump(self._feature_store, feature_file)
@@ -116,6 +120,9 @@ class DataHandler:
             json.dump(self._feature_score_store, feature_score_file)
         with open(os.path.join(out_dir, 'scores.json'), 'w') as score_file:
             json.dump(self._score_store, score_file)
+
+    def load_frame(self, out_dir) -> None:
+        self._frame = pd.read_csv(os.path.join(out_dir, 'frame.csv'), index_col=0)
 
     def load_intermediate_results(self, out_dir):
         try:
@@ -135,4 +142,3 @@ class DataHandler:
             return False  # need to init scores nested dict
 
         return True  # when all files could be read
-

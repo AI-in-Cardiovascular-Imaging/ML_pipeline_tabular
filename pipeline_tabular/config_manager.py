@@ -8,17 +8,20 @@ from omegaconf import DictConfig, OmegaConf
 
 class ConfigManager:
     def __init__(self) -> None:
+        self.config = None
         self.cwd = os.path.abspath(os.getcwd())
-
         logger.remove()
         logger.add(sys.stderr, level='INFO')
 
     def __call__(self) -> DictConfig:
-        config = self._load_config_file()
-        config = self._none_checks(config)
-        return config
+        self.load_config_file()
+        self.range_to_list()
+        OmegaConf.save(
+                self.config, os.path.join(self.config.meta.output_dir, self.config.meta.name, 'job_config.yaml')
+            )  # save copy of config for future reference
+        return self.config
 
-    def _load_config_file(self) -> DictConfig:
+    def load_config_file(self) -> DictConfig:
         """Load config file and merge with paths file"""
         load_path = os.path.join(self.cwd, 'config.yaml')
 
@@ -30,22 +33,11 @@ class ConfigManager:
 
         try:
             with open(load_path, 'r', encoding='utf-8') as file:
-                config = OmegaConf.load(file)
+                self.config = OmegaConf.load(file)
         except Exception as e:
             raise KeyError(f'Type error in config file -> \n{e}')
 
-        return config
-
-    @staticmethod
-    def _none_checks(config: DictConfig) -> DictConfig:
-        """Check if that config file contains 'None' as string, this is not allowed, use null instead"""
-
-        def check_for_string_none(dictionary: DictConfig) -> DictConfig or None:
-            for key, value in dictionary.items():
-                if isinstance(value, DictConfig):
-                    check_for_string_none(value)
-                elif isinstance(value, str) and value.lower() == 'none':
-                    raise ValueError(f'None is not allowed, use null instead in config file -> {key}')
-
-        check_for_string_none(config)
-        return config
+    def range_to_list(self):
+        """Convert range string to list"""
+        if isinstance(self.config.verification.use_n_top_features, str):
+            self.config.verification.use_n_top_features = list(eval(self.config.verification.use_n_top_features))

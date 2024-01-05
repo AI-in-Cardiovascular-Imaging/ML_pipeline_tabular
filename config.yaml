@@ -1,19 +1,19 @@
 meta:
-  name: "ATTR_run_CT" # experiment name, results are stored in directory with this name
+  output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
+  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_clinical.xlsx"
+  name: "ATTR_run_clinical" # experiment name, results are stored in directory with this name
+  target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
+  learn_task: "binary_classification" # binary_classification, multi_classification, regression
+
   plot_format: "png"  # format in which plots are saved, e.g. png, pdf
   workers: 24 # number of workers for parallel processing
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   ignore_warnings: True  # whether to ignore all warnings (removes ConvergenceWarnings during run)
-  learn_task: "binary_classification" # binary_classification, multi_classification, regression
+  overwrite: False  # whether to overwrite existing results
 
   # target_label: "mace"
   # output_dir: "/home/sebalzer/Documents/Projects/Myo_Flamber/"
   # input_file: "/home/sebalzer/Documents/Projects/Myo_Flamber/5_merged/phenomapping.xlsx"
-  target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
-  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_CT.xlsx"
-  # output_dir: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose"
-  # input_file: "/mnt/c/Users/Sebastian/OneDrive/Dokumente/Insel/Projekte/ATTRAS_Amyloidose/ATTRAS_amyloidose_image_based.xlsx"
   hand_picked:  # specify hand-picked features (if available), need to add a job with step "hand_picked" below
     [
       "edmassbsa_gm2_report",
@@ -21,14 +21,11 @@ meta:
       "GLS_AtB_M_ratio",
       "LV_LAX_myo_gls_perc",
     ]
-  collect_results: True # does not check whether all jobs have been run, only summarises available results
-  overwrite: False  # whether to overwrite existing results
 
 # specify the clean strategy
 inspection:
   label_as_index: "ATTRAS_Redcap" # column string name or None
   # label_as_index: "subject"
-  export_cleaned_frame: True # for visual inspection of the cleaned data
   manual_clean: True # manual cleaning of data
   manual_strategy:
     drop_columns_regex: ["([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+"] # remove single segment columns from ATTR dataset
@@ -162,4 +159,4 @@ verification:
       n_nonzero_coefs: [5, 10, 20, 50, null]
 
 collect_results:
-  to_collect: ["ATTR_run_CT"]
+  to_collect: ["ATTR_run_clinical"]

@@ -1,3 +1,4 @@
+import numpy as np
 from sklearn.ensemble import (
     AdaBoostClassifier,
     AdaBoostRegressor,
@@ -11,6 +12,13 @@ from sklearn.ensemble import (
 from sklearn.linear_model import LogisticRegression, Lasso, LassoLars, ElasticNet, OrthogonalMatchingPursuit
 from sklearn.svm import SVC
 from sklearn.model_selection import KFold, RepeatedStratifiedKFold
+
+
+def generate_seeds(init_seed: int, n_seeds: int) -> list:
+    """Generate a list of random seeds"""
+    np.random.seed(init_seed)
+    seeds = np.random.randint(low=0, high=2**32, size=n_seeds)
+    return seeds
 
 
 def init_estimator(

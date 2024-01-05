@@ -35,16 +35,9 @@ class CleanUp(DataHandler):
         self.frame = self.frame.dropna(how='all', axis=1)  # Drop columns with all NaN
 
         self.set_frame(self.frame)
-        if self.config.inspection.export_cleaned_frame:
-            self.export_frame()
-
-    def export_frame(self) -> None:
-        """Export frame"""
         output_dir = os.path.join(self.config.meta.output_dir, self.config.meta.name)
         os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, 'cleaned_up_frame.xlsx')
-        self.frame.to_excel(file_path)
-        logger.info(f'Exported cleaned frame to -> {file_path}')
+        self.save_frame(output_dir)
 
     def set_index_by_label(self) -> None:
         """Set index by label"""

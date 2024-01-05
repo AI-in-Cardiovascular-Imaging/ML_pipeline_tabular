@@ -6,23 +6,34 @@ import matplotlib.pyplot as plt
 from loguru import logger
 from alibi.explainers import KernelShap
 
-from pipeline_tabular.run.run import Run
+from pipeline_tabular.data_handler.data_handler import DataHandler
+from pipeline_tabular.utils.data_split import DataSplit
+from pipeline_tabular.utils.imputers import Imputer
+from pipeline_tabular.utils.normalisers import Normalisers
+from pipeline_tabular.utils.verifications.verification import Verification
+from pipeline_tabular.utils.helpers import generate_seeds
 
 
-class Explain(Run):
+class Explain(DataHandler, Normalisers):
     """Explainability methods to understand model decision process"""
 
     def __init__(self, config) -> None:
-        super().__init__(config)
+        super().__init__()
         self.plot_format = config.meta.plot_format
-        self.expl_out_dir = os.path.join(self.out_dir, self.experiment_name, 'explain')
-        os.makedirs(self.expl_out_dir, exist_ok=True)
+        self.oversample = config.data_split.oversample
+        self.jobs = config.selection.jobs
+        self.data_split = DataSplit(config)
+        self.imputation = Imputer(config)
+        self.verification = Verification(config)
 
-    def __call__(self, job_name, job_index, model, n_top, mean_split_index, seeds, n_bootstraps) -> None:
+    def __call__(self, out_dir, job_name, job_index, model, n_top, mean_split_index, seeds, n_bootstraps) -> None:
+        self.load_frame(out_dir)
+        self.expl_out_dir = os.path.join(out_dir, 'explain')
+        os.makedirs(self.expl_out_dir, exist_ok=True)
         if n_bootstraps == 1:  # i.e. no bootstrapping
             seed = seeds[mean_split_index]
             np.random.seed(seed)
-            boot_seed = np.random.randint(low=0, high=2**32, size=1)  # re-generate seed of original run
+            boot_seed = generate_seeds(seed, n_seeds=1)  # re-generate seed of original run
         else:
             raise NotImplementedError
 

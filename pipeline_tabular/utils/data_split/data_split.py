@@ -19,12 +19,12 @@ class DataSplit(DataHandler):
         self.test_frac = config.data_split.test_frac
 
         self.stratify = None
-        self.frame = self.get_frame()
 
     def __call__(self, seed, boot_seed):
         """Split data"""
         self.seed = seed
         self.boot_seed = boot_seed
+        self.frame = self.get_frame()
         self.split_frame()
 
     def split_frame(self) -> None:

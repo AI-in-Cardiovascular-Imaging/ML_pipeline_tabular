@@ -1,4 +1,5 @@
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -16,13 +17,12 @@ from imblearn.over_sampling import (
 )
 
 from pipeline_tabular.utils.data_split import DataSplit
-from pipeline_tabular.utils.helpers import job_name_cleaner
+from pipeline_tabular.utils.helpers import generate_seeds, job_name_cleaner
 from pipeline_tabular.utils.imputers import Imputer
 from pipeline_tabular.utils.normalisers import Normalisers
 from pipeline_tabular.utils.selections import Selection
 from pipeline_tabular.utils.verifications import Verification
-from pipeline_tabular.data_handler.data_handler import DataHandler
-from pipeline_tabular.run.report import Report
+from pipeline_tabular.data_handler.data_handler import DataHandler, NestedDefaultDict
 
 
 class Run(DataHandler, Normalisers):
@@ -40,10 +40,20 @@ class Run(DataHandler, Normalisers):
         self.oversample = config.data_split.oversample
         self.oversample_method = config.data_split.oversample_method
         self.jobs = config.selection.jobs
+        self.job_names = job_name_cleaner(self.jobs)
+        scoring_dict = config.verification.scoring[self.learn_task]
+        self.scores_to_init = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
+        self.scores_to_init.append('pos_rate')
+        models_dict = config.verification.models
+        self.models_to_init = [model for model in models_dict if models_dict[model]]
+        self.ensemble = [model for model in self.models_to_init if 'ensemble' in model]  # only ensemble models
+        self.models_to_init = [model for model in self.models_to_init if model not in self.ensemble]
+        if len(self.models_to_init) < 2:  # ensemble methods need at least two models two combine their results
+            self.ensemble = []
         self.config.plot_first_iter = False
 
-        self.imputation = Imputer(self.config)
         self.data_split = DataSplit(self.config)
+        self.imputation = Imputer(self.config)
         self.selection = Selection(self.config)
         self.verification = Verification(self.config)
 
@@ -51,48 +61,62 @@ class Run(DataHandler, Normalisers):
         """Iterate over all desired seeds/bootstraps, etc."""
         high_logging_level = self.config.meta.logging_level in ['TRACE', 'DEBUG', 'INFO']
         np.random.seed(self.init_seed)
-        seeds = np.random.randint(low=0, high=2**32, size=self.n_seeds)  # generate desired number of random seeds
-        report = Report(self.config, seeds)
+        self.seeds = generate_seeds(self.init_seed, self.n_seeds)
+        self.init_containers()
 
-        if not self.config.meta.collect_results:
-            for seed_iter, seed in enumerate(tqdm(seeds, desc='Running seeds', disable=high_logging_level)):
-                logger.info(f'Running seed {seed_iter+1}/{self.n_seeds}...')
-                np.random.seed(seed)
-                boot_seeds = np.random.randint(low=0, high=2**32, size=self.n_bootstraps)  # generate boot seeds
-                for boot_iter in range(self.n_bootstraps):
-                    logger.info(f'Running bootstrap iteration {boot_iter+1}/{self.n_bootstraps}...')
-                    self.data_split(seed, boot_seeds[boot_iter])
-                    fit_imputer = self.imputation(seed)
-                    if self.oversample:
-                        train = self.over_sampling(self.get_store('frame', seed, 'train'), seed)
-                        self.set_store('frame', seed, 'train', train)
-                    job_names = job_name_cleaner(self.jobs)
-                    for job, job_name in zip(self.jobs, job_names):
-                        logger.info(f'Running {job_name}...')
-                        job_dir = os.path.join(self.out_dir, self.experiment_name, job_name)
-                        os.makedirs(job_dir, exist_ok=True)
-                        try:
-                            features = self.get_store('feature', seed, job_name, boot_iter=boot_iter)
-                        except KeyError:
-                            features = []
-                        if not features:
-                            self.selection(
-                                seed, boot_iter, job, job_name, job_dir
-                            )  # run only if selection results not already available
-                        else:
-                            norm = [step for step in self.jobs[0] if 'norm' in step][
-                                0
-                            ]  # need to init normalisation for verification (normally part of selection)
-                            train_frame = self.get_store('frame', seed, 'train')
-                            _ = getattr(self, norm)(train_frame)
-                        _ = self.verification(seed, boot_iter, job_name, job_dir, fit_imputer)
-
+        for seed_iter, seed in enumerate(tqdm(self.seeds, desc='Running seeds', disable=high_logging_level)):
+            logger.info(f'Running seed {seed_iter+1}/{self.n_seeds}...')
+            np.random.seed(seed)
+            boot_seeds = generate_seeds(seed, self.n_bootstraps)  # generate boot seeds
+            for boot_iter in range(self.n_bootstraps):
+                logger.info(f'Running bootstrap iteration {boot_iter+1}/{self.n_bootstraps}...')
+                self.data_split(seed, boot_seeds[boot_iter])
+                fit_imputer = self.imputation(seed)
+                if self.oversample:
+                    train = self.over_sampling(self.get_store('frame', seed, 'train'), seed)
+                    self.set_store('frame', seed, 'train', train)
+                for job, job_name in zip(self.jobs, self.job_names):
+                    logger.info(f'Running {job_name}...')
+                    job_dir = os.path.join(self.out_dir, self.experiment_name, job_name)
+                    os.makedirs(job_dir, exist_ok=True)
+                    try:
+                        features = self.get_store('feature', seed, job_name, boot_iter=boot_iter)
+                    except KeyError:
+                        features = []
+                    if not features:
+                        self.selection(
+                            seed, boot_iter, job, job_name, job_dir
+                        )  # run only if selection results not already available
+                    else:
+                        norm = [step for step in self.jobs[0] if 'norm' in step][
+                            0
+                        ]  # need to init normalisation for verification (normally part of selection)
+                        train_frame = self.get_store('frame', seed, 'train')
+                        _ = getattr(self, norm)(train_frame)
+                    _ = self.verification(seed, boot_iter, job_name, job_dir, fit_imputer)
+                try:  # ensure that intermediate result files are not corrupted by KeyboardInterrupt
                     self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
-                    self.config.plot_first_iter = (
-                        False  # minimise work by producing certain plots only for the first iteration
-                    )
+                except KeyboardInterrupt:
+                    logger.warning('Keyboard interrupt detected, saving intermediate results...')
+                    self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
+                    sys.exit(130)
+                self.config.plot_first_iter = (
+                    False  # minimise work by producing certain plots only for the first iteration
+                )
 
-        report()  # summarise results
+    def init_containers(self):
+        if not self.config.meta.overwrite:
+            scores_found = self.load_intermediate_results(
+                os.path.join(self.out_dir, self.experiment_name)
+            )  # try loading available results
+        if self.config.meta.overwrite or not scores_found:
+            for seed in self.seeds:  # initialise empty score containers to be filled during verification
+                for job_name in self.job_names:
+                    for n_top in self.config.verification.use_n_top_features:
+                        scores = NestedDefaultDict()
+                        for model in self.models_to_init + self.ensemble:
+                            scores[model] = {score: [] for score in self.scores_to_init + ['probas', 'true', 'pred']}
+                        self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
 
     def over_sampling(self, x_frame: pd.DataFrame, seed: int) -> pd.DataFrame:
         """Over sample data"""

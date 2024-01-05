@@ -1,4 +1,6 @@
 import os
+import sys
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,30 +10,27 @@ import pingouin as pg
 import sklearn.metrics as metrics
 import imblearn.metrics as imb_metrics
 from loguru import logger
-from omegaconf import DictConfig, OmegaConf
 from roc_utils import compute_roc, plot_mean_roc
 
-from pipeline_tabular.utils.helpers import job_name_cleaner
-from pipeline_tabular.data_handler.data_handler import DataHandler, NestedDefaultDict
+from pipeline_tabular.config_manager import ConfigManager
+from pipeline_tabular.utils.helpers import generate_seeds, job_name_cleaner
+from pipeline_tabular.data_handler.data_handler import DataHandler
 
 
-class Report(DataHandler):
-    """Class to summarise and report all results"""
-
-    def __init__(self, config: DictConfig, seeds) -> None:
+class CollectResults(DataHandler):
+    def __init__(self, config):
         super().__init__()
         self.config = config
-        self.seeds = seeds
-        self.run_dir = os.path.join(config.meta.output_dir, config.meta.name)
-        self.rep_out_dir = os.path.join(config.meta.output_dir, config.meta.name, 'report')
-        os.makedirs(self.rep_out_dir, exist_ok=True)
+        self.out_dir = config.meta.output_dir
+        self.init_seed = config.data_split.init_seed
+        self.n_seeds = config.data_split.n_seeds
+        np.random.seed(self.init_seed)
+        self.seeds = generate_seeds(self.init_seed, self.n_seeds)
+        self.to_collect = config.collect_results.to_collect
         self.plot_format = config.meta.plot_format
         self.learn_task = config.meta.learn_task
         self.n_bootstraps = config.data_split.n_bootstraps
         self.n_top_features = config.verification.use_n_top_features
-        if isinstance(self.n_top_features, str):  # turn range provided as string into list
-            self.n_top_features = list(eval(self.n_top_features))
-            config.verification.use_n_top_features = self.n_top_features
         models_dict = config.verification.models
         self.rep_models = [model for model in models_dict if models_dict[model]]
         self.opt_scoring = config.selection.scoring[self.learn_task]
@@ -42,23 +41,27 @@ class Report(DataHandler):
         self.rep_scoring.append('pos_rate')
         self.ensemble = [model for model in self.rep_models if 'ensemble' in model]  # only ensemble models
         self.rep_models = [model for model in self.rep_models if model not in self.ensemble]
-        if len(self.rep_models) < 2:  # ensemble methods need at least two models two combine their results
+        if len(self.rep_models) < 2:  # ensemble methods need at least two models to combine their results
             self.ensemble = []
-        self.init_containers()
         self.all_features = None
 
-    def __call__(self):
-        """Run feature report"""
-        from pipeline_tabular.utils.explain.explain import Explain  # to avoid circular imports
-
+    def __call__(self) -> None:
+        from pipeline_tabular.utils.explain.explain import Explain  # import here to avoid circular imports
         self.explainer = Explain(self.config)
-        self.summarise_selection()
-        self.summarise_verification()
+        self.collect_data()
 
-    def summarise_selection(self) -> None:
+    def collect_data(self):
+        for name in self.to_collect:
+            self.report_dir = os.path.join(self.out_dir, name, 'report')
+            os.makedirs(self.report_dir, exist_ok=True)
+            self.load_intermediate_results(os.path.join(self.out_dir, name))
+            self.summarise_selection(name)
+            self.summarise_verification(name)
+
+    def summarise_selection(self, name) -> None:
         """Summarise selection results over all seeds"""
         for job_name in self.job_names:
-            out_dir = os.path.join(self.run_dir, job_name)
+            out_dir = os.path.join(self.out_dir, name, job_name)
             job_scores = self.get_store('feature_score', None, job_name)
             job_scores = pd.DataFrame(job_scores.items(), columns=['feature', 'score'])
             job_scores = job_scores.sort_values(by='score', ascending=True).reset_index(drop=True)
@@ -67,9 +70,7 @@ class Report(DataHandler):
             try:
                 ax = job_scores.plot.barh(x='feature', y='score', figsize=(10, 10))
             except TypeError:  # no data is available to plot, i.e. collect_results flag set to True by accident
-                logger.error(
-                    f'Report was run without any computed results, did you set collect_results=True by accident?'
-                )
+                logger.error(f'No results found to collect for job {job_name}.')
                 raise SystemExit(0)
             fig = ax.get_figure()
             plt.title(f'Average feature ranking')
@@ -93,7 +94,7 @@ class Report(DataHandler):
                 )
                 plt.close(fig)
 
-    def summarise_verification(self) -> None:
+    def summarise_verification(self, name) -> None:
         """Summarise verification results over all seeds and bootstraps"""
         best_mean_opt_scores = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
         best_mean_recall = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
@@ -107,7 +108,7 @@ class Report(DataHandler):
         prop_cycle = plt.rcParams['axes.prop_cycle']
         colors = prop_cycle.by_key()['color']
         for job_index, job_name in enumerate(self.job_names):
-            out_dir = os.path.join(self.run_dir, job_name)
+            out_dir = os.path.join(self.out_dir, name, job_name)
             best_mean_opt_score_job, higher_is_better = self.init_scoring()
             best_mean_opt_score_job_combined, _ = self.init_scoring()
             best_mean_opt_scores_job = []
@@ -133,9 +134,7 @@ class Report(DataHandler):
                         )
                         mean_opt_score = mean_scores[f'{self.opt_scoring}_score']
                         mean_opt_score_combined = (
-                            mean_opt_score
-                            + mean_scores['recall_score']
-                            + mean_scores['specificity_score']
+                            mean_opt_score + mean_scores['recall_score'] + mean_scores['specificity_score']
                         )
                         if (higher_is_better and mean_opt_score_combined > best_opt_score_model_combined) or (
                             not higher_is_better and mean_opt_score_combined < best_opt_score_model_combined
@@ -186,7 +185,16 @@ class Report(DataHandler):
             mean_split_index = np.argmin(
                 np.abs(best_opt_score - best_mean_opt_score_job)
             )  # find data split representative of mean model performance
-            self.explainer(job_name, job_index, best_model, best_n_top, mean_split_index, self.seeds, self.n_bootstraps)
+            self.explainer(
+                os.path.join(self.out_dir, name),
+                job_name,
+                job_index,
+                best_model,
+                best_n_top,
+                mean_split_index,
+                self.seeds,
+                self.n_bootstraps,
+            )
             best_mean_opt_scores[job_name] = best_mean_opt_scores_job
             best_mean_recall[job_name] = best_mean_recall_job
             best_mean_specificity[job_name] = best_mean_specificity_job
@@ -226,62 +234,18 @@ class Report(DataHandler):
                 label=f'Strat. {job_index+1}',
             )
             plt.title(f'Best mean ROC for Strat. {job_index+1}')
-            plt.savefig(os.path.join(self.rep_out_dir, f'AUROC_best_strat_{job_index+1}.{self.plot_format}'))
+            plt.savefig(os.path.join(self.report_dir, f'AUROC_best_strat_{job_index+1}.{self.plot_format}'))
             plt.clf()
 
-        best_all_scores.to_csv(os.path.join(self.rep_out_dir, f'best_model_all_scores.csv'))
+        best_all_scores.to_csv(os.path.join(self.report_dir, f'best_model_all_scores.csv'))
         roc_ax.set_title('Best mean ROC for all strategies')
-        roc_plot.savefig(os.path.join(self.rep_out_dir, f'AUROC_best_per_strat.{self.plot_format}'))
+        roc_plot.savefig(os.path.join(self.report_dir, f'AUROC_best_per_strat.{self.plot_format}'))
 
-        VMIN_HEATMAP = 0.0
-        fig = plt.figure()
-        sns.heatmap(
-            best_mean_opt_scores,
-            annot=True,
-            xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
-            yticklabels=True,
-            vmin=VMIN_HEATMAP,
-            vmax=1.0,
-            cmap='Blues',
-            fmt='.2g',
+        self.plot_heatmaps(
+            [best_mean_opt_scores, best_mean_recall, best_mean_specificity],
+            [f'{self.opt_scoring}', 'recall', 'specificity'],
+            ['Blues', 'Greens', 'Reds'],
         )
-        plt.xticks(rotation=0)
-        plt.yticks(rotation=0)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.rep_out_dir, f'results_heatmap_{self.opt_scoring}.{self.plot_format}'))
-        plt.close(fig)
-        fig = plt.figure()
-        sns.heatmap(
-            best_mean_recall,
-            annot=True,
-            xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
-            yticklabels=True,
-            vmin=VMIN_HEATMAP,
-            vmax=1.0,
-            cmap='Greens',
-            fmt='.2g',
-        )
-        plt.xticks(rotation=0)
-        plt.yticks(rotation=0)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.rep_out_dir, f'results_heatmap_recall.{self.plot_format}'))
-        plt.close(fig)
-        fig = plt.figure()
-        sns.heatmap(
-            best_mean_specificity,
-            annot=True,
-            xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
-            yticklabels=True,
-            vmin=VMIN_HEATMAP,
-            vmax=1.0,
-            cmap='Reds',
-            fmt='.2g',
-        )
-        plt.xticks(rotation=0)
-        plt.yticks(rotation=0)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.rep_out_dir, f'results_heatmap_specificity.{self.plot_format}'))
-        plt.close(fig)
         logger.info(
             f'\nStrategies summary:\n' + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names))
         )
@@ -339,20 +303,24 @@ class Report(DataHandler):
 
         return scores
 
-    def init_containers(self):
-        if not self.config.meta.overwrite:
-            scores_found = self.load_intermediate_results(self.run_dir)  # try loading available results
-        if self.config.meta.overwrite or not scores_found:
-            OmegaConf.save(
-                self.config, os.path.join(self.run_dir, 'job_config.yaml')
-            )  # save copy of config for future reference
-            for seed in self.seeds:  # initialise empty score containers to be filled during verification
-                for job_name in self.job_names:
-                    for n_top in self.n_top_features:
-                        scores = NestedDefaultDict()
-                        for model in self.rep_models + self.ensemble:
-                            scores[model] = {score: [] for score in self.rep_scoring + ['probas', 'true', 'pred']}
-                        self.set_store('score', str(seed), f'{job_name}_{n_top}', scores)
+    def plot_heatmaps(self, dataframes, names, cmaps):
+        for i in range(len(dataframes)):
+            fig = plt.figure()
+            sns.heatmap(
+                dataframes[i],
+                annot=True,
+                xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
+                yticklabels=True,
+                vmin=0.0,
+                vmax=1.0,
+                cmap=cmaps[i],
+                fmt='.2g',
+            )
+            plt.xticks(rotation=0)
+            plt.yticks(rotation=0)
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.report_dir, f'results_heatmap_{names[i]}.{self.plot_format}'))
+            plt.close(fig)
 
     def init_scoring(self):
         """Find value corresponding to a bad score given the scoring metric, and return whether higher is better"""
@@ -371,3 +339,14 @@ class Report(DataHandler):
             return np.Inf, False
         else:
             raise NotImplementedError
+
+
+if __name__ == '__main__':
+    config = ConfigManager()()
+    logger.remove()
+    logger.add(sys.stderr, level=config.meta.logging_level)
+    if config.meta.ignore_warnings:
+        warnings.simplefilter("ignore")
+        os.environ["PYTHONWARNINGS"] = "ignore"
+
+    CollectResults(config)()
