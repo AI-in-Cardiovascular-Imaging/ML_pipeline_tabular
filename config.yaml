@@ -1,7 +1,7 @@
 meta:
   output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
   input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_clinical.xlsx"
-  name: "ATTR_run_clinical" # experiment name, results are stored in directory with this name
+  experiment: "ATTR_run_clinical" # experiment name, results are stored in directory with this name
   target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
   learn_task: "binary_classification" # binary_classification, multi_classification, regression
 
@@ -159,4 +159,4 @@ verification:
       n_nonzero_coefs: [5, 10, 20, 50, null]
 
 collect_results:
-  to_collect: ["ATTR_run_clinical"]
+  experiments: ["ATTR_run_lab"]

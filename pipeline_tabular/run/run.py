@@ -31,7 +31,7 @@ class Run(DataHandler, Normalisers):
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
-        self.experiment_name = config.meta.name
+        self.experiment_name = config.meta.experiment
         self.out_dir = config.meta.output_dir
         self.learn_task = config.meta.learn_task
         self.init_seed = config.data_split.init_seed
@@ -97,7 +97,7 @@ class Run(DataHandler, Normalisers):
                 try:  # ensure that intermediate result files are not corrupted by KeyboardInterrupt
                     self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
                 except KeyboardInterrupt:
-                    logger.warning('Keyboard interrupt detected, saving intermediate results...')
+                    logger.warning('Keyboard interrupt detected, saving intermediate results before exiting...')
                     self.save_intermediate_results(os.path.join(self.out_dir, self.experiment_name))
                     sys.exit(130)
                 self.config.plot_first_iter = (

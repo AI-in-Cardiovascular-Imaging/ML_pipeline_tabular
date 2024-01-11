@@ -14,31 +14,34 @@ from roc_utils import compute_roc, plot_mean_roc
 
 from pipeline_tabular.config_manager import ConfigManager
 from pipeline_tabular.utils.helpers import generate_seeds, job_name_cleaner
-from pipeline_tabular.data_handler.data_handler import DataHandler
+from pipeline_tabular.data_handler.data_handler import DataHandler, NestedDefaultDict
+from pipeline_tabular.utils.explain.explain import Explain  # import here to avoid circular imports
 
 
 class CollectResults(DataHandler):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.to_collect = config.collect_results.experiments
         self.out_dir = config.meta.output_dir
-        self.init_seed = config.data_split.init_seed
-        self.n_seeds = config.data_split.n_seeds
-        np.random.seed(self.init_seed)
-        self.seeds = generate_seeds(self.init_seed, self.n_seeds)
-        self.to_collect = config.collect_results.to_collect
         self.plot_format = config.meta.plot_format
         self.learn_task = config.meta.learn_task
+        self.init_seed = config.data_split.init_seed
+        self.n_seeds = config.data_split.n_seeds
         self.n_bootstraps = config.data_split.n_bootstraps
-        self.n_top_features = config.verification.use_n_top_features
-        models_dict = config.verification.models
-        self.rep_models = [model for model in models_dict if models_dict[model]]
+        np.random.seed(self.init_seed)
+        self.seeds = generate_seeds(self.init_seed, self.n_seeds)
         self.opt_scoring = config.selection.scoring[self.learn_task]
         self.jobs = config.selection.jobs
         self.job_names = job_name_cleaner(self.jobs)
+        self.n_top_features = config.verification.use_n_top_features
+        models_dict = config.verification.models
+        self.rep_models = [model for model in models_dict if models_dict[model]]
         scoring_dict = config.verification.scoring[self.learn_task]
         self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
         self.rep_scoring.append('pos_rate')
+        if f'{self.opt_scoring}_score' not in self.rep_scoring:  # ensure optimisation metric is always collected
+            self.rep_scoring.append(f'{self.opt_scoring}_score')
         self.ensemble = [model for model in self.rep_models if 'ensemble' in model]  # only ensemble models
         self.rep_models = [model for model in self.rep_models if model not in self.ensemble]
         if len(self.rep_models) < 2:  # ensemble methods need at least two models to combine their results
@@ -46,22 +49,22 @@ class CollectResults(DataHandler):
         self.all_features = None
 
     def __call__(self) -> None:
-        from pipeline_tabular.utils.explain.explain import Explain  # import here to avoid circular imports
         self.explainer = Explain(self.config)
-        self.collect_data()
+        self.collect_results()
 
-    def collect_data(self):
-        for name in self.to_collect:
-            self.report_dir = os.path.join(self.out_dir, name, 'report')
+    def collect_results(self):
+        """Collect results over all experiments, jobs, models, seeds and bootstraps and summarise them"""
+        for experiment_name in self.to_collect:
+            self.report_dir = os.path.join(self.out_dir, experiment_name, 'report')
             os.makedirs(self.report_dir, exist_ok=True)
-            self.load_intermediate_results(os.path.join(self.out_dir, name))
-            self.summarise_selection(name)
-            self.summarise_verification(name)
+            self.load_intermediate_results(os.path.join(self.out_dir, experiment_name))
+            self.summarise_selection(experiment_name)
+            self.summarise_verification(experiment_name)
 
-    def summarise_selection(self, name) -> None:
+    def summarise_selection(self, experiment_name) -> None:
         """Summarise selection results over all seeds"""
         for job_name in self.job_names:
-            out_dir = os.path.join(self.out_dir, name, job_name)
+            out_dir = os.path.join(self.out_dir, experiment_name, job_name)
             job_scores = self.get_store('feature_score', None, job_name)
             job_scores = pd.DataFrame(job_scores.items(), columns=['feature', 'score'])
             job_scores = job_scores.sort_values(by='score', ascending=True).reset_index(drop=True)
@@ -94,164 +97,57 @@ class CollectResults(DataHandler):
                 )
                 plt.close(fig)
 
-    def summarise_verification(self, name) -> None:
+    def summarise_verification(self, experiment_name) -> None:
         """Summarise verification results over all seeds and bootstraps"""
-        best_mean_opt_scores = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
-        best_mean_recall = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
-        best_mean_specificity = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
-        best_all_scores = pd.DataFrame(
-            columns=[f'Strat. {i+1}' for i in range(len(self.job_names))],
-            index=(['job', 'model', '#features'] + self.rep_scoring) + ['MWU p-value'],
+        verification_scores = {}
+        for metric in self.rep_scoring + ['roc', 'n_top']:
+            verification_scores[metric] = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
+        verification_scores = self.average_scores(verification_scores)
+        mean_verification_scores = self.reduce_scores(verification_scores, np.mean)
+        mean_opt_scores = mean_verification_scores[f'{self.opt_scoring}_score']
+        best_models = {job_name: mean_opt_scores[job_name].idxmax() for job_name in self.job_names}
+        self.explainer(
+            experiment_name,
+            verification_scores,
+            self.opt_scoring,
+            self.job_names,
+            best_models,
+            self.seeds,
+            self.n_bootstraps,
         )
-        best_opt_scores = []
-        roc_plot, roc_ax = plt.subplots()
-        prop_cycle = plt.rcParams['axes.prop_cycle']
-        colors = prop_cycle.by_key()['color']
-        for job_index, job_name in enumerate(self.job_names):
-            out_dir = os.path.join(self.out_dir, name, job_name)
-            best_mean_opt_score_job, higher_is_better = self.init_scoring()
-            best_mean_opt_score_job_combined, _ = self.init_scoring()
-            best_mean_opt_scores_job = []
-            best_mean_recall_job = []
-            best_mean_specificity_job = []
-            best_roc_job = []
-            best_opt_score = None
-            best_model = None
-            best_n_top = None
-            best_scores_mean = None
-            best_scores_std = None
-            with open(os.path.join(out_dir, f'results.txt'), 'w') as file:
-                for model in self.rep_models + self.ensemble:  # find best model for each selection strategy (job)
-                    best_opt_score_model, _ = self.init_scoring()
-                    best_opt_score_model_combined, _ = self.init_scoring()
-                    best_roc_model = None
-                    mean = []
-                    std = []
-                    for n_top in self.n_top_features:  # find best number of features for each model/strat combo
-                        file.write(f'Top {n_top} features:\n')
-                        mean_scores, std_scores, opt_scores, avg_scores, roc = self.average_scores(
-                            f'{job_name}_{n_top}', model
-                        )
-                        mean_opt_score = mean_scores[f'{self.opt_scoring}_score']
-                        mean_opt_score_combined = (
-                            mean_opt_score + mean_scores['recall_score'] + mean_scores['specificity_score']
-                        )
-                        if (higher_is_better and mean_opt_score_combined > best_opt_score_model_combined) or (
-                            not higher_is_better and mean_opt_score_combined < best_opt_score_model_combined
-                        ):  # update best scores for model
-                            best_opt_score_model = mean_opt_score
-                            best_opt_score_model_combined = mean_opt_score_combined
-                            best_recall_model = mean_scores['recall_score']
-                            best_specificity_model = mean_scores['specificity_score']
-                            best_roc_model = roc
-                            if (higher_is_better and mean_opt_score_combined > best_mean_opt_score_job_combined) or (
-                                not higher_is_better and mean_opt_score_combined < best_mean_opt_score_job_combined
-                            ):  # update best scores for job
-                                best_mean_opt_score_job_combined = mean_opt_score_combined
-                                best_mean_opt_score_job = mean_opt_score
-                                best_opt_score = opt_scores
-                                best_model = model
-                                best_n_top = n_top
-                                best_scores_mean = mean_scores
-                                best_scores_std = std_scores
-                        mean.append(mean_opt_score)
-                        std.append(std_scores[f'{self.opt_scoring}_score'])
-                        [file.write(f'\t{k}: {v}\n') for k, v in avg_scores.items()]
 
-                    best_mean_opt_scores_job.append(best_opt_score_model)
-                    best_mean_recall_job.append(best_recall_model)
-                    best_mean_specificity_job.append(best_specificity_model)
-                    best_roc_job.append(best_roc_model)
-                    plt.figure()
-                    plt.xlabel('Number of features selected')
-                    plt.ylabel(f'Mean {self.opt_scoring}')
-                    plt.grid(alpha=0.5)
-                    plt.errorbar(
-                        self.n_top_features,
-                        mean,
-                        yerr=std,
-                    )
-                    plt.title(f'{model} model performance for increasing number of features')
-                    plt.savefig(os.path.join(out_dir, f'results_{model}.{self.plot_format}'))
-                    plt.clf()
-
-                    plt.figure()
-                    plot_mean_roc(best_roc_model, show_ci=True, show_ti=False, show_opt=False)
-                    plt.title(f'Mean ROC for {model} model')
-                    plt.savefig(os.path.join(out_dir, f'AUROC_best_{model}.{self.plot_format}'))
-                    plt.clf()
-
-            best_opt_scores.append(best_opt_score)
-            mean_split_index = np.argmin(
-                np.abs(best_opt_score - best_mean_opt_score_job)
-            )  # find data split representative of mean model performance
-            self.explainer(
-                os.path.join(self.out_dir, name),
-                job_name,
-                job_index,
-                best_model,
-                best_n_top,
-                mean_split_index,
-                self.seeds,
-                self.n_bootstraps,
-            )
-            best_mean_opt_scores[job_name] = best_mean_opt_scores_job
-            best_mean_recall[job_name] = best_mean_recall_job
-            best_mean_specificity[job_name] = best_mean_specificity_job
-            if job_index == 0:  # cannot compare job 0 to itself
-                stats = ['-']
-            else:
-                stats = [
-                    round(pg.mwu(best_opt_scores[0], best_opt_scores[job_index])['p-val'][0], 4),
-                ]
-            best_all_scores[f'Strat. {job_index+1}'] = (
-                [job_name, best_model, best_n_top]
-                + [
-                    f'{mean:.2f} \u00B1 {std:.2f}'
-                    for mean, std in zip(best_scores_mean.values(), best_scores_std.values())
-                ]
-                + stats
-            )
-            best_index = (
-                np.argmax(best_mean_opt_scores_job) if higher_is_better else np.argmin(best_mean_opt_scores_job)
-            )
-            best_roc_job = best_roc_job[best_index]
-            plot_mean_roc(
-                best_roc_job,
-                show_ci=False,
-                show_ti=False,
-                show_opt=False,
-                ax=roc_ax,
-                label=f'Strat. {job_index+1}',
-                color=colors[job_index],
-            )
-            plt.figure()
-            plot_mean_roc(
-                best_roc_job,
-                show_ci=True,
-                show_ti=False,
-                show_opt=False,
-                label=f'Strat. {job_index+1}',
-            )
-            plt.title(f'Best mean ROC for Strat. {job_index+1}')
-            plt.savefig(os.path.join(self.report_dir, f'AUROC_best_strat_{job_index+1}.{self.plot_format}'))
-            plt.clf()
-
-        best_all_scores.to_csv(os.path.join(self.report_dir, f'best_model_all_scores.csv'))
-        roc_ax.set_title('Best mean ROC for all strategies')
-        roc_plot.savefig(os.path.join(self.report_dir, f'AUROC_best_per_strat.{self.plot_format}'))
-
-        self.plot_heatmaps(
-            [best_mean_opt_scores, best_mean_recall, best_mean_specificity],
-            [f'{self.opt_scoring}', 'recall', 'specificity'],
-            ['Blues', 'Greens', 'Reds'],
-        )
+        self.plot_heatmaps(mean_verification_scores)
+        self.plot_rocs(verification_scores['roc'], best_models)
         logger.info(
             f'\nStrategies summary:\n' + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names))
         )
 
-    def average_scores(self, job_name, model) -> None:
+    def average_scores(self, verification_scores) -> None:
         """Average results over all seeds and bootstraps"""
+        for job_name in self.job_names:
+            for model in self.rep_models + self.ensemble:
+                best_mean_opt_score, higher_is_better = self.init_scoring()
+                best_all_scores = None
+                best_roc = None
+                best_n_top = None
+                for n_top in self.n_top_features:  # find best number of features for each job/model combination
+                    all_scores, roc = self.collect_scores(f'{job_name}_{n_top}', model)
+                    mean_opt_score = np.mean(all_scores[f'{self.opt_scoring}_score'])
+                    if higher_is_better and mean_opt_score > best_mean_opt_score:
+                        best_mean_opt_score = mean_opt_score
+                        best_all_scores = all_scores
+                        best_roc = roc
+                        best_n_top = n_top
+                for metric in self.rep_scoring:
+                    best_all_scores[metric] = [elem for sub in best_all_scores[metric] for elem in sub]
+                    verification_scores[metric].loc[model, job_name] = best_all_scores[metric]
+                    verification_scores['roc'].loc[model, job_name] = best_roc
+                    verification_scores['n_top'].loc[model, job_name] = best_n_top
+
+        return verification_scores
+
+    def collect_scores(self, job_name, model) -> None:
+        """Collect results over all seeds and bootstraps"""
         all_scores = {score: [] for score in self.rep_scoring}
         roc = []
         for seed_index, seed in enumerate(self.seeds):
@@ -269,14 +165,8 @@ class CollectResults(DataHandler):
                     roc.append(compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True))
             else:
                 np.delete(self.seeds, seed_index)
-        mean_scores = {score: np.mean(all_scores[score]) for score in self.rep_scoring}
-        std_scores = {score: np.std(all_scores[score]) for score in self.rep_scoring}
-        averaged_scores = {
-            score: f'{mean_scores[score]:.2f} +- {std_scores[score]:.2f}' for score in self.rep_scoring
-        }  # compute mean +- std for all scores
-        opt_scores = all_scores[f'{self.opt_scoring}_score']
-        opt_scores = [item for sublist in opt_scores for item in sublist]  # flatten list
-        return mean_scores, std_scores, opt_scores, averaged_scores, roc
+
+        return all_scores, roc
 
     def compute_missing_scores(self, scores, score):
         try:  # some metrics can be calculated using probabilities, others need prediction
@@ -303,11 +193,55 @@ class CollectResults(DataHandler):
 
         return scores
 
-    def plot_heatmaps(self, dataframes, names, cmaps):
-        for i in range(len(dataframes)):
+    def reduce_scores(self, verification_scores, function):
+        reduced_verification_scores = {
+            metric: pd.DataFrame(
+                np.vectorize(function)(verification_scores[metric]),
+                index=verification_scores[metric].index,
+                columns=verification_scores[metric].columns,
+            )
+            for metric in self.rep_scoring
+        }
+        return reduced_verification_scores
+
+    def plot_rocs(self, rocs, best_models):
+        roc_plot, roc_ax = plt.subplots()
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+        for job_index, job_name in enumerate(self.job_names):
+            best_roc_job = rocs.loc[best_models[job_name], job_name]
+            if best_roc_job is not None:
+                plot_mean_roc(
+                    best_roc_job,
+                    show_ci=False,
+                    show_ti=False,
+                    show_opt=False,
+                    ax=roc_ax,
+                    label=f'Strat. {job_index+1}',
+                    color=colors[job_index],
+                )
+                plt.figure()
+                plot_mean_roc(
+                    best_roc_job,
+                    show_ci=True,
+                    show_ti=False,
+                    show_opt=False,
+                    label=f'Strat. {job_index+1}',
+                )
+                plt.title(f'Best mean ROC for Strat. {job_index+1}')
+                plt.savefig(os.path.join(self.report_dir, f'AUROC_best_strat_{job_index+1}.{self.plot_format}'))
+                plt.clf()
+
+        roc_ax.set_title('Best mean ROC for all strategies')
+        roc_plot.savefig(os.path.join(self.report_dir, f'AUROC_best_per_strat.{self.plot_format}'))
+
+    def plot_heatmaps(self, verification_scores):
+        scores = [f'{self.opt_scoring}_score', 'recall_score', 'specificity_score']
+        cmaps = ['Blues', 'Greens', 'Reds']
+        for i, score in enumerate(scores):
             fig = plt.figure()
             sns.heatmap(
-                dataframes[i],
+                verification_scores[score],
                 annot=True,
                 xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
                 yticklabels=True,
@@ -319,7 +253,7 @@ class CollectResults(DataHandler):
             plt.xticks(rotation=0)
             plt.yticks(rotation=0)
             plt.tight_layout()
-            plt.savefig(os.path.join(self.report_dir, f'results_heatmap_{names[i]}.{self.plot_format}'))
+            plt.savefig(os.path.join(self.report_dir, f'results_heatmap_{scores[i]}.{self.plot_format}'))
             plt.close(fig)
 
     def init_scoring(self):

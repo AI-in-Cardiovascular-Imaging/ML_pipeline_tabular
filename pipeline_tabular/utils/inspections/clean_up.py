@@ -35,7 +35,7 @@ class CleanUp(DataHandler):
         self.frame = self.frame.dropna(how='all', axis=1)  # Drop columns with all NaN
 
         self.set_frame(self.frame)
-        output_dir = os.path.join(self.config.meta.output_dir, self.config.meta.name)
+        output_dir = os.path.join(self.config.meta.output_dir, self.config.meta.experiment)
         os.makedirs(output_dir, exist_ok=True)
         self.save_frame(output_dir)
 

@@ -17,7 +17,7 @@ class ConfigManager:
         self.load_config_file()
         self.range_to_list()
         OmegaConf.save(
-                self.config, os.path.join(self.config.meta.output_dir, self.config.meta.name, 'job_config.yaml')
+                self.config, os.path.join(self.config.meta.output_dir, self.config.meta.experiment, 'job_config.yaml')
             )  # save copy of config for future reference
         return self.config
 
