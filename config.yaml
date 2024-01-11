@@ -83,6 +83,8 @@ verification:
       f1_score: True
       accuracy_score: True
       balanced_accuracy_score: True
+      pos_rate: True
+      roc: True
     multi_classification: {}
     regression:
       r2_score: True
@@ -159,4 +161,4 @@ verification:
       n_nonzero_coefs: [5, 10, 20, 50, null]
 
 collect_results:
-  experiments: ["ATTR_run_lab"]
+  experiments: ["ATTR_run_lab", "ATTR_run_clinical"]

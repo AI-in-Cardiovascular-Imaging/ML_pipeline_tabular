@@ -39,7 +39,6 @@ class CollectResults(DataHandler):
         self.rep_models = [model for model in models_dict if models_dict[model]]
         scoring_dict = config.verification.scoring[self.learn_task]
         self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
-        self.rep_scoring.append('pos_rate')
         if f'{self.opt_scoring}_score' not in self.rep_scoring:  # ensure optimisation metric is always collected
             self.rep_scoring.append(f'{self.opt_scoring}_score')
         self.ensemble = [model for model in self.rep_models if 'ensemble' in model]  # only ensemble models
@@ -55,6 +54,7 @@ class CollectResults(DataHandler):
     def collect_results(self):
         """Collect results over all experiments, jobs, models, seeds and bootstraps and summarise them"""
         for experiment_name in self.to_collect:
+            logger.info(f'Collecting results for experiment {experiment_name}...')
             self.report_dir = os.path.join(self.out_dir, experiment_name, 'report')
             os.makedirs(self.report_dir, exist_ok=True)
             self.load_intermediate_results(os.path.join(self.out_dir, experiment_name))
@@ -100,7 +100,7 @@ class CollectResults(DataHandler):
     def summarise_verification(self, experiment_name) -> None:
         """Summarise verification results over all seeds and bootstraps"""
         verification_scores = {}
-        for metric in self.rep_scoring + ['roc', 'n_top']:
+        for metric in self.rep_scoring + ['n_top']:
             verification_scores[metric] = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
         verification_scores = self.average_scores(verification_scores)
         mean_verification_scores = self.reduce_scores(verification_scores, np.mean)
@@ -139,10 +139,12 @@ class CollectResults(DataHandler):
                         best_roc = roc
                         best_n_top = n_top
                 for metric in self.rep_scoring:
+                    if metric == 'roc':
+                        continue
                     best_all_scores[metric] = [elem for sub in best_all_scores[metric] for elem in sub]
                     verification_scores[metric].loc[model, job_name] = best_all_scores[metric]
-                    verification_scores['roc'].loc[model, job_name] = best_roc
-                    verification_scores['n_top'].loc[model, job_name] = best_n_top
+                verification_scores['roc'].loc[model, job_name] = best_roc
+                verification_scores['n_top'].loc[model, job_name] = best_n_top
 
         return verification_scores
 
@@ -158,11 +160,15 @@ class CollectResults(DataHandler):
 
             if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top
                 for score in self.rep_scoring:
+                    if score == 'roc':
+                        for boot_iter in range(self.n_bootstraps):
+                            roc.append(
+                                compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True)
+                            )
+                        continue
                     if score not in scores.keys() or len(scores[score]) < self.n_bootstraps:  # score not yet computed
                         scores = self.compute_missing_scores(scores, score)
                     all_scores[score].append(scores[score])
-                for boot_iter in range(self.n_bootstraps):
-                    roc.append(compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True))
             else:
                 np.delete(self.seeds, seed_index)
 
@@ -200,7 +206,7 @@ class CollectResults(DataHandler):
                 index=verification_scores[metric].index,
                 columns=verification_scores[metric].columns,
             )
-            for metric in self.rep_scoring
+            for metric in [m for m in self.rep_scoring if m != 'roc']  # cannot reduce roc
         }
         return reduced_verification_scores
 
