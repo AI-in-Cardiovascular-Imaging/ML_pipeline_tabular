@@ -41,10 +41,11 @@ class CollectResults(DataHandler):
         if len(self.rep_models) < 2:  # ensemble methods need at least two models to combine their results
             self.ensemble = []
         self.to_collect = config.collect_results.experiments
-        metrics_dict = config.collect_results.metrics_to_plot[self.learn_task]
-        self.metrics_to_plot = [metric for metric in metrics_dict if metrics_dict[metric]]
-        if f'{self.opt_scoring}_score' not in self.metrics_to_plot:  # ensure optimisation metric is always collected
-            self.metrics_to_plot.append(f'{self.opt_scoring}_score')
+        metrics_dict = config.collect_results.metrics_to_collect[self.learn_task]
+        self.metrics_to_collect = [metric for metric in metrics_dict if metrics_dict[metric]]
+        if f'{self.opt_scoring}_score' not in self.metrics_to_collect:  # ensure optimisation metric is always collected
+            self.metrics_to_collect.append(f'{self.opt_scoring}_score')
+        self.metrics_to_plot = [metric for metric in self.metrics_to_collect if metric != 'roc']
         self.all_features = None
 
     def __call__(self) -> None:
@@ -53,13 +54,23 @@ class CollectResults(DataHandler):
 
     def collect_results(self):
         """Collect results over all experiments, jobs, models, seeds and bootstraps and summarise them"""
-        for experiment_name in self.to_collect:
+        self.results = pd.DataFrame(
+            columns=['experiment', 'best_job', 'best_model', 'best_n_top'] + self.metrics_to_plot,
+            index=range(len(self.to_collect)),
+        )
+        for experiment_index, experiment_name in enumerate(self.to_collect):
             logger.info(f'Collecting results for experiment {experiment_name}...')
             self.report_dir = os.path.join(self.out_dir, experiment_name, 'report')
             os.makedirs(self.report_dir, exist_ok=True)
             self.load_intermediate_results(os.path.join(self.out_dir, experiment_name))
             self.summarise_selection(experiment_name)
-            self.summarise_verification(experiment_name)
+            self.summarise_verification(experiment_index, experiment_name)
+
+        self.summarise_experiments()
+
+        for metric in self.metrics_to_plot:
+            self.results[metric] = self.results[metric].apply(np.mean)
+        self.results.to_csv(os.path.join(self.out_dir, 'results.csv'), index=False)
 
     def summarise_selection(self, experiment_name) -> None:
         """Summarise selection results over all seeds"""
@@ -97,32 +108,52 @@ class CollectResults(DataHandler):
                 )
                 plt.close(fig)
 
-    def summarise_verification(self, experiment_name) -> None:
+    def summarise_verification(self, experiment_index, experiment_name) -> None:
         """Summarise verification results over all seeds and bootstraps"""
         verification_scores = {}
-        for metric in self.metrics_to_plot + ['n_top']:
+        for metric in self.metrics_to_collect + ['n_top']:
             verification_scores[metric] = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
         verification_scores = self.average_scores(verification_scores)
         mean_verification_scores = self.reduce_scores(verification_scores, np.mean)
         mean_opt_scores = mean_verification_scores[f'{self.opt_scoring}_score']
         best_models = {job_name: mean_opt_scores[job_name].idxmax() for job_name in self.job_names}
-        self.explainer(
-            experiment_name,
-            verification_scores,
-            self.opt_scoring,
-            self.job_names,
-            best_models,
-            self.seeds,
-            self.n_bootstraps,
-        )
+        # self.explainer(
+        #     experiment_name,
+        #     verification_scores,
+        #     self.opt_scoring,
+        #     self.job_names,
+        #     best_models,
+        #     self.seeds,
+        #     self.n_bootstraps,
+        # )
 
-        if 'roc' in self.metrics_to_plot:
+        if 'roc' in self.metrics_to_collect:
             self.plot_rocs(verification_scores['roc'], best_models)
-            self.metrics_to_plot.remove('roc')
         self.plot_heatmaps(mean_verification_scores)
         logger.info(
             f'\nStrategies summary:\n' + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names))
         )
+
+        # fill results dataframe
+        best_model_index, best_job_index = [
+            x[0] for x in np.unravel_index([np.argmax(mean_opt_scores.values)], mean_opt_scores.values.shape)
+        ]
+        clean_experiment_name = experiment_name.split('_')[-1]
+        clean_job_name = f'Strat. {best_job_index+1}'
+        best_model, best_job = mean_opt_scores.index[best_model_index], mean_opt_scores.columns[best_job_index]
+        self.results.loc[experiment_index] = [clean_experiment_name, clean_job_name, best_model] + [
+            verification_scores[metric].loc[best_model][best_job] for metric in ['n_top'] + self.metrics_to_plot
+        ]
+
+    def summarise_experiments(self) -> None:
+        """Summarise results across experiments"""
+        self.results = self.results.explode(self.metrics_to_plot)  # expand lists into columns
+        for metric in self.metrics_to_plot:
+            fig = plt.figure()
+            sns.boxplot(data=self.results, x='experiment', y=metric)
+            plt.tight_layout()
+            fig.savefig(os.path.join(self.out_dir, f'{metric}_boxplot.{self.plot_format}'))
+            plt.close(fig)
 
     def average_scores(self, verification_scores) -> None:
         """Average results over all seeds and bootstraps"""
@@ -140,7 +171,7 @@ class CollectResults(DataHandler):
                         best_all_scores = all_scores
                         best_roc = roc
                         best_n_top = n_top
-                for metric in self.metrics_to_plot:
+                for metric in self.metrics_to_collect:
                     if metric == 'roc':
                         continue
                     best_all_scores[metric] = [elem for sub in best_all_scores[metric] for elem in sub]
@@ -152,16 +183,16 @@ class CollectResults(DataHandler):
 
     def collect_scores(self, job_name, model) -> None:
         """Collect results over all seeds and bootstraps"""
-        all_scores = {score: [] for score in self.metrics_to_plot}
+        all_scores = {score: [] for score in self.metrics_to_collect}
         roc = []
         for seed_index, seed in enumerate(self.seeds):
             try:
                 scores = self.get_store('score', seed, job_name)[model]
             except KeyError:  # model not yet stored for this seed/job
-                scores = {scoring: [] for scoring in self.metrics_to_plot}
+                scores = {scoring: [] for scoring in self.metrics_to_collect}
 
             if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top
-                for score in self.metrics_to_plot:
+                for score in self.metrics_to_collect:
                     if score == 'roc':
                         for boot_iter in range(self.n_bootstraps):
                             roc.append(
@@ -208,7 +239,7 @@ class CollectResults(DataHandler):
                 index=verification_scores[metric].index,
                 columns=verification_scores[metric].columns,
             )
-            for metric in [m for m in self.metrics_to_plot if m != 'roc']  # cannot reduce roc
+            for metric in self.metrics_to_plot  # cannot reduce roc
         }
         return reduced_verification_scores
 

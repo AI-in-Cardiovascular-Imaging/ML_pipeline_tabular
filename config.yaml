@@ -137,8 +137,8 @@ verification:
       n_nonzero_coefs: [5, 10, 20, 50, null]
 
 collect_results:
-  experiments: ["ATTR_run_lab"]
-  metrics_to_plot:
+  experiments: ["ATTR_run_lab", "ATTR_run_clinical"]
+  metrics_to_collect:
     binary_classification:
       roc_auc_score: True
       average_precision_score: False

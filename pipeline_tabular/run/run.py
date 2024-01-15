@@ -41,7 +41,7 @@ class Run(DataHandler, Normalisers):
         self.oversample_method = config.data_split.oversample_method
         self.jobs = config.selection.jobs
         self.job_names = job_name_cleaner(self.jobs)
-        scoring_dict = config.collect_results.metrics_to_plot[self.learn_task]
+        scoring_dict = config.collect_results.metrics_to_collect[self.learn_task]
         self.scores_to_init = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
         self.scores_to_init.append('pos_rate')
         models_dict = config.verification.models

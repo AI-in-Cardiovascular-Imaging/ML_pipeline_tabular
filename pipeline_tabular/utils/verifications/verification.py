@@ -63,7 +63,7 @@ class Verification(DataHandler, Normalisers):
         self.train_scoring = config.selection.scoring
         self.class_weight = config.selection.class_weight
         self.n_top_features = config.verification.use_n_top_features
-        v_scoring_dict = config.collect_results.metrics_to_plot[self.learn_task]
+        v_scoring_dict = config.collect_results.metrics_to_collect[self.learn_task]
         self.verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
         models_dict = config.verification.models
         self.param_grids = config.verification.param_grids
