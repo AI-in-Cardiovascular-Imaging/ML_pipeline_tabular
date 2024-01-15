@@ -10,10 +10,6 @@ meta:
   logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   ignore_warnings: True  # whether to ignore all warnings (removes ConvergenceWarnings during run)
   overwrite: False  # whether to overwrite existing results
-
-  # target_label: "mace"
-  # output_dir: "/home/sebalzer/Documents/Projects/Myo_Flamber/"
-  # input_file: "/home/sebalzer/Documents/Projects/Myo_Flamber/5_merged/phenomapping.xlsx"
   hand_picked:  # specify hand-picked features (if available), need to add a job with step "hand_picked" below
     [
       "edmassbsa_gm2_report",
@@ -25,7 +21,6 @@ meta:
 # specify the clean strategy
 inspection:
   label_as_index: "ATTRAS_Redcap" # column string name or None
-  # label_as_index: "subject"
   manual_clean: True # manual cleaning of data
   manual_strategy:
     drop_columns_regex: ["([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+"] # remove single segment columns from ATTR dataset
@@ -71,7 +66,6 @@ selection:
 
 # verification strategy and final model to train and evaluate
 verification:
-  # use_n_top_features: [2] # list or range of n_features to use for verification
   use_n_top_features: [2, 4, 6, 8, 10, 15, 20, 25, 30] # list or range of n_features to use for verification
 
   models:
