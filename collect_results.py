@@ -14,7 +14,7 @@ from roc_utils import compute_roc, plot_mean_roc
 
 from pipeline_tabular.config_manager import ConfigManager
 from pipeline_tabular.utils.helpers import generate_seeds, job_name_cleaner
-from pipeline_tabular.data_handler.data_handler import DataHandler, NestedDefaultDict
+from pipeline_tabular.data_handler.data_handler import DataHandler
 from pipeline_tabular.utils.explain.explain import Explain  # import here to avoid circular imports
 
 
@@ -22,7 +22,6 @@ class CollectResults(DataHandler):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.to_collect = config.collect_results.experiments
         self.out_dir = config.meta.output_dir
         self.plot_format = config.meta.plot_format
         self.learn_task = config.meta.learn_task
@@ -45,6 +44,9 @@ class CollectResults(DataHandler):
         self.rep_models = [model for model in self.rep_models if model not in self.ensemble]
         if len(self.rep_models) < 2:  # ensemble methods need at least two models to combine their results
             self.ensemble = []
+        self.to_collect = config.collect_results.experiments
+        metrics_dict = config.collect_results.metrics_to_plot[self.learn_task]
+        self.metrics_to_plot = [metric for metric in metrics_dict if metrics_dict[metric]]
         self.all_features = None
 
     def __call__(self) -> None:
@@ -117,7 +119,8 @@ class CollectResults(DataHandler):
         )
 
         self.plot_heatmaps(mean_verification_scores)
-        self.plot_rocs(verification_scores['roc'], best_models)
+        if 'roc' in self.rep_scoring:
+            self.plot_rocs(verification_scores['roc'], best_models)
         logger.info(
             f'\nStrategies summary:\n' + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names))
         )
@@ -242,9 +245,8 @@ class CollectResults(DataHandler):
         roc_plot.savefig(os.path.join(self.report_dir, f'AUROC_best_per_strat.{self.plot_format}'))
 
     def plot_heatmaps(self, verification_scores):
-        scores = [f'{self.opt_scoring}_score', 'recall_score', 'specificity_score']
-        cmaps = ['Blues', 'Greens', 'Reds']
-        for i, score in enumerate(scores):
+        cmaps = ['Blues', 'Greens', 'Reds', 'Purples', 'Oranges', 'Greys', 'YlGnBu', 'YlOrRd', 'PuBu', 'PuRd']
+        for i, score in enumerate(self.metrics_to_plot):
             fig = plt.figure()
             sns.heatmap(
                 verification_scores[score],
@@ -259,7 +261,7 @@ class CollectResults(DataHandler):
             plt.xticks(rotation=0)
             plt.yticks(rotation=0)
             plt.tight_layout()
-            plt.savefig(os.path.join(self.report_dir, f'results_heatmap_{scores[i]}.{self.plot_format}'))
+            plt.savefig(os.path.join(self.report_dir, f'results_heatmap_{self.metrics_to_plot[i]}.{self.plot_format}'))
             plt.close(fig)
 
     def init_scoring(self):

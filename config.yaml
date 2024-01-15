@@ -161,4 +161,21 @@ verification:
       n_nonzero_coefs: [5, 10, 20, 50, null]
 
 collect_results:
-  experiments: ["ATTR_run_lab", "ATTR_run_clinical"]
+  experiments: ["ATTR_run_lab"]
+  metrics_to_plot:
+    binary_classification:
+      roc_auc_score: True
+      average_precision_score: False
+      recall_score: True
+      specificity_score: True
+      precision_score: False
+      f1_score: False
+      accuracy_score: False
+      balanced_accuracy_score: True
+      pos_rate: False
+    multi_classification: {}
+    regression:
+      r2_score: True
+      mean_absolute_error: True
+      mean_squared_error: True
+      explained_variance_score: True
