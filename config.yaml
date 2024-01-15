@@ -73,24 +73,6 @@ selection:
 verification:
   # use_n_top_features: [2] # list or range of n_features to use for verification
   use_n_top_features: [2, 4, 6, 8, 10, 15, 20, 25, 30] # list or range of n_features to use for verification
-  scoring:
-    binary_classification:  # these are only the reported metrics, set metric for optimisation under selection.scoring
-      roc_auc_score: True
-      average_precision_score: True
-      recall_score: True
-      specificity_score: True
-      precision_score: True
-      f1_score: True
-      accuracy_score: True
-      balanced_accuracy_score: True
-      pos_rate: True
-      roc: True
-    multi_classification: {}
-    regression:
-      r2_score: True
-      mean_absolute_error: True
-      mean_squared_error: True
-      explained_variance_score: True
 
   models:
     ensemble_voting: False
@@ -173,6 +155,7 @@ collect_results:
       accuracy_score: False
       balanced_accuracy_score: True
       pos_rate: False
+      roc: True
     multi_classification: {}
     regression:
       r2_score: True

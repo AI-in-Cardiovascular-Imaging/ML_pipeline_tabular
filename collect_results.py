@@ -36,10 +36,6 @@ class CollectResults(DataHandler):
         self.n_top_features = config.verification.use_n_top_features
         models_dict = config.verification.models
         self.rep_models = [model for model in models_dict if models_dict[model]]
-        scoring_dict = config.verification.scoring[self.learn_task]
-        self.rep_scoring = [v_scoring for v_scoring in scoring_dict if scoring_dict[v_scoring]]
-        if f'{self.opt_scoring}_score' not in self.rep_scoring:  # ensure optimisation metric is always collected
-            self.rep_scoring.append(f'{self.opt_scoring}_score')
         self.ensemble = [model for model in self.rep_models if 'ensemble' in model]  # only ensemble models
         self.rep_models = [model for model in self.rep_models if model not in self.ensemble]
         if len(self.rep_models) < 2:  # ensemble methods need at least two models to combine their results
@@ -47,6 +43,8 @@ class CollectResults(DataHandler):
         self.to_collect = config.collect_results.experiments
         metrics_dict = config.collect_results.metrics_to_plot[self.learn_task]
         self.metrics_to_plot = [metric for metric in metrics_dict if metrics_dict[metric]]
+        if f'{self.opt_scoring}_score' not in self.metrics_to_plot:  # ensure optimisation metric is always collected
+            self.metrics_to_plot.append(f'{self.opt_scoring}_score')
         self.all_features = None
 
     def __call__(self) -> None:
@@ -102,7 +100,7 @@ class CollectResults(DataHandler):
     def summarise_verification(self, experiment_name) -> None:
         """Summarise verification results over all seeds and bootstraps"""
         verification_scores = {}
-        for metric in self.rep_scoring + ['n_top']:
+        for metric in self.metrics_to_plot + ['n_top']:
             verification_scores[metric] = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
         verification_scores = self.average_scores(verification_scores)
         mean_verification_scores = self.reduce_scores(verification_scores, np.mean)
@@ -118,9 +116,10 @@ class CollectResults(DataHandler):
             self.n_bootstraps,
         )
 
-        self.plot_heatmaps(mean_verification_scores)
-        if 'roc' in self.rep_scoring:
+        if 'roc' in self.metrics_to_plot:
             self.plot_rocs(verification_scores['roc'], best_models)
+            self.metrics_to_plot.remove('roc')
+        self.plot_heatmaps(mean_verification_scores)
         logger.info(
             f'\nStrategies summary:\n' + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names))
         )
@@ -141,7 +140,7 @@ class CollectResults(DataHandler):
                         best_all_scores = all_scores
                         best_roc = roc
                         best_n_top = n_top
-                for metric in self.rep_scoring:
+                for metric in self.metrics_to_plot:
                     if metric == 'roc':
                         continue
                     best_all_scores[metric] = [elem for sub in best_all_scores[metric] for elem in sub]
@@ -153,16 +152,16 @@ class CollectResults(DataHandler):
 
     def collect_scores(self, job_name, model) -> None:
         """Collect results over all seeds and bootstraps"""
-        all_scores = {score: [] for score in self.rep_scoring}
+        all_scores = {score: [] for score in self.metrics_to_plot}
         roc = []
         for seed_index, seed in enumerate(self.seeds):
             try:
                 scores = self.get_store('score', seed, job_name)[model]
             except KeyError:  # model not yet stored for this seed/job
-                scores = {scoring: [] for scoring in self.rep_scoring}
+                scores = {scoring: [] for scoring in self.metrics_to_plot}
 
             if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top
-                for score in self.rep_scoring:
+                for score in self.metrics_to_plot:
                     if score == 'roc':
                         for boot_iter in range(self.n_bootstraps):
                             roc.append(
@@ -209,7 +208,7 @@ class CollectResults(DataHandler):
                 index=verification_scores[metric].index,
                 columns=verification_scores[metric].columns,
             )
-            for metric in [m for m in self.rep_scoring if m != 'roc']  # cannot reduce roc
+            for metric in [m for m in self.metrics_to_plot if m != 'roc']  # cannot reduce roc
         }
         return reduced_verification_scores
 
