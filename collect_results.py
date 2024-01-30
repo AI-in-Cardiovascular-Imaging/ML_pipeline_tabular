@@ -185,10 +185,6 @@ class CollectResults(DataHandler):
                         best_all_scores = all_scores
                         best_roc = roc
                         best_n_top = n_top
-                rocs = [best_roc[i]["auc"] for i in range(len(best_roc))]
-                logger.debug(
-                    f'mean diff for job {job_name} and {model}: {np.abs(np.mean(rocs) - best_mean_opt_score):.4f}'
-                )
                 for metric in self.metrics_to_collect:
                     if metric == 'roc':
                         continue
