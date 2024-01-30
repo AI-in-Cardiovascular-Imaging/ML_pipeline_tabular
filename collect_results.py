@@ -23,6 +23,7 @@ class CollectResults(DataHandler):
         super().__init__()
         self.config = config
         self.out_dir = config.meta.output_dir
+        self.results_dir = os.path.join(self.out_dir, 'results')
         self.plot_format = config.meta.plot_format
         self.learn_task = config.meta.learn_task
         self.init_seed = config.data_split.init_seed
@@ -42,10 +43,13 @@ class CollectResults(DataHandler):
             self.ensemble = []
         self.to_collect = config.collect_results.experiments
         metrics_dict = config.collect_results.metrics_to_collect[self.learn_task]
-        self.metrics_to_collect = [metric for metric in metrics_dict if metrics_dict[metric]]
+        self.use_youden_index = metrics_dict['youden_index']
+        self.metrics_to_collect = [
+            metric for metric in metrics_dict if metrics_dict[metric] and metric != 'youden_index'
+        ]
         if f'{self.opt_scoring}_score' not in self.metrics_to_collect:  # ensure optimisation metric is always collected
             self.metrics_to_collect.append(f'{self.opt_scoring}_score')
-        self.metrics_to_plot = [metric for metric in self.metrics_to_collect if metric != 'roc']
+        self.metrics_to_plot = [metric for metric in self.metrics_to_collect if metric not in ['roc']]
         self.all_features = None
 
     def __call__(self) -> None:
@@ -62,6 +66,7 @@ class CollectResults(DataHandler):
             logger.info(f'Collecting results for experiment {experiment_name}...')
             self.report_dir = os.path.join(self.out_dir, experiment_name, 'report')
             os.makedirs(self.report_dir, exist_ok=True)
+            self.job_names_experiment = [job for job in self.job_names]  # jobs might vary between experiments
             self.load_intermediate_results(os.path.join(self.out_dir, experiment_name))
             self.summarise_selection(experiment_name)
             self.summarise_verification(experiment_index, experiment_name)
@@ -74,9 +79,13 @@ class CollectResults(DataHandler):
 
     def summarise_selection(self, experiment_name) -> None:
         """Summarise selection results over all seeds"""
-        for job_name in self.job_names:
+        for job_name in self.job_names_experiment:
             out_dir = os.path.join(self.out_dir, experiment_name, job_name)
-            job_scores = self.get_store('feature_score', None, job_name)
+            try:
+                job_scores = self.get_store('feature_score', None, job_name)
+            except KeyError:
+                self.job_names_experiment.remove(job_name)
+                continue
             job_scores = pd.DataFrame(job_scores.items(), columns=['feature', 'score'])
             job_scores = job_scores.sort_values(by='score', ascending=True).reset_index(drop=True)
             job_scores['score'] = job_scores['score'] / job_scores['score'].sum()
@@ -112,16 +121,18 @@ class CollectResults(DataHandler):
         """Summarise verification results over all seeds and bootstraps"""
         verification_scores = {}
         for metric in self.metrics_to_collect + ['n_top']:
-            verification_scores[metric] = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
+            verification_scores[metric] = pd.DataFrame(
+                columns=self.job_names_experiment, index=(self.rep_models + self.ensemble)
+            )
         verification_scores = self.average_scores(verification_scores)
         mean_verification_scores = self.reduce_scores(verification_scores, np.mean)
         mean_opt_scores = mean_verification_scores[f'{self.opt_scoring}_score']
-        best_models = {job_name: mean_opt_scores[job_name].idxmax() for job_name in self.job_names}
+        best_models = {job_name: mean_opt_scores[job_name].idxmax() for job_name in self.job_names_experiment}
         # self.explainer(
         #     experiment_name,
         #     verification_scores,
         #     self.opt_scoring,
-        #     self.job_names,
+        #     self.job_names_experiment,
         #     best_models,
         #     self.seeds,
         #     self.n_bootstraps,
@@ -131,12 +142,14 @@ class CollectResults(DataHandler):
             self.plot_rocs(verification_scores['roc'], best_models)
         self.plot_heatmaps(mean_verification_scores)
         logger.info(
-            f'\nStrategies summary:\n' + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names))
+            f'\nStrategies summary:\n'
+            + '\n'.join(f'Strat. {i+1}: {job}' for i, job in enumerate(self.job_names_experiment))
         )
 
         # fill results dataframe
+        to_find = np.argmax if self.higher_is_better else np.argmin
         best_model_index, best_job_index = [
-            x[0] for x in np.unravel_index([np.argmax(mean_opt_scores.values)], mean_opt_scores.values.shape)
+            x[0] for x in np.unravel_index([to_find(mean_opt_scores.values)], mean_opt_scores.values.shape)
         ]
         clean_experiment_name = experiment_name.split('_')[-1]
         clean_job_name = f'Strat. {best_job_index+1}'
@@ -157,20 +170,24 @@ class CollectResults(DataHandler):
 
     def average_scores(self, verification_scores) -> None:
         """Average results over all seeds and bootstraps"""
-        for job_name in self.job_names:
+        for job_name in self.job_names_experiment:
             for model in self.rep_models + self.ensemble:
-                best_mean_opt_score, higher_is_better = self.init_scoring()
+                best_mean_opt_score, self.higher_is_better = self.init_scoring()
                 best_all_scores = None
                 best_roc = None
                 best_n_top = None
                 for n_top in self.n_top_features:  # find best number of features for each job/model combination
                     all_scores, roc = self.collect_scores(f'{job_name}_{n_top}', model)
                     mean_opt_score = np.mean(all_scores[f'{self.opt_scoring}_score'])
-                    if higher_is_better and mean_opt_score > best_mean_opt_score:
+                    if self.higher_is_better and mean_opt_score > best_mean_opt_score:
                         best_mean_opt_score = mean_opt_score
                         best_all_scores = all_scores
                         best_roc = roc
                         best_n_top = n_top
+                rocs = [best_roc[i]["auc"] for i in range(len(best_roc))]
+                logger.debug(
+                    f'mean diff for job {job_name} and {model}: {np.abs(np.mean(rocs) - best_mean_opt_score):.4f}'
+                )
                 for metric in self.metrics_to_collect:
                     if metric == 'roc':
                         continue
@@ -184,6 +201,8 @@ class CollectResults(DataHandler):
     def collect_scores(self, job_name, model) -> None:
         """Collect results over all seeds and bootstraps"""
         all_scores = {score: [] for score in self.metrics_to_collect}
+        best_thresholds = [0.5] * self.n_bootstraps  # default threshold for binary classification
+        recompute_scores = False  # whether to recompute scores with new threshold
         roc = []
         for seed_index, seed in enumerate(self.seeds):
             try:
@@ -191,53 +210,62 @@ class CollectResults(DataHandler):
             except KeyError:  # model not yet stored for this seed/job
                 scores = {scoring: [] for scoring in self.metrics_to_collect}
 
-            if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top
+            if scores[list(scores.keys())[0]]:  # else scores empty, i.e. not run for this job_name/n_top/seed
+                # special metrics
+                if self.use_youden_index:  # find best threshold and use it to compute other metrics
+                    recompute_scores = True
+                    for boot_iter in range(self.n_bootstraps):
+                        fpr, tpr, thresholds = metrics.roc_curve(scores['true'][boot_iter], scores['probas'][boot_iter])
+                        best_thresholds[boot_iter] = thresholds[np.argmax(tpr - fpr)]
+
+                if 'roc' in self.metrics_to_collect:
+                    for boot_iter in range(self.n_bootstraps):
+                        roc.append(compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True))
+
                 for score in self.metrics_to_collect:
-                    if score == 'roc':
-                        for boot_iter in range(self.n_bootstraps):
-                            roc.append(
-                                compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True)
-                            )
+                    if score == 'roc':  # already computed
                         continue
-                    if score not in scores.keys() or len(scores[score]) < self.n_bootstraps:  # score not yet computed
-                        scores = self.compute_missing_scores(scores, score)
+                    elif score == 'roc_auc_score':  # independent of threshold
+                        all_scores[score].append(scores[score])
+                        continue
+                    if (
+                        recompute_scores or score not in scores.keys() or len(scores[score]) < self.n_bootstraps
+                    ):  # score needs to be recomputed or has not yet been computed
+                        scores = self.compute_missing_scores(scores, score, best_thresholds)
+
                     all_scores[score].append(scores[score])
             else:
                 np.delete(self.seeds, seed_index)
 
         return all_scores, roc
 
-    def compute_missing_scores(self, scores, score):
-        try:  # some metrics can be calculated using probabilities, others need prediction
+    def compute_missing_scores(self, scores, score, thresholds):
+        """Compute missing scores for a given metric and threshold"""
+        try:  # try sklearn metrics
             scores[score] = [
-                getattr(metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
-                for boot_iter in range(self.n_bootstraps)
-            ]
-        except ValueError:
-            scores[score] = [
-                getattr(metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
+                getattr(metrics, score)(
+                    scores['true'][boot_iter],
+                    np.where(np.array(scores['probas'][boot_iter]) >= thresholds[boot_iter], 1, 0),
+                )
                 for boot_iter in range(self.n_bootstraps)
             ]
         except AttributeError:  # try imbalanced learn metrics (e.g. for specificity)
-            try:
-                scores[score] = [
-                    getattr(imb_metrics, score)(scores['true'][boot_iter], scores['probas'][boot_iter])
-                    for boot_iter in range(self.n_bootstraps)
-                ]
-            except ValueError:
-                scores[score] = [
-                    getattr(imb_metrics, score)(scores['true'][boot_iter], scores['pred'][boot_iter])
-                    for boot_iter in range(self.n_bootstraps)
-                ]
+            scores[score] = [
+                getattr(imb_metrics, score)(
+                    scores['true'][boot_iter],
+                    np.where(np.array(scores['probas'][boot_iter]) >= thresholds[boot_iter], 1, 0),
+                )
+                for boot_iter in range(self.n_bootstraps)
+            ]
 
         return scores
 
-    def reduce_scores(self, verification_scores, function):
+    def reduce_scores(self, scores, function):
         reduced_verification_scores = {
             metric: pd.DataFrame(
-                np.vectorize(function)(verification_scores[metric]),
-                index=verification_scores[metric].index,
-                columns=verification_scores[metric].columns,
+                np.vectorize(function)(scores[metric]),
+                index=scores[metric].index,
+                columns=scores[metric].columns,
             )
             for metric in self.metrics_to_plot  # cannot reduce roc
         }
@@ -247,7 +275,7 @@ class CollectResults(DataHandler):
         roc_plot, roc_ax = plt.subplots()
         colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-        for job_index, job_name in enumerate(self.job_names):
+        for job_index, job_name in enumerate(self.job_names_experiment):
             best_roc_job = rocs.loc[best_models[job_name], job_name]
             if best_roc_job is not None:
                 plot_mean_roc(
@@ -274,14 +302,14 @@ class CollectResults(DataHandler):
         roc_ax.set_title('Best mean ROC for all strategies')
         roc_plot.savefig(os.path.join(self.report_dir, f'AUROC_best_per_strat.{self.plot_format}'))
 
-    def plot_heatmaps(self, verification_scores):
+    def plot_heatmaps(self, mean_scores):
         cmaps = ['Blues', 'Greens', 'Reds', 'Purples', 'Oranges', 'Greys', 'YlGnBu', 'YlOrRd', 'PuBu', 'PuRd']
         for i, score in enumerate(self.metrics_to_plot):
             fig = plt.figure()
             sns.heatmap(
-                verification_scores[score],
+                mean_scores[score],
                 annot=True,
-                xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names))],
+                xticklabels=[f'Strat. {i+1}' for i in range(len(self.job_names_experiment))],
                 yticklabels=True,
                 vmin=0.0,
                 vmax=1.0,

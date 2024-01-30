@@ -1,7 +1,3 @@
-import os
-import shap
-
-import matplotlib.pyplot as plt
 import pandas as pd
 import sklearn.metrics as metrics
 import imblearn.metrics as imb_metrics
@@ -64,7 +60,9 @@ class Verification(DataHandler, Normalisers):
         self.class_weight = config.selection.class_weight
         self.n_top_features = config.verification.use_n_top_features
         v_scoring_dict = config.collect_results.metrics_to_collect[self.learn_task]
-        self.verif_scoring = [v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring]]
+        self.verif_scoring = [
+            v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring] and v_scoring != 'roc'
+        ]
         models_dict = config.verification.models
         self.param_grids = config.verification.param_grids
         self.models = [model for model in models_dict if models_dict[model]]
@@ -191,7 +189,7 @@ class Verification(DataHandler, Normalisers):
                             scores[model][score].append(getattr(imb_metrics, score)(self.y_test, probas))
                         except ValueError:
                             scores[model][score].append(getattr(imb_metrics, score)(self.y_test, y_pred))
-                            
+
                 scores[model]['probas'].append(probas.tolist())  # need list to save as json later
                 scores[model]['pred'].append(y_pred.tolist())
                 scores[model]['true'].append(self.y_test.tolist())
@@ -201,7 +199,7 @@ class Verification(DataHandler, Normalisers):
         self.set_store('score', self.seed, job_name, scores)  # store results for summary in report
 
         return None, None
-        
+
     def get_predictions(self, best_estimator):
         try:  # e.g. for logistic regression
             probas = best_estimator.decision_function(self.x_test[self.top_features])

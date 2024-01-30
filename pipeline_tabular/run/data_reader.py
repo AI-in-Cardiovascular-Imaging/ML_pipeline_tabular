@@ -19,22 +19,21 @@ class DataReader(DataHandler):
 
     def __call__(self) -> None:
         self.read_file()
+        self.set_frame(self.frame)
 
     def read_file(self):
         """Reads excel, csv, or pd dataframe and returns a pd dataframe"""
         if self.file.endswith('.csv'):
             logger.info(f'Reading csv file -> {self.file}')
-            frame = pd.read_csv(self.file)
-            self.set_frame(frame)
+            self.frame = pd.read_csv(self.file)
 
         elif self.file.endswith('.xlsx'):
             logger.info(f'Reading excel file -> {self.file}')
-            frame = pd.read_excel(self.file)
-            self.set_frame(frame)
+            self.frame = pd.read_excel(self.file)
 
         elif isinstance(self.file, pd.DataFrame):
             logger.info(f'Reading dataframe -> {self.file}')
-            self.set_frame(self.file)
+            self.frame = self.file
 
         else:
             raise ValueError(f'Found invalid file type, allowed is (.csv, .xlsx, dataframe), check -> {self.file}')
