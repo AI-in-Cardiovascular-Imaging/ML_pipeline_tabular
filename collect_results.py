@@ -10,7 +10,8 @@ import pingouin as pg
 import sklearn.metrics as metrics
 import imblearn.metrics as imb_metrics
 from loguru import logger
-from roc_utils import compute_roc, plot_mean_roc
+from roc_utils import plot_mean_roc
+from pipeline_tabular.utils.roc_utils.roc_utils import compute_roc_aucopt
 
 from pipeline_tabular.config_manager import ConfigManager
 from pipeline_tabular.utils.helpers import generate_seeds, job_name_cleaner
@@ -220,7 +221,15 @@ class CollectResults(DataHandler):
 
                 if 'roc' in self.metrics_to_collect:
                     for boot_iter in range(self.n_bootstraps):
-                        roc.append(compute_roc(scores['probas'][boot_iter], scores['true'][boot_iter], pos_label=True))
+                        fpr, tpr, thresholds = metrics.roc_curve(scores['true'][boot_iter], scores['probas'][boot_iter])
+                        roc.append(
+                            compute_roc_aucopt(
+                                fpr,
+                                tpr,
+                                thresholds,
+                                costs={'minoptsym': lambda fpr, tpr: -np.sqrt(fpr**2 + (1 - tpr) ** 2)},
+                            )
+                        )
 
                 for score in self.metrics_to_collect:
                     if score == 'roc':  # already computed

@@ -141,6 +141,7 @@ collect_results:
   metrics_to_collect:
     binary_classification:
       roc_auc_score: True
+      youden_index: True # use Youden index to find optimal threshold, compute other metrics using this threshold
       average_precision_score: False
       recall_score: True
       specificity_score: True
