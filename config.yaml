@@ -60,7 +60,7 @@ selection:
     [
       # ["z_score_norm", "hand_picked"],
       ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
-      ["variance_threshold", "z_score_norm", "univariate_ranking"],
+      ["variance_threshold", "z_score_norm", "correlation", "univariate_ranking"],
       ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
     ]
 
