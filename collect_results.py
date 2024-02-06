@@ -355,3 +355,4 @@ if __name__ == '__main__':
         os.environ["PYTHONWARNINGS"] = "ignore"
 
     CollectResults(config)()
+    logger.info('Results collected successfully.')
