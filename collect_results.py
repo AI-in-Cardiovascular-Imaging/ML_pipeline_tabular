@@ -346,13 +346,20 @@ class CollectResults(DataHandler):
             raise NotImplementedError
 
 
-if __name__ == '__main__':
-    config = ConfigManager()()
-    logger.remove()
-    logger.add(sys.stderr, level=config.meta.logging_level)
-    if config.meta.ignore_warnings:
-        warnings.simplefilter("ignore")
-        os.environ["PYTHONWARNINGS"] = "ignore"
+def collect_results() -> None:
+    try:  # need this for script to exit correctly
+        config = ConfigManager()()
+        logger.remove()
+        logger.add(sys.stderr, level=config.meta.logging_level)
+        if config.meta.ignore_warnings:
+            warnings.simplefilter("ignore")
+            os.environ["PYTHONWARNINGS"] = "ignore"
 
-    CollectResults(config)()
-    logger.info('Results collected successfully.')
+        CollectResults(config)()
+        logger.info('Results collected successfully.')
+    except KeyboardInterrupt:
+        logger.warning('Keyboard interrupt. Exiting...')
+
+
+if __name__ == '__main__':
+    collect_results()
