@@ -33,6 +33,7 @@ class CleanUp(DataHandler):
         non_categorical = nunique[nunique > 5].index
         self.frame[non_categorical] = self.frame[non_categorical].replace(0, np.nan)  # Replace 0 with NaN
         self.frame = self.frame.dropna(how='all', axis=1)  # Drop columns with all NaN
+        self.frame = self.frame[self.frame[self.target_label].notna()]  # Drop rows with NaN in target column
 
         self.set_frame(self.frame)
         output_dir = os.path.join(self.config.meta.output_dir, self.config.meta.experiment)
