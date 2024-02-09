@@ -61,7 +61,9 @@ class Verification(DataHandler, Normalisers):
         self.n_top_features = config.verification.use_n_top_features
         v_scoring_dict = config.collect_results.metrics_to_collect[self.learn_task]
         self.verif_scoring = [
-            v_scoring for v_scoring in v_scoring_dict if v_scoring_dict[v_scoring] and v_scoring != 'roc'
+            v_scoring
+            for v_scoring in v_scoring_dict
+            if v_scoring_dict[v_scoring] and v_scoring not in ['roc', 'youden_index']
         ]
         models_dict = config.verification.models
         self.param_grids = config.verification.param_grids
@@ -89,6 +91,8 @@ class Verification(DataHandler, Normalisers):
         top_features = self.get_store('feature', seed, job_name, boot_iter)
         if not explain_mode:
             n_top_features = [n for n in self.n_top_features if n <= len(top_features)]
+            if not n_top_features:
+                n_top_features = [len(top_features)]  # ensure that list is not empty
         for n_top in n_top_features:
             logger.info(f'Verifying final feature importance for top {n_top} features...')
             self.top_features = top_features[:n_top]
