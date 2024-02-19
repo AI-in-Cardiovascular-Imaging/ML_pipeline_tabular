@@ -13,14 +13,15 @@ class ConfigManager:
         logger.remove()
         logger.add(sys.stderr, level='INFO')
 
-    def __call__(self) -> DictConfig:
+    def __call__(self, save=True) -> DictConfig:
         self.load_config_file()
         self.range_to_list()
         experiment_dir = os.path.join(self.config.meta.output_dir, self.config.meta.experiment)
         os.makedirs(experiment_dir, exist_ok=True)
-        OmegaConf.save(
-                self.config, os.path.join(experiment_dir, 'job_config.yaml')
-            )  # save copy of config for future reference
+        if save:
+            OmegaConf.save(
+                    self.config, os.path.join(experiment_dir, 'job_config.yaml')
+                )  # save copy of config for future reference
         return self.config
 
     def load_config_file(self) -> DictConfig:
