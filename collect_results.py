@@ -41,6 +41,7 @@ class CollectResults(DataHandler):
         self.rep_models = [model for model in self.rep_models if model not in self.ensemble]
         if len(self.rep_models) < 2:  # ensemble methods need at least two models to combine their results
             self.ensemble = []
+        self.explain = config.collect_results.explain
         self.to_collect = config.collect_results.experiments
         metrics_dict = config.collect_results.metrics_to_collect[learn_task]
         self.use_youden_index = metrics_dict['youden_index']
@@ -66,7 +67,10 @@ class CollectResults(DataHandler):
             experiment_dir = os.path.join(self.out_dir, experiment_name)
             self.report_dir = os.path.join(experiment_dir, 'report')
             os.makedirs(self.report_dir, exist_ok=True)
-            experiment_config = OmegaConf.load(os.path.join(experiment_dir, 'job_config.yaml'))
+            try:
+                experiment_config = OmegaConf.load(os.path.join(experiment_dir, 'job_config.yaml'))
+            except FileNotFoundError:
+                logger.warning(f'No job_config.yaml found in {experiment_dir}. Skipping experiment...')
             self.job_names = job_name_cleaner(experiment_config.selection.jobs)
             self.n_top_features = experiment_config.verification.use_n_top_features
             self.load_intermediate_results(experiment_dir)
@@ -124,15 +128,16 @@ class CollectResults(DataHandler):
         mean_verification_scores = self.reduce_scores(verification_scores, np.mean)
         mean_opt_scores = mean_verification_scores[f'{self.opt_scoring}_score']
         best_models = {job_name: mean_opt_scores[job_name].idxmax() for job_name in self.job_names}
-        # self.explainer(
-        #     experiment_name,
-        #     verification_scores,
-        #     self.opt_scoring,
-        #     self.job_names_experiment,
-        #     best_models,
-        #     self.seeds,
-        #     self.n_bootstraps,
-        # )
+        if self.explain:
+            self.explainer(
+                experiment_name,
+                verification_scores,
+                self.opt_scoring,
+                self.job_names,
+                best_models,
+                self.seeds,
+                self.n_bootstraps,
+            )
 
         if 'roc' in self.metrics_to_collect:
             self.plot_rocs(verification_scores['roc'], best_models)
@@ -155,10 +160,12 @@ class CollectResults(DataHandler):
 
     def summarise_experiments(self) -> None:
         """Summarise results across experiments"""
-        self.results = self.results.explode(self.metrics_to_plot)  # expand lists into columns
+        self.results[self.metrics_to_plot] = np.vectorize(np.mean)(self.results[self.metrics_to_plot])
+        self.results.to_csv(os.path.join(self.results_dir, 'mean_results.csv'), index=False, float_format='%.2f')
+        results_to_plot = self.results.explode(self.metrics_to_plot)  # expand lists into columns
         for metric in self.metrics_to_plot:
             fig = plt.figure()
-            sns.boxplot(data=self.results, x='experiment', y=metric)
+            sns.boxplot(data=results_to_plot, x='experiment', y=metric)
             plt.xticks(rotation=45, ha='right')
             plt.tight_layout()
             fig.savefig(os.path.join(self.results_dir, f'{metric}_boxplot.{self.plot_format}'))
@@ -261,7 +268,7 @@ class CollectResults(DataHandler):
         return scores
 
     def reduce_scores(self, scores, function):
-        reduced_verification_scores = {
+        reduced_scores = {
             metric: pd.DataFrame(
                 np.vectorize(function)(scores[metric]),
                 index=scores[metric].index,
@@ -269,7 +276,7 @@ class CollectResults(DataHandler):
             )
             for metric in self.metrics_to_plot  # cannot reduce roc
         }
-        return reduced_verification_scores
+        return reduced_scores
 
     def plot_rocs(self, rocs, best_models):
         roc_plot, roc_ax = plt.subplots()
@@ -342,18 +349,15 @@ class CollectResults(DataHandler):
 
 
 def collect_results() -> None:
-    try:  # need this for script to exit correctly
-        config = ConfigManager()(save=False)
-        logger.remove()
-        logger.add(sys.stderr, level=config.meta.logging_level)
-        if config.meta.ignore_warnings:
-            warnings.simplefilter("ignore")
-            os.environ["PYTHONWARNINGS"] = "ignore"
+    config = ConfigManager()(save=False)
+    logger.remove()
+    logger.add(sys.stderr, level=config.meta.logging_level)
+    if config.meta.ignore_warnings:
+        warnings.simplefilter("ignore")
+        os.environ["PYTHONWARNINGS"] = "ignore"
 
-        CollectResults(config)()
-        logger.info('Results collected successfully.')
-    except KeyboardInterrupt:
-        logger.warning('Keyboard interrupt. Exiting...')
+    CollectResults(config)()
+    logger.info('Results collected successfully.')
 
 
 if __name__ == '__main__':

@@ -48,8 +48,8 @@ class Explain(DataHandler, Normalisers):
             pred_function, conf_matrix, x_train_norm, x_test_norm = self.verification(
                 seed, 0, job_name, fit_imputer, model=[best_model], n_top_features=[n_top], explain_mode=True
             )
-            self.plot_conf_matrix(conf_matrix, job_index)
-            self.plot_kernel_shap(pred_function, x_train_norm, x_test_norm, features, job_index)
+            self.plot_conf_matrix(conf_matrix, job_index + 1)
+            self.plot_kernel_shap(pred_function, x_train_norm, x_test_norm, features, job_index + 1)
 
     def get_seeds(self, scores, opt_scoring, job_name, best_model, seeds, n_bootstraps):
         if n_bootstraps == 1:  # i.e. no bootstrapping
