@@ -160,8 +160,9 @@ class CollectResults(DataHandler):
 
     def summarise_experiments(self) -> None:
         """Summarise results across experiments"""
-        self.results[self.metrics_to_plot] = np.vectorize(np.mean)(self.results[self.metrics_to_plot])
-        self.results.to_csv(os.path.join(self.results_dir, 'mean_results.csv'), index=False, float_format='%.2f')
+        mean_results = pd.DataFrame(index=self.results.index, columns=self.results.columns)
+        mean_results[self.metrics_to_plot] = np.vectorize(np.mean)(self.results[self.metrics_to_plot])
+        mean_results.to_csv(os.path.join(self.results_dir, 'mean_results.csv'), index=False, float_format='%.2f')
         results_to_plot = self.results.explode(self.metrics_to_plot)  # expand lists into columns
         for metric in self.metrics_to_plot:
             fig = plt.figure()
