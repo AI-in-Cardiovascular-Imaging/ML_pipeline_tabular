@@ -97,9 +97,9 @@ class Verification(DataHandler, Normalisers):
             logger.info(f'Verifying final feature importance for top {n_top} features...')
             self.top_features = top_features[:n_top]
             self.train_models(f'{job_name}_{n_top}')  # optimise all models
-            pred_function, conf_matrix = self.evaluate(f'{job_name}_{n_top}')  # evaluate all optimised models
+            pred_function, conf_matrix, estimator = self.evaluate(f'{job_name}_{n_top}')  # evaluate all optimised models
 
-        return pred_function, conf_matrix, self.x_train, self.x_test  # only needed for Explain class
+        return pred_function, conf_matrix, estimator, self.x_train, self.x_test  # only needed for Explain class
 
     def train_test_split(self) -> None:
         """Prepare data for training"""
@@ -180,7 +180,7 @@ class Verification(DataHandler, Normalisers):
                 if self.explain_mode:
                     conf_matrix = metrics.confusion_matrix(self.y_test, y_pred, labels=estimator.classes_)
                     conf_matrix = metrics.ConfusionMatrixDisplay(conf_matrix, display_labels=estimator.classes_)
-                    return pred_func, conf_matrix
+                    return pred_func, conf_matrix, estimator.best_estimator_
                 for score in self.verif_scoring:  # calculate and store all requested scores
                     if score not in scores[model].keys():
                         scores[model][score] = []
@@ -202,7 +202,7 @@ class Verification(DataHandler, Normalisers):
                     logger.warning(f'0/{int(self.y_test.sum())} positive samples were predicted using top features.')
         self.set_store('score', self.seed, job_name, scores)  # store results for summary in report
 
-        return None, None
+        return None, None, None
 
     def get_predictions(self, best_estimator):
         try:  # e.g. for logistic regression

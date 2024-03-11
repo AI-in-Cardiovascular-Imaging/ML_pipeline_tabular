@@ -45,11 +45,14 @@ class Explain(DataHandler, Normalisers):
             train_frame, _ = getattr(self, norm)(train_frame)
             self.set_store('frame', seed, 'train', train_frame)
             features = self.get_store('feature', seed, job_name, boot_iter=0)[:n_top]
-            pred_function, conf_matrix, x_train_norm, x_test_norm = self.verification(
+            pred_function, conf_matrix, estimator, x_train_norm, x_test_norm = self.verification(
                 seed, 0, job_name, fit_imputer, model=[best_model], n_top_features=[n_top], explain_mode=True
             )
             self.plot_conf_matrix(conf_matrix, job_index + 1)
             self.plot_kernel_shap(pred_function, x_train_norm, x_test_norm, features, job_index + 1)
+            if best_model == 'logistic_regression':
+                coefficients = estimator.coef_
+                self.plot_coefficients(coefficients, features, job_index + 1)
 
     def get_seeds(self, scores, opt_scoring, job_name, best_model, seeds, n_bootstraps):
         if n_bootstraps == 1:  # i.e. no bootstrapping
@@ -93,4 +96,12 @@ class Explain(DataHandler, Normalisers):
         shap.plots.heatmap(values, show=False)
         plt.tight_layout()
         plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_heatmap_strat_{job_index}.{self.plot_format}'))
+        plt.clf()
+
+    def plot_coefficients(self, coefficients, features, job_index):
+        plt.figure()
+        plt.barh(features, coefficients[0], color='yellowgreen')
+        plt.title('Feature coefficients from logistic regression')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.expl_out_dir, f'coefficients_strat_{job_index}.{self.plot_format}'))
         plt.clf()

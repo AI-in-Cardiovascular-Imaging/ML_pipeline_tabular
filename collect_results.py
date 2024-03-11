@@ -62,6 +62,11 @@ class CollectResults(DataHandler):
             columns=['experiment', 'best_job', 'best_model', 'best_n_top'] + self.metrics_to_plot,
             index=range(len(self.to_collect)),
         )
+        self.opt_scores = {}
+        self.best_jobs = {}
+        self.best_models = {}
+        self.best_models_per_job = {}
+        self.clean_experiment_names = []
         for experiment_index, experiment_name in enumerate(self.to_collect):
             logger.info(f'Collecting results for experiment {experiment_name}...')
             experiment_dir = os.path.join(self.out_dir, experiment_name)
@@ -71,6 +76,7 @@ class CollectResults(DataHandler):
                 experiment_config = OmegaConf.load(os.path.join(experiment_dir, 'job_config.yaml'))
             except FileNotFoundError:
                 logger.warning(f'No job_config.yaml found in {experiment_dir}. Skipping experiment...')
+                continue
             self.job_names = job_name_cleaner(experiment_config.selection.jobs)
             self.n_top_features = experiment_config.verification.use_n_top_features
             self.load_intermediate_results(experiment_dir)
@@ -79,21 +85,18 @@ class CollectResults(DataHandler):
 
         self.summarise_experiments()
 
-        for metric in self.metrics_to_plot:
-            self.results[metric] = self.results[metric].apply(np.mean)
-        self.results.to_csv(os.path.join(self.results_dir, 'results.csv'), index=False)
-
     def summarise_selection(self, experiment_name) -> None:
         """Summarise selection results over all seeds"""
         for job_name in self.job_names:
             out_dir = os.path.join(self.out_dir, experiment_name, job_name)
+            os.makedirs(out_dir, exist_ok=True)
             job_scores = self.get_store('feature_score', None, job_name)
             job_scores = pd.DataFrame(job_scores.items(), columns=['feature', 'score'])
             job_scores = job_scores.sort_values(by='score', ascending=True).reset_index(drop=True)
             job_scores['score'] = job_scores['score'] / job_scores['score'].sum()
 
             try:
-                ax = job_scores.plot.barh(x='feature', y='score', figsize=(10, 10))
+                ax = job_scores.plot.barh(x='feature', y='score', figsize=(10, 10), color='green')
             except TypeError:  # no data is available to plot, i.e. collect_results flag set to True by accident
                 logger.error(f'No results found to collect for job {job_name}.')
                 raise SystemExit(0)
@@ -107,7 +110,7 @@ class CollectResults(DataHandler):
 
             for n_top in range(5, max(self.n_top_features), 10):
                 job_scores_n_top = job_scores.iloc[-n_top:, :]
-                ax = job_scores_n_top.plot.barh(x='feature', y='score')
+                ax = job_scores_n_top.plot.barh(x='feature', y='score', color='green')
                 fig = ax.get_figure()
                 plt.title(f'Average feature ranking (top {n_top})')
                 plt.xlabel('Average feature ranking')
@@ -125,6 +128,9 @@ class CollectResults(DataHandler):
         for metric in self.metrics_to_collect + ['n_top']:
             verification_scores[metric] = pd.DataFrame(columns=self.job_names, index=(self.rep_models + self.ensemble))
         verification_scores = self.average_scores(verification_scores)
+        self.opt_scores[experiment_name] = verification_scores[
+            f'{self.opt_scoring}_score'
+        ]  # save optimisation scores for statistical tests
         mean_verification_scores = self.reduce_scores(verification_scores, np.mean)
         mean_opt_scores = mean_verification_scores[f'{self.opt_scoring}_score']
         best_models = {job_name: mean_opt_scores[job_name].idxmax() for job_name in self.job_names}
@@ -138,7 +144,6 @@ class CollectResults(DataHandler):
                 self.seeds,
                 self.n_bootstraps,
             )
-
         if 'roc' in self.metrics_to_collect:
             self.plot_rocs(verification_scores['roc'], best_models)
         self.plot_heatmaps(mean_verification_scores)
@@ -151,18 +156,20 @@ class CollectResults(DataHandler):
         best_model_index, best_job_index = [
             x[0] for x in np.unravel_index([to_find(mean_opt_scores.values)], mean_opt_scores.values.shape)
         ]
-        clean_experiment_name = '_'.join(experiment_name.split('_')[2:])
+        self.clean_experiment_names.append('_'.join(experiment_name.split('_')[2:]))
         clean_job_name = f'Strat. {best_job_index+1}'
         best_model, best_job = mean_opt_scores.index[best_model_index], mean_opt_scores.columns[best_job_index]
-        self.results.loc[experiment_index] = [clean_experiment_name, clean_job_name, best_model] + [
+        self.best_jobs[experiment_name] = best_job
+        self.best_models[experiment_name] = best_model
+        self.best_models_per_job[experiment_name] = best_models
+        self.results.loc[experiment_index] = [self.clean_experiment_names[experiment_index], clean_job_name, best_model] + [
             verification_scores[metric].loc[best_model][best_job] for metric in ['n_top'] + self.metrics_to_plot
         ]
 
     def summarise_experiments(self) -> None:
         """Summarise results across experiments"""
-        mean_results = pd.DataFrame(index=self.results.index, columns=self.results.columns)
-        mean_results[self.metrics_to_plot] = np.vectorize(np.mean)(self.results[self.metrics_to_plot])
-        mean_results.to_csv(os.path.join(self.results_dir, 'mean_results.csv'), index=False, float_format='%.2f')
+        self.compute_statistics()
+        self.save_mean_results()
         results_to_plot = self.results.explode(self.metrics_to_plot)  # expand lists into columns
         for metric in self.metrics_to_plot:
             fig = plt.figure()
@@ -171,6 +178,60 @@ class CollectResults(DataHandler):
             plt.tight_layout()
             fig.savefig(os.path.join(self.results_dir, f'{metric}_boxplot.{self.plot_format}'))
             plt.close(fig)
+
+    def compute_statistics(self):
+        best_aurocs = {}
+        for experiment_name in self.to_collect:
+            best_aurocs[experiment_name] = self.opt_scores[experiment_name].loc[self.best_models[experiment_name]][
+                self.best_jobs[experiment_name]
+            ]
+            best_aurocs_all_jobs = self.opt_scores[experiment_name]
+            exp_jobs = best_aurocs_all_jobs.columns
+            clean_job_names = [f'Strat. {i+1}' for i in range(len(exp_jobs))]
+            stats_all_jobs = pd.DataFrame(index=clean_job_names, columns=clean_job_names)
+            for i, job_1 in enumerate(exp_jobs):
+                for j, job_2 in enumerate(exp_jobs):
+                    if i >= j:  # only compute upper triangle
+                        continue
+                    stats_all_jobs.iloc[i, j] = pg.mwu(
+                        best_aurocs_all_jobs.loc[self.best_models_per_job[experiment_name][job_1]][job_1],
+                        best_aurocs_all_jobs.loc[self.best_models_per_job[experiment_name][job_2]][job_2],
+                    ).round(3)['p-val'][0]
+            fig = plt.figure(figsize=(20, 20))
+            stats_all_jobs = stats_all_jobs.dropna(axis=1, how='all').dropna(axis=0, how='all')
+            if not stats_all_jobs.empty:
+                sns.heatmap(stats_all_jobs.astype(float), annot=True, cmap='Purples', fmt='.3f')
+                plt.title('Mann-Whitney U test p-values for best AUROC')
+                plt.xticks(rotation=45, ha='right')
+                plt.yticks(rotation=0)
+                plt.tight_layout()
+                fig.savefig(os.path.join(self.results_dir, f'mwu_pvals_{experiment_name}.{self.plot_format}'))
+                plt.close(fig)
+
+        stats_all_exp = pd.DataFrame(index=self.to_collect, columns=self.to_collect)
+        for i, exp_1 in enumerate(self.to_collect):
+            for j, exp_2 in enumerate(self.to_collect):
+                if i >= j:  # only compute upper triangle
+                    continue
+                stats_all_exp.loc[exp_1, exp_2] = pg.mwu(best_aurocs[exp_1], best_aurocs[exp_2]).round(3)['p-val'][0]
+        fig = plt.figure()
+        stats_all_exp = stats_all_exp.dropna(axis=1, how='all').dropna(axis=0, how='all')
+        sns.heatmap(stats_all_exp.astype(float), annot=True, cmap='Purples', fmt='.3f')
+        plt.title('Mann-Whitney U test p-values for best AUROC')
+        plt.xticks(ticks=plt.xticks()[0], labels=self.clean_experiment_names[:-1], rotation=45, ha='right')
+        plt.yticks(ticks=plt.yticks()[0], labels=self.clean_experiment_names[1:], rotation=0)
+        plt.tight_layout()
+        fig.savefig(os.path.join(self.results_dir, f'mwu_pvals.{self.plot_format}'))
+        plt.close(fig)
+
+    def save_mean_results(self):
+        mean_results = pd.DataFrame(index=self.results.index, columns=self.results.columns)
+        info_cols = [col for col in mean_results.columns if col not in self.metrics_to_plot]
+        mean_results[info_cols] = self.results[info_cols]
+        mean_results[self.metrics_to_plot] = np.vectorize(np.mean)(self.results[self.metrics_to_plot])
+        std_cols = [f'{col}_std' for col in self.metrics_to_plot]
+        mean_results[std_cols] = np.vectorize(np.std)(self.results[self.metrics_to_plot])
+        mean_results.to_csv(os.path.join(self.results_dir, 'mean_results.csv'), index=False, float_format='%.2f')
 
     def average_scores(self, verification_scores) -> None:
         """Average results over all seeds and bootstraps"""
@@ -304,11 +365,11 @@ class CollectResults(DataHandler):
                     label=f'Strat. {job_index+1}',
                 )
                 plt.title(f'Best mean ROC for Strat. {job_index+1}')
-                plt.savefig(os.path.join(self.report_dir, f'AUROC_best_strat_{job_index+1}.{self.plot_format}'))
+                plt.savefig(os.path.join(self.report_dir, f'ROC_best_strat_{job_index+1}.{self.plot_format}'))
                 plt.clf()
 
         roc_ax.set_title('Best mean ROC for all strategies')
-        roc_plot.savefig(os.path.join(self.report_dir, f'AUROC_best_per_strat.{self.plot_format}'))
+        roc_plot.savefig(os.path.join(self.report_dir, f'ROC_best_per_strat.{self.plot_format}'))
 
     def plot_heatmaps(self, mean_scores):
         cmaps = ['Blues', 'Greens', 'Reds', 'Purples', 'Oranges', 'Greys', 'YlGnBu', 'YlOrRd', 'PuBu', 'PuRd']
