@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -34,6 +36,10 @@ class Imputer(DataHandler):
                 imp_test = pd.DataFrame(imp_test, index=test_frame.index, columns=test_frame.columns)
             self.set_store('frame', seed, 'train', imp_train)
             self.set_store('frame', seed, 'test', imp_test)
+            if True:
+                out_path = f'{os.path.splitext(self.config.meta.input_file)[0]}_imputed_{seed}'
+                imp_train.to_csv(f'{out_path}_train.csv')
+                imp_test.to_csv(f'{out_path}_test.csv')
 
     def _check_methods(self) -> bool:
         """Check if the given method is valid"""

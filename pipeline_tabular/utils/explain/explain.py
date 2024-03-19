@@ -73,7 +73,7 @@ class Explain(DataHandler, Normalisers):
         plt.figure()
         plt.tight_layout()
         conf_matrix.plot(cmap='Blues', values_format='d')
-        plt.savefig(os.path.join(self.expl_out_dir, f'confusion_matrix_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(os.path.join(self.expl_out_dir, f'confusion_matrix_strat_{job_index}.{self.plot_format}'), dpi=300)
         plt.clf()
 
     def plot_kernel_shap(self, pred_function, x_train_norm, x_test_norm, features, job_index):
@@ -82,11 +82,15 @@ class Explain(DataHandler, Normalisers):
         explanation = explainer.explain(x_test_norm[features], feature_names=features)
         shap.summary_plot(explanation.shap_values[1], x_test_norm[features], features, show=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_positive_class_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(
+            os.path.join(self.expl_out_dir, f'KernelSHAP_positive_class_strat_{job_index}.{self.plot_format}'), dpi=300
+        )
         plt.clf()
         shap.summary_plot(explanation.shap_values, x_test_norm[features], features, show=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_both_classes_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(
+            os.path.join(self.expl_out_dir, f'KernelSHAP_both_classes_strat_{job_index}.{self.plot_format}'), dpi=300
+        )
         plt.clf()
 
         heatmap_explainer = shap.KernelExplainer(
@@ -95,7 +99,9 @@ class Explain(DataHandler, Normalisers):
         values = heatmap_explainer(x_test_norm[features])
         shap.plots.heatmap(values, show=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_heatmap_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(
+            os.path.join(self.expl_out_dir, f'KernelSHAP_heatmap_strat_{job_index}.{self.plot_format}'), dpi=300
+        )
         plt.clf()
 
     def plot_coefficients(self, coefficients, features, job_index):
@@ -103,5 +109,5 @@ class Explain(DataHandler, Normalisers):
         plt.barh(features, coefficients[0], color='yellowgreen')
         plt.title('Feature coefficients from logistic regression')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.expl_out_dir, f'coefficients_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(os.path.join(self.expl_out_dir, f'coefficients_strat_{job_index}.{self.plot_format}'), dpi=300)
         plt.clf()

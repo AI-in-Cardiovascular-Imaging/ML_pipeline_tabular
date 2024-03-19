@@ -100,7 +100,7 @@ class FeatureReductions:
             fig = plt.figure(figsize=(20, 20))
             sns.heatmap(abs_corr, annot=False, xticklabels=True, yticklabels=True, cmap='viridis')
             plt.xticks(rotation=90)
-            plt.savefig(os.path.join(self.job_dir, f'corr_plot.{self.plot_format}'))
+            plt.savefig(os.path.join(self.job_dir, f'corr_plot.{self.plot_format}'), dpi=300)
             plt.close(fig)
 
         new_frame = pd.concat([x_frame, y_frame], axis=1)
@@ -206,7 +206,7 @@ class FeatureReductions:
         )
         plt.axvline(x=0, alpha=0.7, color='grey', linestyle='--')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.job_dir, f'box_plot_{self.target_label}.{self.plot_format}'))
+        plt.savefig(os.path.join(self.job_dir, f'box_plot_{self.target_label}.{self.plot_format}'), dpi=300)
         plt.clf()
 
         x_frame = frame.drop(self.target_label, axis=1)
@@ -215,13 +215,13 @@ class FeatureReductions:
         sns.boxplot(data=x_frame, orient='h', meanline=True, showmeans=True, whis=1.5)
         plt.axvline(x=0, alpha=0.7, color='grey', linestyle='--')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.job_dir, f'box_plot.{self.plot_format}'))
+        plt.savefig(os.path.join(self.job_dir, f'box_plot.{self.plot_format}'), dpi=300)
         plt.clf()
 
         # plot distribution for each feature
         sns.displot(data=x_frame, kind='kde')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.job_dir, f'dis_plot.{self.plot_format}'))
+        plt.savefig(os.path.join(self.job_dir, f'dis_plot.{self.plot_format}'), dpi=300)
         plt.clf()
         return frame, None
 

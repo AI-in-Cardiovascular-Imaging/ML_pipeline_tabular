@@ -58,7 +58,9 @@ class DataExploration(DataHandler):
     def plot_cluster_map(self) -> None:
         frame = self.frame.drop(self.target_label, axis=1)
         cluster_map = sns.clustermap(frame, figsize=(20, 20), cmap='coolwarm', method='ward', metric='euclidean')
-        cluster_map.savefig(os.path.join(self.out_dir, f'feature_{self.corr_method}_cluster_map.{self.plot_format}'))
+        cluster_map.savefig(
+            os.path.join(self.out_dir, f'feature_{self.corr_method}_cluster_map.{self.plot_format}'), dpi=300
+        )
         plt.clf()
 
     def plot_corr_heatmap(self) -> None:
@@ -80,7 +82,9 @@ class DataExploration(DataHandler):
         )
         corr_plot.figure.tight_layout()
         corr_plot = corr_plot.get_figure()
-        corr_plot.savefig(os.path.join(self.out_dir, f'feature_{self.corr_method}_corr_heatmap.{self.plot_format}'))
+        corr_plot.savefig(
+            os.path.join(self.out_dir, f'feature_{self.corr_method}_corr_heatmap.{self.plot_format}'), dpi=300
+        )
 
     def plot_stats(self) -> None:
         """Plot target statistics"""
