@@ -1,33 +1,33 @@
 meta:
-  output_dir: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/"
-  input_file: "/home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/ATTRAS_clinical.xlsx"
-  experiment: "ATTR_run_Clinical" # experiment name, results are stored in directory with this name
-  target_label: "ATTR_Amyloidose" # which column to use as label for exploration, feature reduction and analysis
-  learn_task: "binary_classification" # binary_classification, multi_classification, regression
+  output_dir: /home/sebalzer/Documents/Projects/ATTRAS_Amyloidose
+  input_file: /home/sebalzer/Documents/Projects/TAVI_outcome/Classification/PaceMaker/PaceMaker_BWYR_HNLN.xlsx
+  experiment: TAVI_outcome_PaceMaker # experiment name, results are stored in directory with this name
+  target_label: ATTR_Amyloidose # which column to use as label for exploration, feature reduction and analysis
+  learn_task: binary_classification # binary_classification, multi_classification, regression
 
-  plot_format: "png"  # format in which plots are saved, e.g. png, pdf
+  plot_format: png  # format in which plots are saved, e.g. png, pdf
   workers: 24 # number of workers for parallel processing
-  logging_level: "DEBUG" #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logging_level: DEBUG #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   ignore_warnings: True  # whether to ignore all warnings (removes ConvergenceWarnings during run)
   overwrite: False  # whether to overwrite existing results
-  hand_picked:  # specify hand-picked features (if available), need to add a job with step "hand_picked" below
+  hand_picked:  # specify hand-picked features (if available), need to add a job with step hand_picked below
     [
-      "edmassbsa_gm2_report",
-      "LA_endo_gls_perc",
-      "GLS_AtB_M_ratio",
-      "LV_LAX_myo_gls_perc",
+      edmassbsa_gm2_report,
+      LA_endo_gls_perc,
+      GLS_AtB_M_ratio,
+      LV_LAX_myo_gls_perc,
     ]
 
 # specify the clean strategy
 inspection:
-  label_as_index: "ATTRAS_Redcap" # column string name or None
+  label_as_index: ATTRAS_Redcap # column string name or None
   manual_clean: True # manual cleaning of data
   manual_strategy:
     drop_columns_regex: ["([A-Za-z]+(_[A-Za-z]+)+)_[0-9]+"] # remove single segment columns from ATTR dataset
 
 # imputation strategy
 impute:
-  method: "iterative_impute" #: drop_nan_impute, iterative_impute, simple_impute, knn_impute
+  method: iterative_impute #: drop_nan_impute, iterative_impute, simple_impute, knn_impute
 
 # data split definitions
 data_split:
@@ -38,30 +38,30 @@ data_split:
 
   oversample: False # oversample minority class to balance training set
   oversample_method:
-    binary_classification: "BorderlineSMOTE" #: ADASYN, SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
-    multi_classification: "RandomOverSampler" # Not implemented yet
-    regression: "RandomOverSampler" #: ADASYN, SMOTE, KMeansSMOTE, RandomOverSampler
+    binary_classification: BorderlineSMOTE #: ADASYN, SMOTEN, SMOTENC, SVMSMOTE, BorderlineSMOTE, RandomOverSampler
+    multi_classification: RandomOverSampler # Not implemented yet
+    regression: RandomOverSampler #: ADASYN, SMOTE, KMeansSMOTE, RandomOverSampler
 
 # feature reduction strategy
 selection:
-  class_weight: "balanced"
-  corr_method: "pearson" # correlation method
+  class_weight: balanced
+  corr_method: pearson # correlation method
   corr_thresh: 0.95 # threshold above which correlated features are removed
-  corr_ranking: "corr" # method with which feature importance is calculated
+  corr_ranking: corr # method with which feature importance is calculated
   variance_thresh: 0.99 # remove binary features with same value in more than variance_thresh subjects
   univariate_thresh: 0.00 # use only features with univariate score above this threshold
 
   scoring:
-    binary_classification: "roc_auc"  # this metric is used for all training (also during verification)
-    multi_classification: "roc_auc"
-    regression: "neg_mean_absolute_error"
+    binary_classification: roc_auc  # this metric is used for all training (also during verification)
+    multi_classification: roc_auc
+    regression: neg_mean_absolute_error
 
   jobs:
     [
-      # ["z_score_norm", "hand_picked"],
-      ["variance_threshold", "z_score_norm", "correlation", "fr_forest"],
-      ["variance_threshold", "z_score_norm", "correlation", "univariate_ranking"],
-      ["variance_threshold", "z_score_norm", "correlation", "mrmr"],
+      [z_score_norm, hand_picked],
+      [variance_threshold, z_score_norm, correlation, fr_forest],
+      [variance_threshold, z_score_norm, correlation, univariate_ranking],
+      [variance_threshold, z_score_norm, correlation, mrmr],
     ]
 
 # verification strategy and final model to train and evaluate
@@ -83,30 +83,30 @@ verification:
 
   param_grids:
     logistic_regression:
-      penalty: ["l1", "l2", "elasticnet"]
+      penalty: [l1, l2, elasticnet]
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
-      solver: ["saga"] # only solver that supports all penalties
+      solver: [saga] # only solver that supports all penalties
       warm_start: [True, False]
       max_iter: [10000]
 
     svm:
       C: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
-      kernel: ["poly", "rbf", "sigmoid"]
-      gamma: ["scale", "auto"]
+      kernel: [poly, rbf, sigmoid]
+      gamma: [scale, auto]
       max_iter: [10000]
 
     forest:
       n_estimators: [10, 100, 500]
-      criterion: ["gini", "entropy"]
+      criterion: [gini, entropy]
       max_depth: [10, 50, 100, null]
-      max_features: ["sqrt", "log2", null]
+      max_features: [sqrt, log2, null]
       bootstrap: [True, False]
 
     extreme_forest:
       n_estimators: [10, 100, 500]
-      criterion: ["gini", "entropy"]
+      criterion: [gini, entropy]
       max_depth: [10, 50, 100, null]
-      max_features: ["sqrt", "log2", null]
+      max_features: [sqrt, log2, null]
       bootstrap: [True, False]
 
     adaboost:
@@ -117,12 +117,12 @@ verification:
       n_estimators: [10, 100, 500]
       learning_rate: [0.0001, 0.001, 0.01, 0.1, 1]
       max_depth: [10, 50, 100, null]
-      max_features: ["sqrt", "log2", null]
+      max_features: [sqrt, log2, null]
 
     lasso:
       alpha: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       warm_start: [True, False]
-      selection: ["cyclic", "random"]
+      selection: [cyclic, random]
 
     lassolars:
       alpha: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
@@ -131,7 +131,7 @@ verification:
       alpha: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
       l1_ratio: [0.25, 0.5, 0.75]
       warm_start: [True, False]
-      selection: ["cyclic", "random"]
+      selection: [cyclic, random]
 
     omp:
       n_nonzero_coefs: [5, 10, 20, 50, null]
@@ -139,19 +139,19 @@ verification:
 collect_results:
   explain: True
   experiments: [
-    ATTR_run_Clinical,
-    ATTR_run_Lab,
-    ATTR_run_ECG,
-    ATTR_run_Cath_Lab,
-    ATTR_run_Echo,
-    ATTR_run_TTE_TEE_Angio,
-    ATTR_run_Non_Contrast_Radiomics,
-    ATTR_run_Systolic_Radiomics,
-    ATTR_run_Diastolic_Radiomics,
-    ATTR_run_Delta_Radiomics,
-    ATTR_run_All_Radiomics,
-    ATTR_run_CT_All_Radiomics,
-    ATTR_run_CT_Clinical_All_Radiomics,
+    # ATTR_run_Clinical,
+    # ATTR_run_Lab,
+    # ATTR_run_ECG,
+    # ATTR_run_Cath_Lab,
+    # ATTR_run_Echo,
+    # ATTR_run_TTE_TEE_Angio,
+    # ATTR_run_Non_Contrast_Radiomics,
+    # ATTR_run_Systolic_Radiomics,
+    # ATTR_run_Diastolic_Radiomics,
+    # ATTR_run_Delta_Radiomics,
+    # ATTR_run_All_Radiomics,
+    # ATTR_run_CT_All_Radiomics,
+    # ATTR_run_CT_Clinical_All_Radiomics,
     ATTR_run_CT,
     ATTR_run_Multi_Modality,
   ]
