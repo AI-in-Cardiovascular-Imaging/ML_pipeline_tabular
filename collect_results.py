@@ -196,11 +196,11 @@ class CollectResults(DataHandler):
                     stats_all_jobs.iloc[i, j] = pg.mwu(
                         best_aurocs_all_jobs.loc[self.best_models_per_job[experiment_name][job_1]][job_1],
                         best_aurocs_all_jobs.loc[self.best_models_per_job[experiment_name][job_2]][job_2],
-                    ).round(3)['p-val'][0]
-            fig = plt.figure(figsize=(20, 20))
-            stats_all_jobs = stats_all_jobs.dropna(axis=1, how='all').dropna(axis=0, how='all')
+                    ).round(2)['p-val'][0]
+            fig = plt.figure()
+            # stats_all_jobs = stats_all_jobs.dropna(axis=1, how='all').dropna(axis=0, how='all')
             if not stats_all_jobs.empty:
-                sns.heatmap(stats_all_jobs.astype(float), annot=True, cmap='Purples', fmt='.3f')
+                sns.heatmap(stats_all_jobs.astype(float), annot=True, cmap='Purples', fmt='.2f')
                 plt.title('Mann-Whitney U test p-values for best AUROC')
                 plt.xticks(rotation=45, ha='right')
                 plt.yticks(rotation=0)
@@ -213,13 +213,13 @@ class CollectResults(DataHandler):
             for j, exp_2 in enumerate(self.to_collect):
                 if i >= j:  # only compute upper triangle
                     continue
-                stats_all_exp.loc[exp_1, exp_2] = pg.mwu(best_aurocs[exp_1], best_aurocs[exp_2]).round(3)['p-val'][0]
-        fig = plt.figure()
-        stats_all_exp = stats_all_exp.dropna(axis=1, how='all').dropna(axis=0, how='all')
-        sns.heatmap(stats_all_exp.astype(float), annot=True, cmap='Purples', fmt='.3f')
+                stats_all_exp.loc[exp_1, exp_2] = pg.mwu(best_aurocs[exp_1], best_aurocs[exp_2]).round(2)['p-val'][0]
+        fig = plt.figure(figsize=(10, 10))
+        # stats_all_exp = stats_all_exp.dropna(axis=1, how='all').dropna(axis=0, how='all')
+        sns.heatmap(stats_all_exp.astype(float), annot=True, cmap='Purples', fmt='.2f')
         plt.title('Mann-Whitney U test p-values for best AUROC')
-        plt.xticks(ticks=plt.xticks()[0], labels=self.clean_experiment_names[:-1], rotation=45, ha='right')
-        plt.yticks(ticks=plt.yticks()[0], labels=self.clean_experiment_names[1:], rotation=0)
+        plt.xticks(ticks=plt.xticks()[0], labels=self.clean_experiment_names, rotation=45, ha='right')
+        plt.yticks(ticks=plt.yticks()[0], labels=self.clean_experiment_names, rotation=0)
         plt.tight_layout()
         fig.savefig(os.path.join(self.results_dir, f'mwu_pvals.{self.plot_format}'))
         plt.close(fig)
