@@ -105,7 +105,7 @@ class CollectResults(DataHandler):
             plt.xlabel('Average feature ranking')
             plt.tight_layout()
             plt.gca().legend_.remove()
-            plt.savefig(os.path.join(out_dir, f'avg_feature_ranking_all.{self.plot_format}'), dpi=fig.dpi)
+            plt.savefig(os.path.join(out_dir, f'avg_feature_ranking_all.{self.plot_format}'), dpi=300)
             plt.close(fig)
 
             for n_top in range(5, max(self.n_top_features), 10):
@@ -118,7 +118,7 @@ class CollectResults(DataHandler):
                 plt.gca().legend_.remove()
                 plt.savefig(
                     os.path.join(out_dir, f'avg_feature_ranking_top{n_top}.{self.plot_format}'),
-                    dpi=fig.dpi,
+                    dpi=300,
                 )
                 plt.close(fig)
 
@@ -162,9 +162,11 @@ class CollectResults(DataHandler):
         self.best_jobs[experiment_name] = best_job
         self.best_models[experiment_name] = best_model
         self.best_models_per_job[experiment_name] = best_models
-        self.results.loc[experiment_index] = [self.clean_experiment_names[experiment_index], clean_job_name, best_model] + [
-            verification_scores[metric].loc[best_model][best_job] for metric in ['n_top'] + self.metrics_to_plot
-        ]
+        self.results.loc[experiment_index] = [
+            self.clean_experiment_names[experiment_index],
+            clean_job_name,
+            best_model,
+        ] + [verification_scores[metric].loc[best_model][best_job] for metric in ['n_top'] + self.metrics_to_plot]
 
     def summarise_experiments(self) -> None:
         """Summarise results across experiments"""
@@ -176,7 +178,7 @@ class CollectResults(DataHandler):
             sns.boxplot(data=results_to_plot, x='experiment', y=metric)
             plt.xticks(rotation=45, ha='right')
             plt.tight_layout()
-            fig.savefig(os.path.join(self.results_dir, f'{metric}_boxplot.{self.plot_format}'))
+            fig.savefig(os.path.join(self.results_dir, f'{metric}_boxplot.{self.plot_format}'), dpi=300)
             plt.close(fig)
 
     def compute_statistics(self):
@@ -205,7 +207,7 @@ class CollectResults(DataHandler):
                 plt.xticks(rotation=45, ha='right')
                 plt.yticks(rotation=0)
                 plt.tight_layout()
-                fig.savefig(os.path.join(self.results_dir, f'mwu_pvals_{experiment_name}.{self.plot_format}'))
+                fig.savefig(os.path.join(self.results_dir, f'mwu_pvals_{experiment_name}.{self.plot_format}'), dpi=300)
                 plt.close(fig)
 
         stats_all_exp = pd.DataFrame(index=self.to_collect, columns=self.to_collect)
@@ -221,7 +223,7 @@ class CollectResults(DataHandler):
         plt.xticks(ticks=plt.xticks()[0], labels=self.clean_experiment_names, rotation=45, ha='right')
         plt.yticks(ticks=plt.yticks()[0], labels=self.clean_experiment_names, rotation=0)
         plt.tight_layout()
-        fig.savefig(os.path.join(self.results_dir, f'mwu_pvals.{self.plot_format}'))
+        fig.savefig(os.path.join(self.results_dir, f'mwu_pvals.{self.plot_format}'), dpi=300)
         plt.close(fig)
 
     def save_mean_results(self):
@@ -235,19 +237,17 @@ class CollectResults(DataHandler):
 
     def average_scores(self, verification_scores) -> None:
         """Average results over all seeds and bootstraps"""
-        for job_name in self.job_names:
+        for job_index, job_name in enumerate(self.job_names):
             for model in self.rep_models + self.ensemble:
                 best_mean_opt_score, self.higher_is_better = self.init_scoring()
-                best_all_scores = None
-                best_roc = None
-                best_n_top = None
                 for n_top in self.n_top_features:  # find best number of features for each job/model combination
-                    all_scores, roc = self.collect_scores(f'{job_name}_{n_top}', model)
+                    all_scores, roc, conf_matrix = self.collect_scores(f'{job_name}_{n_top}', model)
                     mean_opt_score = np.mean(all_scores[f'{self.opt_scoring}_score'])
                     if self.higher_is_better and mean_opt_score > best_mean_opt_score:
                         best_mean_opt_score = mean_opt_score
                         best_all_scores = all_scores
                         best_roc = roc
+                        best_conf_matrix = conf_matrix
                         best_n_top = n_top
                 for metric in self.metrics_to_collect:
                     if metric == 'roc':
@@ -257,6 +257,8 @@ class CollectResults(DataHandler):
                 verification_scores['roc'].loc[model, job_name] = best_roc
                 verification_scores['n_top'].loc[model, job_name] = best_n_top
 
+            self.plot_conf_matrix(best_conf_matrix, job_index + 1)
+
         return verification_scores
 
     def collect_scores(self, job_name, model) -> None:
@@ -265,6 +267,7 @@ class CollectResults(DataHandler):
         best_thresholds = [0.5] * self.n_bootstraps  # default threshold for binary classification
         recompute_scores = False  # whether to recompute scores with new threshold
         roc = []
+        cum_conf_matrix = np.zeros(shape=(2, 2))
         for seed_index, seed in enumerate(self.seeds):
             try:
                 scores = self.get_store('score', seed, job_name)[model]
@@ -290,7 +293,9 @@ class CollectResults(DataHandler):
                                 costs={'minoptsym': lambda fpr, tpr: -np.sqrt(fpr**2 + (1 - tpr) ** 2)},
                             )
                         )
-
+                for boot_iter in range(self.n_bootstraps):  # compute cumulative confusion matrix
+                    pred = np.where(np.array(scores['probas'][boot_iter]) >= best_thresholds[boot_iter], 1, 0)
+                    cum_conf_matrix += metrics.confusion_matrix(scores['true'][boot_iter], pred)
                 for score in self.metrics_to_collect:
                     if score == 'roc':  # already computed
                         continue
@@ -306,7 +311,9 @@ class CollectResults(DataHandler):
             else:
                 np.delete(self.seeds, seed_index)
 
-        return all_scores, roc
+        mean_conf_matrix = cum_conf_matrix / (self.n_bootstraps * len(self.seeds))
+
+        return all_scores, roc, mean_conf_matrix
 
     def compute_missing_scores(self, scores, score, thresholds):
         """Compute missing scores for a given metric and threshold"""
@@ -365,11 +372,19 @@ class CollectResults(DataHandler):
                     label=f'Strat. {job_index+1}',
                 )
                 plt.title(f'Best mean ROC for Strat. {job_index+1}')
-                plt.savefig(os.path.join(self.report_dir, f'ROC_best_strat_{job_index+1}.{self.plot_format}'))
+                plt.savefig(os.path.join(self.report_dir, f'ROC_best_strat_{job_index+1}.{self.plot_format}'), dpi=300)
                 plt.clf()
 
         roc_ax.set_title('Best mean ROC for all strategies')
-        roc_plot.savefig(os.path.join(self.report_dir, f'ROC_best_per_strat.{self.plot_format}'))
+        roc_plot.savefig(os.path.join(self.report_dir, f'ROC_best_per_strat.{self.plot_format}'), dpi=300)
+
+    def plot_conf_matrix(self, conf_matrix, job_index):
+        plt.figure()
+        plt.tight_layout()
+        conf_matrix = metrics.ConfusionMatrixDisplay(conf_matrix)
+        conf_matrix.plot(cmap='Blues', values_format='.2f')
+        plt.savefig(os.path.join(self.report_dir, f'confusion_matrix_strat_{job_index}.{self.plot_format}'), dpi=300)
+        plt.clf()
 
     def plot_heatmaps(self, mean_scores):
         cmaps = ['Blues', 'Greens', 'Reds', 'Purples', 'Oranges', 'Greys', 'YlGnBu', 'YlOrRd', 'PuBu', 'PuRd']
@@ -388,7 +403,9 @@ class CollectResults(DataHandler):
             plt.xticks(rotation=0)
             plt.yticks(rotation=0)
             plt.tight_layout()
-            plt.savefig(os.path.join(self.report_dir, f'results_heatmap_{self.metrics_to_plot[i]}.{self.plot_format}'))
+            plt.savefig(
+                os.path.join(self.report_dir, f'results_heatmap_{self.metrics_to_plot[i]}.{self.plot_format}'), dpi=300
+            )
             plt.close(fig)
 
     def init_scoring(self):

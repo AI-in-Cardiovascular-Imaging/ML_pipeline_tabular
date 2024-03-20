@@ -45,10 +45,9 @@ class Explain(DataHandler, Normalisers):
             train_frame, _ = getattr(self, norm)(train_frame)
             self.set_store('frame', seed, 'train', train_frame)
             features = self.get_store('feature', seed, job_name, boot_iter=0)[:n_top]
-            pred_function, conf_matrix, estimator, x_train_norm, x_test_norm = self.verification(
+            pred_function, estimator, x_train_norm, x_test_norm = self.verification(
                 seed, 0, job_name, fit_imputer, model=[best_model], n_top_features=[n_top], explain_mode=True
             )
-            self.plot_conf_matrix(conf_matrix, job_index + 1)
             self.plot_kernel_shap(pred_function, x_train_norm, x_test_norm, features, job_index + 1)
             if best_model == 'logistic_regression':
                 coefficients = estimator.coef_
@@ -68,13 +67,6 @@ class Explain(DataHandler, Normalisers):
             raise NotImplementedError
 
         return seed, boot_seed
-
-    def plot_conf_matrix(self, conf_matrix, job_index):
-        plt.figure()
-        plt.tight_layout()
-        conf_matrix.plot(cmap='Blues', values_format='d')
-        plt.savefig(os.path.join(self.expl_out_dir, f'confusion_matrix_strat_{job_index}.{self.plot_format}'), dpi=300)
-        plt.clf()
 
     def plot_kernel_shap(self, pred_function, x_train_norm, x_test_norm, features, job_index):
         explainer = KernelShap(pred_function)
