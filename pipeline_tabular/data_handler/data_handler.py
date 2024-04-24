@@ -138,6 +138,7 @@ class DataHandler:
         try:
             with open(os.path.join(out_dir, 'scores.json'), 'r') as score_file:
                 self._score_store = json.load(score_file)
+                logger.info(f'Scores loaded for {len(self._score_store.keys())} seeds')
         except FileNotFoundError:
             return False  # need to init scores nested dict
 

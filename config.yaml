@@ -1,12 +1,12 @@
 meta:
   output_dir: /home/sebalzer/Documents/Projects/ATTRAS_Amyloidose
-  input_file: /home/sebalzer/Documents/Projects/TAVI_outcome/Classification/PaceMaker/PaceMaker_BWYR_HNLN.xlsx
-  experiment: TAVI_outcome_PaceMaker # experiment name, results are stored in directory with this name
+  input_file: /home/sebalzer/Documents/Projects/ATTRAS_Amyloidose/Data/ContrastEnhanced/filtered_phases_Out_MyoCa_Min_BasVen_cleaned.xlsx
+  experiment: ATTR_run_All_Radiomics_test_correlation # experiment name, results are stored in directory with this name
   target_label: ATTR_Amyloidose # which column to use as label for exploration, feature reduction and analysis
   learn_task: binary_classification # binary_classification, multi_classification, regression
 
   plot_format: png  # format in which plots are saved, e.g. png, pdf
-  workers: 24 # number of workers for parallel processing
+  workers: 12 # number of workers for parallel processing
   logging_level: DEBUG #: TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
   ignore_warnings: True  # whether to ignore all warnings (removes ConvergenceWarnings during run)
   overwrite: False  # whether to overwrite existing results
@@ -58,10 +58,10 @@ selection:
 
   jobs:
     [
-      [z_score_norm, hand_picked],
       [variance_threshold, z_score_norm, correlation, fr_forest],
       [variance_threshold, z_score_norm, correlation, univariate_ranking],
       [variance_threshold, z_score_norm, correlation, mrmr],
+      [z_score_norm, hand_picked],
     ]
 
 # verification strategy and final model to train and evaluate
@@ -137,24 +137,23 @@ verification:
       n_nonzero_coefs: [5, 10, 20, 50, null]
 
 collect_results:
-  explain: True
-  experiments: [
-    # ATTR_run_Clinical,
-    # ATTR_run_Lab,
-    # ATTR_run_ECG,
-    # ATTR_run_Cath_Lab,
-    # ATTR_run_Echo,
-    # ATTR_run_TTE_TEE_Angio,
-    # ATTR_run_Non_Contrast_Radiomics,
-    # ATTR_run_Systolic_Radiomics,
-    # ATTR_run_Diastolic_Radiomics,
-    # ATTR_run_Delta_Radiomics,
-    # ATTR_run_All_Radiomics,
-    # ATTR_run_CT_All_Radiomics,
-    # ATTR_run_CT_Clinical_All_Radiomics,
-    ATTR_run_CT,
-    ATTR_run_Multi_Modality,
-  ]
+  font_size: 15
+  explain: False
+  experiments:
+    # ATTR_run_Clinical: Clinical
+    # ATTR_run_Lab: Laboratory
+    # ATTR_run_ECG: ECG
+    ATTR_run_Echo: Echo
+    # ATTR_run_Cath_Lab: Invasive Cath
+    # ATTR_run_TTE_TEE_Angio: Interventional Imaging
+    ATTR_run_CT: CT Strain
+    # ATTR_run_Non_Contrast_Radiomics: CT Non-Contrast Radiomics
+    # ATTR_run_Diastolic_Radiomics: CT Diastolic Radiomics
+    # ATTR_run_Systolic_Radiomics: CT Systolic Radiomics
+    # ATTR_run_Delta_Radiomics: CT Delta Radiomics
+    # ATTR_run_All_Radiomics: CT All Radiomics
+    ATTR_run_Multi_Modality: Multi Modality
+
   metrics_to_collect:
     binary_classification:
       roc_auc_score: True
