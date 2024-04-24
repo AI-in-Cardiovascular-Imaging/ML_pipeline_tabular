@@ -73,7 +73,7 @@ class RecursiveFeatureElimination:
                 yerr=selector.cv_results_['std_test_score'],
             )
             plt.title(f'Recursive Feature Elimination for {rfe_estimator} estimator')
-            plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.{self.plot_format}'))
+            plt.savefig(os.path.join(self.job_dir, f'RFECV_{rfe_estimator}.{self.plot_format}'), dpi=300)
             plt.close(fig)
 
         frame = pd.concat((x.loc[:, selector.support_], frame[self.target_label]), axis=1)  # concat with target label
@@ -98,7 +98,7 @@ class RecursiveFeatureElimination:
             plt.xlabel('Feature importance')
             plt.tight_layout()
             plt.gca().legend_.remove()
-            plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.{self.plot_format}'), dpi=fig.dpi)
+            plt.savefig(os.path.join(self.job_dir, f'feature_importance_{rfe_estimator}.{self.plot_format}'), dpi=300)
             plt.close(fig)
 
         features = importances.index.tolist()[::-1]

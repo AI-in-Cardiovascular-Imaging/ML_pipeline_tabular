@@ -27,10 +27,11 @@ class Explain(DataHandler, Normalisers):
         self.imputation = Imputer(config)
         self.verification = Verification(config)
 
+        plt.rcParams.update({'font.size': config.collect_results.font_size})
+
     def __call__(self, experiment_name, scores, opt_scoring, job_names, best_models, seeds, n_bootstraps) -> None:
         self.expl_out_dir = os.path.join(self.out_dir, experiment_name, 'explain')
         os.makedirs(self.expl_out_dir, exist_ok=True)
-        self.load_frame(os.path.join(self.out_dir, experiment_name))
 
         for job_index, job_name in enumerate(job_names):
             best_model = best_models[job_name]
@@ -45,10 +46,11 @@ class Explain(DataHandler, Normalisers):
             train_frame, _ = getattr(self, norm)(train_frame)
             self.set_store('frame', seed, 'train', train_frame)
             features = self.get_store('feature', seed, job_name, boot_iter=0)[:n_top]
-            pred_function, conf_matrix, estimator, x_train_norm, x_test_norm = self.verification(
+            pred_function, estimator, x_train_norm, x_test_norm = self.verification(
                 seed, 0, job_name, fit_imputer, model=[best_model], n_top_features=[n_top], explain_mode=True
             )
-            self.plot_conf_matrix(conf_matrix, job_index + 1)
+            # x_train_norm = shap.sample(x_train_norm, nsamples=50)
+            # x_test_norm = shap.sample(x_test_norm, nsamples=50)
             self.plot_kernel_shap(pred_function, x_train_norm, x_test_norm, features, job_index + 1)
             if best_model == 'logistic_regression':
                 coefficients = estimator.coef_
@@ -69,24 +71,21 @@ class Explain(DataHandler, Normalisers):
 
         return seed, boot_seed
 
-    def plot_conf_matrix(self, conf_matrix, job_index):
-        plt.figure()
-        plt.tight_layout()
-        conf_matrix.plot(cmap='Blues', values_format='d')
-        plt.savefig(os.path.join(self.expl_out_dir, f'confusion_matrix_strat_{job_index}.{self.plot_format}'))
-        plt.clf()
-
     def plot_kernel_shap(self, pred_function, x_train_norm, x_test_norm, features, job_index):
         explainer = KernelShap(pred_function)
         explainer.fit(x_train_norm[features])
         explanation = explainer.explain(x_test_norm[features], feature_names=features)
         shap.summary_plot(explanation.shap_values[1], x_test_norm[features], features, show=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_positive_class_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(
+            os.path.join(self.expl_out_dir, f'KernelSHAP_positive_class_strat_{job_index}.{self.plot_format}'), dpi=300
+        )
         plt.clf()
         shap.summary_plot(explanation.shap_values, x_test_norm[features], features, show=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_both_classes_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(
+            os.path.join(self.expl_out_dir, f'KernelSHAP_both_classes_strat_{job_index}.{self.plot_format}'), dpi=300
+        )
         plt.clf()
 
         heatmap_explainer = shap.KernelExplainer(
@@ -95,13 +94,15 @@ class Explain(DataHandler, Normalisers):
         values = heatmap_explainer(x_test_norm[features])
         shap.plots.heatmap(values, show=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.expl_out_dir, f'KernelSHAP_heatmap_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(
+            os.path.join(self.expl_out_dir, f'KernelSHAP_heatmap_strat_{job_index}.{self.plot_format}'), dpi=300
+        )
         plt.clf()
 
     def plot_coefficients(self, coefficients, features, job_index):
         plt.figure()
         plt.barh(features, coefficients[0], color='yellowgreen')
-        plt.title('Feature coefficients from logistic regression')
+        plt.title('Feature coefficients')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.expl_out_dir, f'coefficients_strat_{job_index}.{self.plot_format}'))
+        plt.savefig(os.path.join(self.expl_out_dir, f'coefficients_strat_{job_index}.{self.plot_format}'), dpi=300)
         plt.clf()
