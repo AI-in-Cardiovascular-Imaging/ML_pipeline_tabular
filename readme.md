@@ -7,7 +7,6 @@
 - [Configuration](#configuration)
 - [Run](#run)
 
-
 ## Installation
 
 ```bash
