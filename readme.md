@@ -57,3 +57,19 @@ python3 main.py
 ```
 
 Computation progress is saved after each seed/bootstrap and will not be recomputed unless the meta.overwrite flag is set to True.
+
+
+## Citation
+Please cite the following paper if you use this repository.
+
+```
+@article{Shiri2024,
+  author = {Isaac Shiri and Sebastian Balzer and Giovanni Baj and Benedikt Bernhard and Moritz Hundertmark and Adam Bakula and Masaaki Nakase and Daijiro Tomii and Giulia Barbati and Stephan Dobner and Waldo Valenzuela and Axel Rominger and Federico Caobelli and George C. M. Siontis and Jonas Lanz and Thomas Pilgrim and Stephan Windecker and Stefan Stortecky and Christoph Gräni},
+  title = {Multi-modality artificial intelligence-based transthyretin amyloid cardiomyopathy detection in patients with severe aortic stenosis},
+  journal = {European Journal of Nuclear Medicine and Molecular Imaging},
+  year = {2024},
+  note = {In press}
+}
+
+```
+Shiri, I., Balzer, S., Baj, G., Bernhard, B., Hundertmark, M., Bakula, A., Nakase, M., Tomii, D., Barbati, G., Dobner, S., Valenzuela, W., Rominger, A., Caobelli, F., Siontis, G. C. M., Lanz, J., Pilgrim, T., Windecker, S., Stortecky, S., & Gräni, C. Multi-modality artificial intelligence-based transthyretin amyloid cardiomyopathy detection in patients with severe aortic stenosis. European Journal of Nuclear Medicine and Molecular Imaging, (2024) In press.
