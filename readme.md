@@ -72,4 +72,4 @@ Please cite the following paper if you use this repository.
 }
 
 ```
-Shiri, I., Balzer, S., Baj, G., Bernhard, B., Hundertmark, M., Bakula, A., Nakase, M., Tomii, D., Barbati, G., Dobner, S., Valenzuela, W., Rominger, A., Caobelli, F., Siontis, G. C. M., Lanz, J., Pilgrim, T., Windecker, S., Stortecky, S., & Gräni, C. Multi-modality artificial intelligence-based transthyretin amyloid cardiomyopathy detection in patients with severe aortic stenosis. European Journal of Nuclear Medicine and Molecular Imaging, (2024) In press.
+Shiri I, Balzer S, Baj G, Bernhard B, Hundertmark M, Bakula A, Nakase M, Tomii D, Barbati G, Dobner S, Valenzuela W, Rominger A, Caobelli F, Siontis GCM, Lanz J, Pilgrim T, Windecker S, Stortecky S, Gräni C. Multi-modality artificial intelligence-based transthyretin amyloid cardiomyopathy detection in patients with severe aortic stenosis. Eur J Nucl Med Mol Imaging. 2024 Sep 23. doi: 10.1007/s00259-024-06922-4. Epub ahead of print. PMID: 39307861.
