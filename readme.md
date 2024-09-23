@@ -68,7 +68,9 @@ Please cite the following paper if you use this repository.
   title = {Multi-modality artificial intelligence-based transthyretin amyloid cardiomyopathy detection in patients with severe aortic stenosis},
   journal = {European Journal of Nuclear Medicine and Molecular Imaging},
   year = {2024},
-  note = {In press}
+  note = {In press},
+  doi = {10.1007/s00259-024-06922-4},
+  pmid = {39307861}
 }
 
 ```
